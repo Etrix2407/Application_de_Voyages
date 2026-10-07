@@ -1,0 +1,37 @@
+{% load static %}<!doctype html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block titre %}Application de voyage{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+</head>
+<body>
+    <a class="lien-evitement" href="#contenu">Aller au contenu</a>
+    <header class="entete">
+        <a class="logo" href="{% url 'accueil' %}">Application de voyage</a>
+        <nav aria-label="Navigation principale">
+            <ul class="menu">
+                <li><a href="{% url 'accueil' %}">Accueil</a></li>
+                {% block menu %}{% endblock %}
+            </ul>
+        </nav>
+    </header>
+
+    <main id="contenu" class="contenu">
+        {% if messages %}
+            <ul class="messages" role="status">
+                {% for message in messages %}
+                    <li class="message message-{{ message.tags }}">{{ message }}</li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+
+        {% block contenu %}{% endblock %}
+    </main>
+
+    <footer class="pied">
+        <p>Application de voyage</p>
+    </footer>
+</body>
+</html>

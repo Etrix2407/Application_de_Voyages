@@ -1,0 +1,163 @@
+/* Styles de base : texte grand, contraste élevé, adapté au mobile. */
+
+:root {
+    --couleur-texte: #1a1a1a;
+    --couleur-fond: #ffffff;
+    --couleur-principale: #0b4f8a;
+    --couleur-principale-fonce: #083a66;
+    --couleur-bordure: #8a8a8a;
+    --couleur-succes: #1e6b2f;
+    --couleur-erreur: #a4161a;
+    --couleur-fond-doux: #f2f5f8;
+}
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+html {
+    font-size: 112.5%; /* 18px */
+}
+
+body {
+    margin: 0;
+    font-family: Verdana, Arial, sans-serif;
+    line-height: 1.6;
+    color: var(--couleur-texte);
+    background: var(--couleur-fond);
+}
+
+a {
+    color: var(--couleur-principale);
+}
+
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+    outline: 3px solid #f5a623;
+    outline-offset: 2px;
+}
+
+.lien-evitement {
+    position: absolute;
+    left: -9999px;
+}
+
+.lien-evitement:focus {
+    left: 1rem;
+    top: 1rem;
+    padding: 0.5rem 1rem;
+    background: var(--couleur-fond);
+}
+
+.entete {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1rem;
+    background: var(--couleur-principale);
+}
+
+.entete a {
+    color: #ffffff;
+}
+
+.logo {
+    font-size: 1.3rem;
+    font-weight: bold;
+    text-decoration: none;
+}
+
+.menu {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.contenu {
+    max-width: 60rem;
+    margin: 0 auto;
+    padding: 1.5rem 1rem;
+}
+
+.pied {
+    padding: 1rem;
+    text-align: center;
+    background: var(--couleur-fond-doux);
+}
+
+.messages {
+    padding: 0;
+    list-style: none;
+}
+
+.message {
+    padding: 0.75rem 1rem;
+    margin-bottom: 0.5rem;
+    border-left: 6px solid var(--couleur-principale);
+    background: var(--couleur-fond-doux);
+}
+
+.message-success {
+    border-color: var(--couleur-succes);
+}
+
+.message-error {
+    border-color: var(--couleur-erreur);
+}
+
+/* Formulaires */
+
+label {
+    display: block;
+    margin-top: 1rem;
+    font-weight: bold;
+}
+
+input,
+select,
+textarea {
+    width: 100%;
+    max-width: 30rem;
+    padding: 0.6rem;
+    font-size: 1rem;
+    border: 2px solid var(--couleur-bordure);
+    border-radius: 4px;
+}
+
+input[type="checkbox"] {
+    width: auto;
+}
+
+.bouton,
+button {
+    display: inline-block;
+    margin-top: 1rem;
+    padding: 0.7rem 1.4rem;
+    font-size: 1rem;
+    color: #ffffff;
+    text-decoration: none;
+    background: var(--couleur-principale);
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.bouton:hover,
+button:hover {
+    background: var(--couleur-principale-fonce);
+}
+
+.errorlist {
+    color: var(--couleur-erreur);
+    padding-left: 1rem;
+}
