@@ -1,17 +1,14 @@
-from datetime import date
 from decimal import Decimal
 
-from django.contrib.auth import get_user_model
 from django.test import SimpleTestCase, TestCase
 from django.urls import reverse
 
 from catalogue.models import Categorie, Continent, Difficulte, Mois
 from catalogue.recherche import Criteres, rechercher
+from comptes.tests.fabriques import creer_client
 from config.texte import normaliser
 
 from .fabriques import creer_activite, creer_destination, creer_pays
-
-Utilisateur = get_user_model()
 
 
 def noms(objets):
@@ -146,11 +143,7 @@ class PageRechercheTests(TestCase):
     url = reverse("recherche")
 
     def setUp(self):
-        self.client.force_login(
-            Utilisateur.objects.create_user(
-                "c@example.com", "voyage2026ok", nom="D", prenom="M", date_naissance=date(1950, 1, 1)
-            )
-        )
+        self.client.force_login(creer_client())
         creer_activite(creer_pays("Japon"), "Cérémonie du thé", categorie=Categorie.CULTURE)
 
     def test_connexion_requise(self):

@@ -6,23 +6,9 @@ from django.urls import reverse
 
 from comptes.models import Role
 
+from .fabriques import MOT_DE_PASSE, creer_agent, creer_client
+
 Utilisateur = get_user_model()
-
-MOT_DE_PASSE = "voyage2026ok"
-
-
-def creer_client(email="client@example.com", **champs):
-    champs.setdefault("nom", "Dupont")
-    champs.setdefault("prenom", "Marie")
-    champs.setdefault("date_naissance", date(1955, 4, 12))
-    return Utilisateur.objects.create_user(email, MOT_DE_PASSE, **champs)
-
-
-def creer_agent(email="agent@example.com"):
-    return Utilisateur.objects.create_user(
-        email, MOT_DE_PASSE, nom="Martin", prenom="Luc", role=Role.AGENT
-    )
-
 
 class AccesProfilTests(TestCase):
     def test_pages_reservees_aux_utilisateurs_connectes(self):

@@ -1,21 +1,10 @@
-from datetime import date
-
-from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
 
 from catalogue.models import FavoriActivite, FavoriDestination
-from comptes.models import Role
+from comptes.tests.fabriques import MOT_DE_PASSE, creer_agent, creer_client
 
 from .fabriques import creer_activite, creer_destination, creer_pays
-
-Utilisateur = get_user_model()
-
-
-def creer_client(email="client@example.com"):
-    return Utilisateur.objects.create_user(
-        email, "voyage2026ok", nom="Dupont", prenom="Marie", date_naissance=date(1955, 4, 12)
-    )
 
 
 class FavorisTests(TestCase):
@@ -120,7 +109,7 @@ class FavorisTests(TestCase):
     def test_favoris_supprimes_avec_le_compte(self):
         self.ajouter("activite", self.activite.pk)
 
-        self.client.post(reverse("supprimer_compte"), {"mot_de_passe": "voyage2026ok"})
+        self.client.post(reverse("supprimer_compte"), {"mot_de_passe": MOT_DE_PASSE})
 
         self.assertFalse(FavoriActivite.objects.exists())
 
@@ -128,10 +117,7 @@ class FavorisTests(TestCase):
 class AccesFavorisTests(TestCase):
     def test_reserve_aux_clients(self):
         activite = creer_activite(creer_pays())
-        agent = Utilisateur.objects.create_user(
-            "agent@example.com", "voyage2026ok", nom="M", prenom="L", role=Role.AGENT
-        )
-        self.client.force_login(agent)
+        self.client.force_login(creer_agent())
 
         self.assertEqual(self.client.get(reverse("mes_favoris")).status_code, 403)
         url = reverse("ajouter_favori", args=["activite", activite.pk])

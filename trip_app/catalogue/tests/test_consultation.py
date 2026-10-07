@@ -1,4 +1,3 @@
-from datetime import date
 from decimal import Decimal
 
 from django.contrib.auth import get_user_model
@@ -6,20 +5,11 @@ from django.test import SimpleTestCase, TestCase
 from django.urls import reverse
 
 from catalogue.models import Continent, afficher_decalage
+from comptes.tests.fabriques import creer_client
 
 from .fabriques import creer_activite, creer_destination, creer_pays
 
 Utilisateur = get_user_model()
-
-
-def creer_client():
-    return Utilisateur.objects.create_user(
-        "client@example.com",
-        "voyage2026ok",
-        nom="Dupont",
-        prenom="Marie",
-        date_naissance=date(1955, 4, 12),
-    )
 
 
 class AfficherDecalageTests(SimpleTestCase):
