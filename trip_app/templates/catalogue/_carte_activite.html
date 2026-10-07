@@ -1,0 +1,4 @@
+<li class="carte">
+    <h3><a href="{% url 'detail_activite' activite.pk %}">{{ activite.nom }}</a></h3>
+    <p>{{ activite.get_categorie_display }} · {{ activite.duree_affichee }} · {{ activite.prix_par_personne }} € par personne</p>
+</li>

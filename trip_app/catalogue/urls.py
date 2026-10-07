@@ -1,8 +1,13 @@
 from django.urls import path
 
+from . import views
 from . import views_gestion as gestion
 
 urlpatterns = [
+    path("", views.liste_pays, name="catalogue_pays"),
+    path("pays/<int:pk>/", views.detail_pays, name="detail_pays"),
+    path("destinations/<int:pk>/", views.detail_destination, name="detail_destination"),
+    path("activites/<int:pk>/", views.detail_activite, name="detail_activite"),
     path("gestion/", gestion.liste_pays, name="gestion_liste_pays"),
     path("gestion/pays/nouveau/", gestion.creer_pays, name="gestion_creer_pays"),
     path("gestion/pays/<int:pk>/", gestion.fiche_pays, name="gestion_pays"),

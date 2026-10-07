@@ -1,0 +1,12 @@
+<li class="carte">
+    {% if destination.photo %}
+        <img class="carte-photo" src="{{ destination.photo }}" alt="Photo : {{ destination.nom }}" loading="lazy">
+    {% endif %}
+    <h3><a href="{% url 'detail_destination' destination.pk %}">{{ destination.nom }}</a></h3>
+    {% if destination.periode_ideale %}
+        <p>Période idéale : {{ destination.periode_ideale }}</p>
+    {% endif %}
+    {% if destination.prix_a_partir_de is not None %}
+        <p>À partir de {{ destination.prix_a_partir_de }} €</p>
+    {% endif %}
+</li>
