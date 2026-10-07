@@ -313,3 +313,8 @@ td {
     font-size: 1.2rem;
     font-weight: bold;
 }
+
+.indisponible {
+    font-style: italic;
+    color: #444444;
+}

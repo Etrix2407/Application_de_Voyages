@@ -2,6 +2,7 @@
 
 from decimal import Decimal
 
+from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
@@ -250,3 +251,35 @@ class Activite(models.Model):
         if not heures:
             return f"{minutes} min"
         return f"{heures} h {minutes:02d}" if minutes else f"{heures} h"
+
+
+# Favoris des clients (suppression en cascade avec le compte : droit à l'effacement).
+
+
+class Favori(models.Model):
+    client = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    date_ajout = models.DateTimeField("date d'ajout", auto_now_add=True)
+
+    class Meta:
+        abstract = True
+        ordering = ["-date_ajout"]
+
+
+class FavoriDestination(Favori):
+    destination = models.ForeignKey(Destination, on_delete=models.CASCADE)
+
+    class Meta(Favori.Meta):
+        verbose_name = "destination favorite"
+        constraints = [
+            models.UniqueConstraint(fields=["client", "destination"], name="favori_destination_unique")
+        ]
+
+
+class FavoriActivite(Favori):
+    activite = models.ForeignKey(Activite, on_delete=models.CASCADE)
+
+    class Meta(Favori.Meta):
+        verbose_name = "activité favorite"
+        constraints = [
+            models.UniqueConstraint(fields=["client", "activite"], name="favori_activite_unique")
+        ]

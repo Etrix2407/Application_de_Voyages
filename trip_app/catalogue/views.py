@@ -6,6 +6,7 @@ from django.shortcuts import get_object_or_404, render
 from .forms import RechercheForm
 from .models import Activite, Continent, Destination, Pays
 from .recherche import rechercher
+from .views_favoris import est_favori
 
 
 def liste_pays(request):
@@ -38,6 +39,7 @@ def detail_destination(request, pk):
     contexte = {
         "destination": destination,
         "activites": Activite.objects.visibles().filter(destination=destination),
+        "est_favori": est_favori(request.user, destination),
     }
     return render(request, "catalogue/destination.html", contexte)
 
@@ -47,7 +49,8 @@ def detail_activite(request, pk):
     activite = get_object_or_404(
         Activite.objects.visibles().select_related("pays", "destination"), pk=pk
     )
-    return render(request, "catalogue/activite.html", {"activite": activite})
+    contexte = {"activite": activite, "est_favori": est_favori(request.user, activite)}
+    return render(request, "catalogue/activite.html", contexte)
 
 
 @login_required
