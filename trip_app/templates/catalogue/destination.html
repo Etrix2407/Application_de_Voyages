@@ -6,6 +6,7 @@
     <p><a href="{% url 'detail_pays' destination.pays.pk %}">← {{ destination.pays.nom }}</a></p>
 
     <h1>{{ destination.nom }}</h1>
+    {% include "catalogue/_bouton_favori.html" with type_element="destination" objet=destination %}
     {% if destination.photo %}
         <img class="photo" src="{{ destination.photo }}" alt="Photo : {{ destination.nom }}">
     {% endif %}

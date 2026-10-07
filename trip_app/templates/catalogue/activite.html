@@ -6,6 +6,7 @@
     <p><a href="{% url 'detail_pays' activite.pays.pk %}">← {{ activite.pays.nom }}</a></p>
 
     <h1>{{ activite.nom }}</h1>
+    {% include "catalogue/_bouton_favori.html" with type_element="activite" objet=activite %}
     <p>{{ activite.description|linebreaksbr }}</p>
 
     <dl class="fiche">

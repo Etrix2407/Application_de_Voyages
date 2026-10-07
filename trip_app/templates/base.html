@@ -17,6 +17,9 @@
                 {% block menu %}{% endblock %}
                 {% if user.is_authenticated %}
                     <li><a href="{% url 'recherche' %}">Rechercher</a></li>
+                    {% if user.est_client %}
+                        <li><a href="{% url 'mes_favoris' %}">Mes favoris</a></li>
+                    {% endif %}
                     {% if user.est_personnel %}
                         <li><a href="{% url 'gestion_liste_pays' %}">Gestion du catalogue</a></li>
                     {% endif %}
