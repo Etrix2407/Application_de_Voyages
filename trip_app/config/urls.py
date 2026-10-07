@@ -12,5 +12,6 @@ urlpatterns = [
         name="confidentialite",
     ),
     path("comptes/", include("comptes.urls")),
+    path("catalogue/", include("catalogue.urls")),
     path("admin/", admin.site.urls),
 ]
