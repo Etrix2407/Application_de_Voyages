@@ -19,6 +19,7 @@ trip_app/
 pip install -r trip_app/requirements.txt
 cd trip_app
 python manage.py migrate
+python manage.py createsuperuser   # compte administrateur (la gérante)
 python manage.py runserver
 ```
 
