@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+{% block title %}Personnel — Application de voyage{% endblock %}
+
+{% block content %}
+    <h1>Personnel</h1>
+
+    <p><a class="button" href="{% url 'create_agent' %}">Créer un agent</a></p>
+
+    <div class="table-scroll">
+        <table>
+            <caption>Agents et administrateurs</caption>
+            <thead>
+                <tr>
+                    <th scope="col">Nom</th>
+                    <th scope="col">E-mail</th>
+                    <th scope="col">N° employé</th>
+                    <th scope="col">Rôle</th>
+                    <th scope="col">État</th>
+                    <th scope="col">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for member in members %}
+                    <tr>
+                        <td>{{ member.first_name }} {{ member.last_name }}</td>
+                        <td>{{ member.email }}</td>
+                        <td>{{ member.employee_number }}</td>
+                        <td>{{ member.get_role_display }}</td>
+                        <td>
+                            {% if not member.is_active %}
+                                Désactivé
+                            {% elif not member.has_usable_password %}
+                                En attente d'activation
+                            {% else %}
+                                Actif
+                            {% endif %}
+                        </td>
+                        <td>
+                            <ul class="actions table-actions">
+                                <li><a href="{% url 'edit_staff_member' member.pk %}">Modifier</a></li>
+                                {% if member.pk != user.pk %}
+                                    <li>
+                                        {% if member.is_active %}
+                                            <form method="post" action="{% url 'deactivate_staff_member' member.pk %}">
+                                                {% csrf_token %}
+                                                <button type="submit">Désactiver</button>
+                                            </form>
+                                        {% else %}
+                                            <form method="post" action="{% url 'reactivate_staff_member' member.pk %}">
+                                                {% csrf_token %}
+                                                <button type="submit">Réactiver</button>
+                                            </form>
+                                        {% endif %}
+                                    </li>
+                                    <li>
+                                        <form method="post" action="{% url 'resend_staff_link' member.pk %}">
+                                            {% csrf_token %}
+                                            <button type="submit">Envoyer un lien de mot de passe</button>
+                                        </form>
+                                    </li>
+                                    <li><a href="{% url 'delete_staff_member' member.pk %}">Supprimer</a></li>
+                                {% else %}
+                                    <li>(votre compte)</li>
+                                {% endif %}
+                            </ul>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% endblock %}

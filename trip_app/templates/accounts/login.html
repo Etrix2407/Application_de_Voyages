@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+
+{% block title %}Se connecter — Application de voyage{% endblock %}
+
+{% block content %}
+    <h1>Se connecter</h1>
+
+    <form method="post" novalidate>
+        {% csrf_token %}
+        {{ form }}
+        <input type="hidden" name="next" value="{{ next }}">
+        <button type="submit">Se connecter</button>
+    </form>
+
+    <p><a href="{% url 'password_reset' %}">Mot de passe oublié ?</a></p>
+    <p>Pas encore de compte ? <a href="{% url 'sign_up' %}">Créer un compte</a></p>
+{% endblock %}

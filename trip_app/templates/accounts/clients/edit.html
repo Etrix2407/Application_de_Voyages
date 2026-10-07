@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block title %}Corriger {{ client.get_full_name }} — Application de voyage{% endblock %}
+
+{% block content %}
+    <p><a href="{% url 'client_list' %}">← Tous les clients</a></p>
+
+    <h1>Corriger les informations de {{ client.get_full_name }}</h1>
+    <p>Adresse e-mail : {{ client.email }} (modifiable uniquement par le client)</p>
+
+    <form method="post" novalidate>
+        {% csrf_token %}
+        {{ form }}
+        <button type="submit">Enregistrer</button>
+    </form>
+
+    <h2>Mot de passe</h2>
+    <p>Vous ne pouvez pas voir ni modifier le mot de passe du client. Vous pouvez lui envoyer un lien (valable 1 heure) pour qu'il en choisisse un nouveau.</p>
+    <form method="post" action="{% url 'send_client_link' client.pk %}">
+        {% csrf_token %}
+        <button type="submit" class="button-secondary">Envoyer un lien de mot de passe à {{ client.email }}</button>
+    </form>
+{% endblock %}

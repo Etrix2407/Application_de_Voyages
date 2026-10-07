@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+
+{% block title %}Créer un compte — Application de voyage{% endblock %}
+
+{% block content %}
+    <h1>Créer un compte</h1>
+    <p>Tous les champs sont obligatoires, sauf le téléphone.</p>
+
+    <form method="post" novalidate>
+        {% csrf_token %}
+        {{ form }}
+        <p>
+            Lire la <a href="{% url 'privacy' %}" target="_blank" rel="noopener">politique de confidentialité</a>
+            (s'ouvre dans un nouvel onglet).
+        </p>
+        <button type="submit">Créer mon compte</button>
+    </form>
+
+    <p>Vous avez déjà un compte ? <a href="{% url 'login' %}">Se connecter</a></p>
+{% endblock %}

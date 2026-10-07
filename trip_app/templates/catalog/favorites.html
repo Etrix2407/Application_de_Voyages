@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block title %}Mes favoris — Application de voyage{% endblock %}
+
+{% block content %}
+    <h1>Mes favoris</h1>
+
+    <h2>Destinations</h2>
+    {% if favorite_destinations %}
+        <ul class="cards">
+            {% for destination, available in favorite_destinations %}
+                <li class="card">
+                    {% if available %}
+                        <h3><a href="{% url 'destination_detail' destination.pk %}">{{ destination.name }}</a></h3>
+                    {% else %}
+                        <h3>{{ destination.name }}</h3>
+                        <p class="unavailable">Cette destination n'est plus disponible.</p>
+                    {% endif %}
+                    <p>{{ destination.country.name }}</p>
+                    {% include "catalog/_favorite_button.html" with item_type="destination" item=destination is_favorite=True %}
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p>Vous n'avez pas encore de destination favorite.</p>
+    {% endif %}
+
+    <h2>Activités</h2>
+    {% if favorite_activities %}
+        <ul class="cards">
+            {% for activity, available in favorite_activities %}
+                <li class="card">
+                    {% if available %}
+                        <h3><a href="{% url 'activity_detail' activity.pk %}">{{ activity.name }}</a></h3>
+                    {% else %}
+                        <h3>{{ activity.name }}</h3>
+                        <p class="unavailable">Cette activité n'est plus disponible.</p>
+                    {% endif %}
+                    <p>{{ activity.country.name }}</p>
+                    {% include "catalog/_favorite_button.html" with item_type="activite" item=activity is_favorite=True %}
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p>Vous n'avez pas encore d'activité favorite.</p>
+    {% endif %}
+
+    <p><a href="{% url 'country_list' %}">Découvrir nos pays</a></p>
+{% endblock %}

@@ -9,9 +9,10 @@ une application pour gérer les comptes des clients et des agents, ainsi qu'un c
 ```
 trip_app/
 ├── config/            # settings, urls
-├── comptes/           # utilisateurs, inscription, profil, RGPD
-├── catalogue/         # pays, destinations, activités
-└── templates/
+├── accounts/          # utilisateurs, inscription, profil, personnel, clients, RGPD
+├── catalog/           # pays, destinations, activités, recherche, favoris
+├── templates/
+└── static/
 ```
 
 ## technologie
@@ -24,6 +25,8 @@ sqLite pour la db
 
 - Pas de doublon 
 - Ne jamais inventer ni modifier des faits (dates, postes, entreprises, chiffres, compétences). Si une information manque ou semble incohérente, poser la question.
+- Code en anglais uniquement (identifiants, noms de fichiers, routes internes).
+- Markdown, commentaires et textes affichés aux utilisateurs en français.
 
 ## Règles de code
 

@@ -1,14 +1,14 @@
 /* Styles de base : texte grand, contraste élevé, adapté au mobile. */
 
 :root {
-    --couleur-texte: #1a1a1a;
-    --couleur-fond: #ffffff;
-    --couleur-principale: #0b4f8a;
-    --couleur-principale-fonce: #083a66;
-    --couleur-bordure: #8a8a8a;
-    --couleur-succes: #1e6b2f;
-    --couleur-erreur: #a4161a;
-    --couleur-fond-doux: #f2f5f8;
+    --color-text: #1a1a1a;
+    --color-background: #ffffff;
+    --color-primary: #0b4f8a;
+    --color-primary-dark: #083a66;
+    --color-border: #8a8a8a;
+    --color-success: #1e6b2f;
+    --color-error: #a4161a;
+    --color-background-soft: #f2f5f8;
 }
 
 *,
@@ -25,12 +25,12 @@ body {
     margin: 0;
     font-family: Verdana, Arial, sans-serif;
     line-height: 1.6;
-    color: var(--couleur-texte);
-    background: var(--couleur-fond);
+    color: var(--color-text);
+    background: var(--color-background);
 }
 
 a {
-    color: var(--couleur-principale);
+    color: var(--color-primary);
 }
 
 a:focus-visible,
@@ -42,29 +42,29 @@ textarea:focus-visible {
     outline-offset: 2px;
 }
 
-.lien-evitement {
+.skip-link {
     position: absolute;
     left: -9999px;
 }
 
-.lien-evitement:focus {
+.skip-link:focus {
     left: 1rem;
     top: 1rem;
     padding: 0.5rem 1rem;
-    background: var(--couleur-fond);
+    background: var(--color-background);
 }
 
-.entete {
+.site-header {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
     gap: 1rem;
     padding: 1rem;
-    background: var(--couleur-principale);
+    background: var(--color-primary);
 }
 
-.entete a {
+.site-header a {
     color: #ffffff;
 }
 
@@ -83,16 +83,16 @@ textarea:focus-visible {
     list-style: none;
 }
 
-.contenu {
+.content {
     max-width: 60rem;
     margin: 0 auto;
     padding: 1.5rem 1rem;
 }
 
-.pied {
+.site-footer {
     padding: 1rem;
     text-align: center;
-    background: var(--couleur-fond-doux);
+    background: var(--color-background-soft);
 }
 
 .messages {
@@ -103,16 +103,16 @@ textarea:focus-visible {
 .message {
     padding: 0.75rem 1rem;
     margin-bottom: 0.5rem;
-    border-left: 6px solid var(--couleur-principale);
-    background: var(--couleur-fond-doux);
+    border-left: 6px solid var(--color-primary);
+    background: var(--color-background-soft);
 }
 
 .message-success {
-    border-color: var(--couleur-succes);
+    border-color: var(--color-success);
 }
 
 .message-error {
-    border-color: var(--couleur-erreur);
+    border-color: var(--color-error);
 }
 
 /* Formulaires */
@@ -130,7 +130,7 @@ textarea {
     max-width: 30rem;
     padding: 0.6rem;
     font-size: 1rem;
-    border: 2px solid var(--couleur-bordure);
+    border: 2px solid var(--color-border);
     border-radius: 4px;
 }
 
@@ -138,7 +138,7 @@ input[type="checkbox"] {
     width: auto;
 }
 
-.bouton,
+.button,
 button {
     display: inline-block;
     margin-top: 1rem;
@@ -146,19 +146,19 @@ button {
     font-size: 1rem;
     color: #ffffff;
     text-decoration: none;
-    background: var(--couleur-principale);
+    background: var(--color-primary);
     border: none;
     border-radius: 4px;
     cursor: pointer;
 }
 
-.bouton:hover,
+.button:hover,
 button:hover {
-    background: var(--couleur-principale-fonce);
+    background: var(--color-primary-dark);
 }
 
 .errorlist {
-    color: var(--couleur-erreur);
+    color: var(--color-error);
     padding-left: 1rem;
 }
 
@@ -172,7 +172,7 @@ button:hover {
     margin: 0.25rem 0;
 }
 
-.form-deconnexion button {
+.logout-form button {
     margin: 0;
     padding: 0;
     color: #ffffff;
@@ -180,16 +180,16 @@ button:hover {
     background: none;
 }
 
-.form-deconnexion button:hover {
+.logout-form button:hover {
     background: none;
 }
 
-.fiche dt {
+.details dt {
     margin-top: 0.75rem;
     font-weight: bold;
 }
 
-.fiche dd {
+.details dd {
     margin-left: 0;
 }
 
@@ -201,17 +201,17 @@ button:hover {
     list-style: none;
 }
 
-.bouton-danger {
-    background: var(--couleur-erreur);
+.button-danger {
+    background: var(--color-error);
 }
 
-.bouton-danger:hover {
+.button-danger:hover {
     background: #7a1013;
 }
 
 /* Tableaux : défilement horizontal limité au tableau sur petit écran. */
 
-.tableau-defilant {
+.table-scroll {
     overflow-x: auto;
 }
 
@@ -231,21 +231,21 @@ td {
     padding: 0.6rem;
     text-align: left;
     vertical-align: top;
-    border-bottom: 1px solid var(--couleur-bordure);
+    border-bottom: 1px solid var(--color-border);
 }
 
-.actions-tableau {
+.table-actions {
     flex-direction: column;
     gap: 0.5rem;
     margin: 0;
 }
 
-.actions-tableau button {
+.table-actions button {
     margin: 0;
     padding: 0.4rem 0.8rem;
 }
 
-.miniature {
+.thumbnail {
     display: block;
     width: 8rem;
     max-width: 100%;
@@ -255,7 +255,7 @@ td {
 
 /* Cartes du catalogue : une colonne sur téléphone, plusieurs sur ordinateur. */
 
-.cartes {
+.cards {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
     gap: 1rem;
@@ -263,18 +263,18 @@ td {
     list-style: none;
 }
 
-.carte {
+.card {
     padding: 1rem;
-    border: 2px solid var(--couleur-fond-doux);
+    border: 2px solid var(--color-background-soft);
     border-radius: 6px;
-    background: var(--couleur-fond);
+    background: var(--color-background);
 }
 
-.carte h3 {
+.card h3 {
     margin-top: 0;
 }
 
-.carte-photo,
+.card-photo,
 .photo {
     display: block;
     width: 100%;
@@ -282,7 +282,7 @@ td {
     border-radius: 4px;
 }
 
-.carte-photo {
+.card-photo {
     aspect-ratio: 4 / 3;
     object-fit: cover;
     margin-bottom: 0.5rem;
@@ -292,29 +292,29 @@ td {
     max-width: 40rem;
 }
 
-.form-recherche {
+.search-form {
     padding: 1rem;
-    background: var(--couleur-fond-doux);
+    background: var(--color-background-soft);
     border-radius: 6px;
 }
 
-.bouton-secondaire {
+.button-secondary {
     margin-left: 0.5rem;
-    color: var(--couleur-principale);
-    background: var(--couleur-fond);
-    border: 2px solid var(--couleur-principale);
+    color: var(--color-primary);
+    background: var(--color-background);
+    border: 2px solid var(--color-primary);
 }
 
-.bouton-secondaire:hover {
+.button-secondary:hover {
     color: #ffffff;
 }
 
-.nombre-resultats {
+.result-count {
     font-size: 1.2rem;
     font-weight: bold;
 }
 
-.indisponible {
+.unavailable {
     font-style: italic;
     color: #444444;
 }

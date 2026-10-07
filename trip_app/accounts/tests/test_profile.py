@@ -1,0 +1,183 @@
+from datetime import date
+
+from django.contrib.auth import get_user_model
+from django.test import TestCase
+from django.urls import reverse
+
+from accounts.models import Role
+
+from .factories import PASSWORD, create_agent, create_client
+
+User = get_user_model()
+
+
+class ProfileAccessTests(TestCase):
+    def test_pages_reserved_to_logged_in_users(self):
+        for last_name in ["profile", "edit_profile", "change_password", "delete_account"]:
+            with self.subTest(page=last_name):
+                url = reverse(last_name)
+
+                response = self.client.get(url)
+
+                self.assertRedirects(response, f"{reverse('login')}?next={url}")
+
+    def test_agent_cannot_edit_or_delete_through_client_profile(self):
+        self.client.force_login(create_agent())
+
+        for last_name in ["edit_profile", "delete_account"]:
+            with self.subTest(page=last_name):
+                self.assertEqual(self.client.get(reverse(last_name)).status_code, 403)
+
+
+class ProfileViewTests(TestCase):
+    def test_client_sees_own_information_not_others(self):
+        client = create_client(phone="0470123456")
+        create_client(email="voisin@example.com", last_name="Voisin")
+        self.client.force_login(client)
+
+        response = self.client.get(reverse("profile"))
+
+        self.assertContains(response, "client@example.com")
+        self.assertContains(response, "0470123456")
+        self.assertContains(response, reverse("delete_account"))
+        self.assertNotContains(response, "voisin@example.com")
+
+    def test_agent_sees_number_without_delete_link(self):
+        agent = create_agent()
+        self.client.force_login(agent)
+
+        response = self.client.get(reverse("profile"))
+
+        self.assertContains(response, "AG0001")
+        self.assertContains(response, reverse("change_password"))
+        self.assertNotContains(response, reverse("delete_account"))
+        self.assertNotContains(response, reverse("edit_profile"))
+
+
+class ProfileEditTests(TestCase):
+    url = reverse("edit_profile")
+
+    def setUp(self):
+        self.user = create_client()
+        self.client.force_login(self.user)
+
+    def data(self, **fields):
+        data = {
+            "first_name": "Marie",
+            "last_name": "Durand",
+            "email": "Nouvelle@Example.com",
+            "phone": "+32 2 123 45 67",
+            "birth_date": "1956-05-01",
+        }
+        data.update(fields)
+        return data
+
+    def test_change_saved(self):
+        response = self.client.post(self.url, self.data())
+
+        self.assertRedirects(response, reverse("profile"))
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.last_name, "Durand")
+        self.assertEqual(self.user.email, "nouvelle@example.com")
+        self.assertEqual(self.user.phone, "+3221234567")
+        self.assertEqual(self.user.birth_date, date(1956, 5, 1))
+
+    def test_email_already_taken_rejected(self):
+        create_client(email="pris@example.com")
+
+        response = self.client.post(self.url, self.data(email="PRIS@example.com"))
+
+        self.assertEqual(response.status_code, 200)
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.email, "client@example.com")
+
+    def test_keep_own_email(self):
+        response = self.client.post(self.url, self.data(email="client@example.com"))
+
+        self.assertRedirects(response, reverse("profile"))
+
+    def test_role_not_editable(self):
+        self.client.post(self.url, self.data(role=Role.ADMINISTRATOR))
+
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.role, Role.CLIENT)
+
+    def test_birth_date_required(self):
+        response = self.client.post(self.url, self.data(birth_date=""))
+
+        self.assertEqual(response.status_code, 200)
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.birth_date, date(1955, 4, 12))
+
+
+class PasswordChangeTests(TestCase):
+    url = reverse("change_password")
+
+    def change_password(self, old_password, new_password="montagne-lac-77"):
+        return self.client.post(
+            self.url,
+            {"old_password": old_password, "new_password1": new_password, "new_password2": new_password},
+        )
+
+    def test_change_keeps_session(self):
+        client = create_client()
+        self.client.force_login(client)
+
+        response = self.change_password(PASSWORD)
+
+        self.assertRedirects(response, reverse("profile"))
+        client.refresh_from_db()
+        self.assertTrue(client.check_password("montagne-lac-77"))
+        self.assertEqual(self.client.get(reverse("profile")).status_code, 200)
+
+    def test_old_password_required(self):
+        client = create_client()
+        self.client.force_login(client)
+
+        response = self.change_password("mauvais-mot-2026")
+
+        self.assertEqual(response.status_code, 200)
+        client.refresh_from_db()
+        self.assertTrue(client.check_password(PASSWORD))
+
+    def test_strong_new_password_required(self):
+        client = create_client()
+        self.client.force_login(client)
+
+        self.change_password(PASSWORD, new_password="court")
+
+        client.refresh_from_db()
+        self.assertTrue(client.check_password(PASSWORD))
+
+    def test_agent_can_change_own_password(self):
+        agent = create_agent()
+        self.client.force_login(agent)
+
+        self.assertRedirects(self.change_password(PASSWORD), reverse("profile"))
+
+
+class AccountDeletionTests(TestCase):
+    url = reverse("delete_account")
+
+    def setUp(self):
+        self.user = create_client()
+        self.client.force_login(self.user)
+
+    def test_confirmation_page(self):
+        response = self.client.get(self.url)
+
+        self.assertContains(response, "définitive")
+
+    def test_wrong_password_deletes_nothing(self):
+        response = self.client.post(self.url, {"password": "mauvais-mot-2026"})
+
+        self.assertContains(response, "Mot de passe incorrect.")
+        self.assertTrue(User.objects.filter(pk=self.user.pk).exists())
+
+    def test_permanent_deletion_and_logout(self):
+        response = self.client.post(self.url, {"password": PASSWORD}, follow=True)
+
+        self.assertRedirects(response, reverse("home"))
+        self.assertContains(response, "Votre compte et vos données ont été supprimés.")
+        self.assertFalse(User.objects.filter(pk=self.user.pk).exists())
+        self.assertNotIn("_auth_user_id", self.client.session)

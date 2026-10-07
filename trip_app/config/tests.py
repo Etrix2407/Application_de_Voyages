@@ -2,24 +2,24 @@ from django.test import TestCase
 from django.urls import reverse
 
 
-class AccueilTests(TestCase):
-    def test_accueil_accessible_sans_connexion(self):
-        reponse = self.client.get(reverse("accueil"))
+class HomeTests(TestCase):
+    def test_home_accessible_without_login(self):
+        response = self.client.get(reverse("home"))
 
-        self.assertEqual(reponse.status_code, 200)
-        self.assertTemplateUsed(reponse, "accueil.html")
-        self.assertTemplateUsed(reponse, "base.html")
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "home.html")
+        self.assertTemplateUsed(response, "base.html")
 
-    def test_page_en_francais(self):
-        reponse = self.client.get(reverse("accueil"))
+    def test_page_in_french(self):
+        response = self.client.get(reverse("home"))
 
-        self.assertContains(reponse, '<html lang="fr">')
+        self.assertContains(response, '<html lang="fr">')
 
 
-class PagesErreurTests(TestCase):
-    def test_page_introuvable_lisible(self):
-        reponse = self.client.get("/page-qui-n-existe-pas/")
+class ErrorPageTests(TestCase):
+    def test_readable_not_found_page(self):
+        response = self.client.get("/page-qui-n-existe-pas/")
 
-        self.assertEqual(reponse.status_code, 404)
-        self.assertTemplateUsed(reponse, "404.html")
-        self.assertContains(reponse, "Page introuvable", status_code=404)
+        self.assertEqual(response.status_code, 404)
+        self.assertTemplateUsed(response, "404.html")
+        self.assertContains(response, "Page introuvable", status_code=404)
