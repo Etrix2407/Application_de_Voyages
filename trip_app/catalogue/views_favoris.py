@@ -1,8 +1,8 @@
 """Favoris des clients : chacun ne voit et ne gère que les siens (règle 7)."""
 
 from django.contrib import messages
-from django.http import Http404
-from django.shortcuts import get_object_or_404, redirect, render
+from django.http import Http404, HttpResponseRedirect
+from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
@@ -24,11 +24,16 @@ def _type(nom: str):
     return TYPES[nom]
 
 
-def _page_suivante(request, defaut: str) -> str:
+def _rediriger(request, defaut: str) -> HttpResponseRedirect:
+    """Revient à la page d'origine si c'est un chemin interne au site, sinon à `defaut`.
+
+    Le texte reçu n'est jamais interprété comme un nom de vue (évite une erreur 500).
+    """
     suivant = request.POST.get("suivant", "")
-    if url_has_allowed_host_and_scheme(suivant, allowed_hosts={request.get_host()}):
-        return suivant
-    return defaut
+    est_interne = suivant.startswith("/") and url_has_allowed_host_and_scheme(
+        suivant, allowed_hosts={request.get_host()}
+    )
+    return HttpResponseRedirect(suivant if est_interne else defaut)
 
 
 @client_requis
@@ -39,7 +44,7 @@ def ajouter(request, type_element, pk):
     element = get_object_or_404(modele.objects.visibles(), pk=pk)
     modele_favori.objects.get_or_create(client=request.user, **{champ: element})
     messages.success(request, f"« {element} » a été ajouté à vos favoris.")
-    return redirect(_page_suivante(request, reverse(page_detail, args=[pk])))
+    return _rediriger(request, reverse(page_detail, args=[pk]))
 
 
 @client_requis
@@ -49,7 +54,7 @@ def retirer(request, type_element, pk):
     supprimes, _ = modele_favori.objects.filter(client=request.user, **{f"{champ}_id": pk}).delete()
     if supprimes:
         messages.success(request, "L'élément a été retiré de vos favoris.")
-    return redirect(_page_suivante(request, reverse("mes_favoris")))
+    return _rediriger(request, reverse("mes_favoris"))
 
 
 @client_requis
