@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "skills": {
+    "django-expert": {
+      "source": "vintasoftware/django-ai-plugins",
+      "sourceType": "github",
+      "skillPath": "skills/django-expert/SKILL.md",
+      "computedHash": "3efd4c5513e401438dd3c275a7ce7c7838566bfc455d22ed731fbc5879cb56c1"
+    },
+    "python-async-best-practices": {
+      "source": "nathan-gage/python-best-practices",
+      "sourceType": "github",
+      "skillPath": "skills/python-async-best-practices/SKILL.md",
+      "computedHash": "d55348481cf6b2f6118352cd6be53a4638df17841084cd731d26e0878f273897"
+    },
+    "python-best-practices": {
+      "source": "nathan-gage/python-best-practices",
+      "sourceType": "github",
+      "skillPath": "skills/python-best-practices/SKILL.md",
+      "computedHash": "deb37ee615175e50fe9172405daaac4796d2451bae72e77a32bbd65eb37439f2"
+    },
+    "python-pytest": {
+      "source": "nathan-gage/python-best-practices",
+      "sourceType": "github",
+      "skillPath": "skills/python-pytest/SKILL.md",
+      "computedHash": "51c30eeea19ddcfdd3ddab8c1226c49177606b83929c50c6d9fc68e82a481903"
+    }
+  }
+}
