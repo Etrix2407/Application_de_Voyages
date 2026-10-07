@@ -1,13 +1,8 @@
 """Gestion des comptes du personnel par l'administrateur."""
 
-from django.contrib.auth.tokens import default_token_generator
 from django.core.exceptions import ValidationError
-from django.core.mail import send_mail
-from django.template.loader import render_to_string
-from django.urls import reverse
-from django.utils.encoding import force_bytes
-from django.utils.http import urlsafe_base64_encode
 
+from .emails import envoyer_lien_mot_de_passe
 from .models import Utilisateur
 
 
@@ -25,15 +20,7 @@ def verifier_action_sur_soi(cible: Utilisateur, acteur: Utilisateur) -> None:
 
 
 def envoyer_lien_activation(request, agent: Utilisateur) -> None:
-    """Envoie à l'agent un lien (valable 1 heure) pour choisir son mot de passe."""
-    lien = request.build_absolute_uri(
-        reverse(
-            "reinitialisation",
-            kwargs={
-                "uidb64": urlsafe_base64_encode(force_bytes(agent.pk)),
-                "token": default_token_generator.make_token(agent),
-            },
-        )
+    """Envoie à l'agent un lien pour choisir son mot de passe."""
+    envoyer_lien_mot_de_passe(
+        request, agent, "Activation de votre compte", "comptes/email_activation_agent.txt"
     )
-    corps = render_to_string("comptes/email_activation_agent.txt", {"agent": agent, "lien": lien})
-    send_mail("Activation de votre compte", corps, None, [agent.email])

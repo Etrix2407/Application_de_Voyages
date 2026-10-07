@@ -86,6 +86,13 @@ class ProfilClientForm(forms.ModelForm):
         self.fields["date_naissance"].required = True
 
 
+class CorrectionClientForm(ProfilClientForm):
+    """Correction par un agent : ni mot de passe ni e-mail (identifiant géré par le client)."""
+
+    class Meta(ProfilClientForm.Meta):
+        fields = tuple(champ for champ in CHAMPS_CLIENT if champ != "email")
+
+
 class SuppressionCompteForm(forms.Form):
     mot_de_passe = forms.CharField(
         label="Votre mot de passe",
