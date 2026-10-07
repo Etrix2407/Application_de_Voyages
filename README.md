@@ -47,3 +47,9 @@ python manage.py test
 - Mots de passe hachés, 12 caractères minimum avec au moins une lettre et un chiffre.
 - Lien « mot de passe oublié » valable 1 heure.
 - Connexion bloquée 15 minutes après 5 échecs pour une même adresse e-mail. Le compteur utilise le cache Django (en mémoire par défaut) : en production avec plusieurs processus, configurer un cache partagé.
+
+## Gestion du personnel
+
+- L'administrateur (créé avec `createsuperuser`) gère le personnel depuis le menu « Personnel ».
+- Un agent créé reçoit un e-mail avec un lien (valable 1 heure) pour choisir son mot de passe ; l'administrateur peut renvoyer un lien.
+- L'administrateur peut modifier, promouvoir administrateur, rétrograder, désactiver, réactiver ou supprimer un membre du personnel, mais jamais son propre compte (il reste donc toujours un administrateur actif).

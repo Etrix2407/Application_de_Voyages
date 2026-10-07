@@ -15,6 +15,23 @@ urlpatterns = [
         name="changer_mot_de_passe",
     ),
     path("profil/supprimer/", views.supprimer_compte, name="supprimer_compte"),
+    path("personnel/", views.liste_personnel, name="liste_personnel"),
+    path("personnel/nouveau/", views.creer_agent, name="creer_agent"),
+    path("personnel/<int:pk>/modifier/", views.modifier_membre, name="modifier_membre"),
+    path(
+        "personnel/<int:pk>/desactiver/",
+        views.changer_activation,
+        {"actif": False},
+        name="desactiver_membre",
+    ),
+    path(
+        "personnel/<int:pk>/reactiver/",
+        views.changer_activation,
+        {"actif": True},
+        name="reactiver_membre",
+    ),
+    path("personnel/<int:pk>/renvoyer-lien/", views.renvoyer_lien, name="renvoyer_lien"),
+    path("personnel/<int:pk>/supprimer/", views.supprimer_membre, name="supprimer_membre"),
     path(
         "mot-de-passe-oublie/",
         auth_views.PasswordResetView.as_view(
