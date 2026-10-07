@@ -57,10 +57,24 @@ class FavorisTests(TestCase):
         self.assertRedirects(reponse, reverse("mes_favoris"))
         self.assertFalse(FavoriActivite.objects.exists())
 
-    def test_redirection_externe_ignoree(self):
-        reponse = self.ajouter("activite", self.activite.pk, suivant="https://pirate.example.com/")
+    def test_redirection_externe_ou_invalide_ignoree(self):
+        detail = reverse("detail_activite", args=[self.activite.pk])
+        for suivant in [
+            "https://pirate.example.com/",
+            "//pirate.example.com/",
+            "admin'--",
+            "' OR '1'='1",
+            "mes_favoris",
+        ]:
+            with self.subTest(suivant=suivant):
+                reponse = self.ajouter("activite", self.activite.pk, suivant=suivant)
 
-        self.assertRedirects(reponse, reverse("detail_activite", args=[self.activite.pk]))
+                self.assertRedirects(reponse, detail)
+
+    def test_retour_a_la_page_d_origine(self):
+        reponse = self.retirer("activite", self.activite.pk, suivant="/catalogue/favoris/")
+
+        self.assertRedirects(reponse, reverse("mes_favoris"))
 
     def test_bouton_sur_les_pages_de_detail(self):
         url = reverse("detail_activite", args=[self.activite.pk])
