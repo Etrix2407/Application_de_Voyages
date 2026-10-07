@@ -13,6 +13,7 @@
         <nav aria-label="Navigation principale">
             <ul class="menu">
                 <li><a href="{% url 'accueil' %}">Accueil</a></li>
+                <li><a href="{% url 'catalogue_pays' %}">Nos pays</a></li>
                 {% block menu %}{% endblock %}
                 {% if user.is_authenticated %}
                     {% if user.est_personnel %}

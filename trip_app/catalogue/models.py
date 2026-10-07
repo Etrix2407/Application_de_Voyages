@@ -1,10 +1,22 @@
 """Catalogue : pays, destinations et activités."""
 
+from decimal import Decimal
+
 from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
 from .validators import valider_decalage_horaire
+
+
+def afficher_decalage(heures: Decimal) -> str:
+    """Affiche un décalage horaire lisible : « +5 h 30 », « -6 h », « même heure »."""
+    if not heures:
+        return "même heure qu'en Belgique"
+    signe = "+" if heures > 0 else "-"
+    total_minutes = int(abs(heures) * 60)
+    h, minutes = divmod(total_minutes, 60)
+    return f"{signe}{h} h {minutes:02d}" if minutes else f"{signe}{h} h"
 
 
 def cle_de_nom(nom: str) -> str:
@@ -128,6 +140,12 @@ class Pays(models.Model):
     def save(self, *args, **kwargs) -> None:
         self.nom_cle = cle_de_nom(self.nom)
         super().save(*args, **kwargs)
+
+    def decalage_ete_affiche(self) -> str:
+        return afficher_decalage(self.decalage_ete)
+
+    def decalage_hiver_affiche(self) -> str:
+        return afficher_decalage(self.decalage_hiver)
 
     def peut_etre_supprime(self) -> bool:
         """Règle 5 : un pays qui contient des destinations ou des activités se désactive."""

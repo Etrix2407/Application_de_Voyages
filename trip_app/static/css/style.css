@@ -252,3 +252,42 @@ td {
     height: auto;
     border-radius: 4px;
 }
+
+/* Cartes du catalogue : une colonne sur téléphone, plusieurs sur ordinateur. */
+
+.cartes {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+    gap: 1rem;
+    padding: 0;
+    list-style: none;
+}
+
+.carte {
+    padding: 1rem;
+    border: 2px solid var(--couleur-fond-doux);
+    border-radius: 6px;
+    background: var(--couleur-fond);
+}
+
+.carte h3 {
+    margin-top: 0;
+}
+
+.carte-photo,
+.photo {
+    display: block;
+    width: 100%;
+    height: auto;
+    border-radius: 4px;
+}
+
+.carte-photo {
+    aspect-ratio: 4 / 3;
+    object-fit: cover;
+    margin-bottom: 0.5rem;
+}
+
+.photo {
+    max-width: 40rem;
+}

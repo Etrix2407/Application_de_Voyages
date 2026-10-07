@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block titre %}{{ pays.nom }} — Application de voyage{% endblock %}
+
+{% block contenu %}
+    <p><a href="{% url 'catalogue_pays' %}">← Tous les pays</a></p>
+
+    <h1>{{ pays.nom }}</h1>
+    <p>{{ pays.description|linebreaksbr }}</p>
+
+    <h2>Informations pratiques</h2>
+    <dl class="fiche">
+        <dt>Continent</dt>
+        <dd>{{ pays.get_continent_display }}</dd>
+        <dt>Langue principale</dt>
+        <dd>{{ pays.langue_principale }}</dd>
+        <dt>Monnaie</dt>
+        <dd>{{ pays.monnaie }}</dd>
+        <dt>Visa pour les Belges</dt>
+        <dd>{{ pays.get_visa_display }}</dd>
+        <dt>Décalage horaire avec la Belgique</dt>
+        <dd>{{ pays.decalage_ete_affiche }} en été, {{ pays.decalage_hiver_affiche }} en hiver</dd>
+    </dl>
+
+    <h2>Destinations</h2>
+    {% if destinations %}
+        <ul class="cartes">
+            {% for destination in destinations %}
+                {% include "catalogue/_carte_destination.html" %}
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p>Aucune destination pour le moment.</p>
+    {% endif %}
+
+    <h2>Activités</h2>
+    {% if activites %}
+        <ul class="cartes">
+            {% for activite in activites %}
+                {% include "catalogue/_carte_activite.html" %}
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p>Aucune activité pour le moment.</p>
+    {% endif %}
+{% endblock %}
