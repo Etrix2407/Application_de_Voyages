@@ -4,46 +4,17 @@ from django.core.exceptions import ValidationError
 from django.db.models import ProtectedError
 from django.test import SimpleTestCase, TestCase
 
-from .models import Activite, Categorie, Continent, Destination, Difficulte, Mois, Pays, Visa
-from .validators import valider_decalage_horaire
+from catalogue.models import Activite, Categorie, Continent, Destination, Difficulte, Mois, Pays
+from catalogue.validators import valider_decalage_horaire
 
-
-def creer_pays(nom="Japon", **champs):
-    donnees = {
-        "nom": nom,
-        "continent": Continent.ASIE,
-        "langue_principale": "japonais",
-        "monnaie": "yen",
-        "description": "Description du pays.",
-        "visa": Visa.NON_REQUIS,
-        "decalage_ete": Decimal("7"),
-        "decalage_hiver": Decimal("8"),
-    }
-    donnees.update(champs)
-    return Pays.objects.create(**donnees)
-
-
-def creer_destination(pays, nom="Kyoto", **champs):
-    return Destination.objects.create(pays=pays, nom=nom, description="Description.", **champs)
-
-
-def creer_activite(pays, nom="Cérémonie du thé", **champs):
-    donnees = {
-        "description": "Description.",
-        "categorie": Categorie.CULTURE,
-        "duree_minutes": 90,
-        "prix_par_personne": Decimal("45.00"),
-        "difficulte": Difficulte.FACILE,
-    }
-    donnees.update(champs)
-    return Activite.objects.create(pays=pays, nom=nom, **donnees)
+from .fabriques import creer_activite, creer_destination, creer_pays
 
 
 class PaysTests(TestCase):
     def test_nom_unique_sans_tenir_compte_de_la_casse(self):
-        creer_pays("Japon")
+        creer_pays("Pérou")
         doublon = Pays(
-            nom="JAPON",
+            nom=" PÉROU ",
             continent=Continent.ASIE,
             langue_principale="japonais",
             monnaie="yen",

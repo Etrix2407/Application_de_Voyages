@@ -3,9 +3,13 @@
 from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
-from django.db.models.functions import Lower
 
 from .validators import valider_decalage_horaire
+
+
+def cle_de_nom(nom: str) -> str:
+    """Compare les noms sans tenir compte des majuscules ni des espaces autour."""
+    return nom.strip().casefold()
 
 
 class Continent(models.TextChoices):
@@ -103,22 +107,27 @@ class Pays(models.Model):
     decalage_ete = _champ_decalage("décalage horaire en été")
     decalage_hiver = _champ_decalage("décalage horaire en hiver")
     actif = models.BooleanField(default=True)
+    # Nom normalisé (sans majuscules) garantissant l'unicité, y compris pour les accents.
+    nom_cle = models.CharField(max_length=100, unique=True, editable=False)
 
     objects = PaysQuerySet.as_manager()
 
     class Meta:
         verbose_name_plural = "pays"
         ordering = ["nom"]
-        constraints = [
-            models.UniqueConstraint(
-                Lower("nom"),
-                name="pays_nom_unique",
-                violation_error_message="Un pays avec ce nom existe déjà.",
-            )
-        ]
 
     def __str__(self) -> str:
         return self.nom
+
+    def clean(self) -> None:
+        super().clean()
+        doublons = Pays.objects.filter(nom_cle=cle_de_nom(self.nom)).exclude(pk=self.pk)
+        if self.nom and doublons.exists():
+            raise ValidationError({"nom": "Un pays avec ce nom existe déjà."})
+
+    def save(self, *args, **kwargs) -> None:
+        self.nom_cle = cle_de_nom(self.nom)
+        super().save(*args, **kwargs)
 
     def peut_etre_supprime(self) -> bool:
         """Règle 5 : un pays qui contient des destinations ou des activités se désactive."""

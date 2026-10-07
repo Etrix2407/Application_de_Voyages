@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block titre %}Gestion du catalogue — Application de voyage{% endblock %}
+
+{% block contenu %}
+    <h1>Gestion du catalogue</h1>
+
+    <p><a class="bouton" href="{% url 'gestion_creer_pays' %}">Ajouter un pays</a></p>
+
+    {% if liste_pays %}
+        <div class="tableau-defilant">
+            <table>
+                <caption>Pays</caption>
+                <thead>
+                    <tr>
+                        <th scope="col">Pays</th>
+                        <th scope="col">Continent</th>
+                        <th scope="col">Destinations</th>
+                        <th scope="col">Activités</th>
+                        <th scope="col">État</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for pays in liste_pays %}
+                        <tr>
+                            <td><a href="{% url 'gestion_pays' pays.pk %}">{{ pays.nom }}</a></td>
+                            <td>{{ pays.get_continent_display }}</td>
+                            <td>{{ pays.nb_destinations }}</td>
+                            <td>{{ pays.nb_activites }}</td>
+                            <td>{{ pays.actif|yesno:"Actif,Désactivé" }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <p>Aucun pays pour le moment.</p>
+    {% endif %}
+{% endblock %}

@@ -28,3 +28,6 @@ client_requis = _role_requis(lambda utilisateur: utilisateur.est_client)
 
 # Gestion du personnel : réservée à l'administrateur.
 administrateur_requis = _role_requis(lambda utilisateur: utilisateur.est_administrateur)
+
+# Règle 6 : seuls les agents (et l'administrateur) modifient le catalogue.
+personnel_requis = _role_requis(lambda utilisateur: utilisateur.est_personnel)
