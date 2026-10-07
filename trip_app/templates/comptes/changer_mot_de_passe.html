@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+
+{% block titre %}Changer mon mot de passe — Application de voyage{% endblock %}
+
+{% block contenu %}
+    <h1>Changer mon mot de passe</h1>
+
+    <form method="post" novalidate>
+        {% csrf_token %}
+        {{ form }}
+        <button type="submit">Enregistrer le mot de passe</button>
+    </form>
+
+    <p><a href="{% url 'profil' %}">Retour à mon profil</a></p>
+{% endblock %}

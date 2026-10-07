@@ -7,6 +7,14 @@ urlpatterns = [
     path("inscription/", views.inscription, name="inscription"),
     path("connexion/", views.ConnexionView.as_view(), name="connexion"),
     path("deconnexion/", auth_views.LogoutView.as_view(), name="deconnexion"),
+    path("profil/", views.profil, name="profil"),
+    path("profil/modifier/", views.modifier_profil, name="modifier_profil"),
+    path(
+        "profil/mot-de-passe/",
+        views.ChangementMotDePasseView.as_view(),
+        name="changer_mot_de_passe",
+    ),
+    path("profil/supprimer/", views.supprimer_compte, name="supprimer_compte"),
     path(
         "mot-de-passe-oublie/",
         auth_views.PasswordResetView.as_view(
