@@ -155,8 +155,7 @@ class PersonnelModificationForm(forms.ModelForm):
     def save(self, commit: bool = True) -> Utilisateur:
         membre = super().save(commit=False)
         if membre.role == Role.AGENT:
-            # Un agent n'a pas accès à l'administration technique de Django.
-            membre.is_staff = False
+            # Un agent rétrogradé perd aussi le statut de superutilisateur.
             membre.is_superuser = False
         if commit:
             membre.save()

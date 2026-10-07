@@ -42,7 +42,6 @@ class UtilisateurManager(BaseUserManager):
 
     def create_superuser(self, email: str, password: str | None = None, **champs):
         champs.setdefault("role", Role.ADMINISTRATEUR)
-        champs.setdefault("is_staff", True)
         champs.setdefault("is_superuser", True)
         if champs["role"] != Role.ADMINISTRATEUR:
             raise ValueError("Un superutilisateur doit avoir le rôle administrateur.")
@@ -67,7 +66,6 @@ class Utilisateur(AbstractBaseUser, PermissionsMixin):
     )
 
     is_active = models.BooleanField("actif", default=True)
-    is_staff = models.BooleanField("accès à l'administration Django", default=False)
     date_inscription = models.DateTimeField("date d'inscription", default=timezone.now)
     date_consentement = models.DateTimeField(
         "date d'acceptation de la politique de confidentialité", null=True, blank=True

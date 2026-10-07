@@ -141,13 +141,12 @@ class ModificationMembreTests(TestCase):
         self.agent.refresh_from_db()
         self.assertEqual(self.agent.role, Role.AGENT)
 
-    def test_retrograder_un_superutilisateur_retire_l_acces_technique(self):
+    def test_retrograder_un_superutilisateur_retire_son_statut(self):
         autre_admin = creer_admin(email="admin2@example.com")
 
         self.modifier(autre_admin, role=Role.AGENT)
 
         autre_admin.refresh_from_db()
-        self.assertFalse(autre_admin.is_staff)
         self.assertFalse(autre_admin.is_superuser)
 
     def test_role_client_interdit(self):
