@@ -1,6 +1,7 @@
 """Paramètres Django du projet trip_app."""
 
 import os
+import sys
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -84,6 +85,10 @@ AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
     {"NAME": "comptes.validators.LettreEtChiffreValidator"},
 ]
+
+# Pendant les tests uniquement : hachage rapide pour accélérer la suite (jamais en production).
+if "test" in sys.argv[1:2]:
+    PASSWORD_HASHERS = ["django.contrib.auth.hashers.MD5PasswordHasher"]
 
 
 LANGUAGE_CODE = "fr-be"
