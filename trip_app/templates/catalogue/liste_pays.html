@@ -18,10 +18,7 @@
             <h2 id="continent-{{ forloop.counter }}">{{ continent }}</h2>
             <ul class="cartes">
                 {% for pays in liste_pays %}
-                    <li class="carte">
-                        <h3><a href="{% url 'detail_pays' pays.pk %}">{{ pays.nom }}</a></h3>
-                        <p>{{ pays.description|truncatewords:25 }}</p>
-                    </li>
+                    {% include "catalogue/_carte_pays.html" %}
                 {% endfor %}
             </ul>
         </section>

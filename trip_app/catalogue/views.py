@@ -3,7 +3,9 @@
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, render
 
+from .forms import RechercheForm
 from .models import Activite, Continent, Destination, Pays
+from .recherche import rechercher
 
 
 def liste_pays(request):
@@ -46,3 +48,12 @@ def detail_activite(request, pk):
         Activite.objects.visibles().select_related("pays", "destination"), pk=pk
     )
     return render(request, "catalogue/activite.html", {"activite": activite})
+
+
+@login_required
+def recherche(request):
+    form = RechercheForm(request.GET or None)
+    resultats = None
+    if form.is_valid() and not form.criteres().est_vide():
+        resultats = rechercher(form.criteres())
+    return render(request, "catalogue/recherche.html", {"form": form, "resultats": resultats})
