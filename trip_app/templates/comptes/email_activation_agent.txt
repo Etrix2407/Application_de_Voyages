@@ -1,6 +1,6 @@
-Bonjour {{ agent.prenom }},
+Bonjour {{ utilisateur.prenom }},
 
-Un compte agent a été créé pour vous (numéro d'employé : {{ agent.numero_employe }}).
+Un compte agent a été créé pour vous (numéro d'employé : {{ utilisateur.numero_employe }}).
 Pour choisir votre mot de passe, ouvrez ce lien (valable 1 heure) :
 
 {{ lien }}

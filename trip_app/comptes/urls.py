@@ -1,7 +1,7 @@
 from django.contrib.auth import views as auth_views
 from django.urls import path, reverse_lazy
 
-from . import views
+from . import views, views_clients
 
 urlpatterns = [
     path("inscription/", views.inscription, name="inscription"),
@@ -15,6 +15,13 @@ urlpatterns = [
         name="changer_mot_de_passe",
     ),
     path("profil/supprimer/", views.supprimer_compte, name="supprimer_compte"),
+    path("clients/", views_clients.liste_clients, name="liste_clients"),
+    path("clients/<int:pk>/modifier/", views_clients.modifier_client, name="modifier_client"),
+    path(
+        "clients/<int:pk>/envoyer-lien/",
+        views_clients.envoyer_lien_client,
+        name="envoyer_lien_client",
+    ),
     path("personnel/", views.liste_personnel, name="liste_personnel"),
     path("personnel/nouveau/", views.creer_agent, name="creer_agent"),
     path("personnel/<int:pk>/modifier/", views.modifier_membre, name="modifier_membre"),

@@ -22,6 +22,7 @@
                     {% endif %}
                     {% if user.est_personnel %}
                         <li><a href="{% url 'gestion_liste_pays' %}">Gestion du catalogue</a></li>
+                        <li><a href="{% url 'liste_clients' %}">Clients</a></li>
                     {% endif %}
                     {% if user.est_administrateur %}
                         <li><a href="{% url 'liste_personnel' %}">Personnel</a></li>

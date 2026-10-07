@@ -53,3 +53,12 @@ python manage.py test
 - L'administrateur (créé avec `createsuperuser`) gère le personnel depuis le menu « Personnel ».
 - Un agent créé reçoit un e-mail avec un lien (valable 1 heure) pour choisir son mot de passe ; l'administrateur peut renvoyer un lien.
 - L'administrateur peut modifier, promouvoir administrateur, rétrograder, désactiver, réactiver ou supprimer un membre du personnel, mais jamais son propre compte (il reste donc toujours un administrateur actif).
+
+## Fonctionnalités par rôle
+
+| Rôle | Fonctionnalités |
+|---|---|
+| Visiteur | Liste des pays par continent ; inscription ; connexion |
+| Client | Détail des pays, destinations et activités ; recherche et filtres ; favoris ; profil (modifier, changer le mot de passe, supprimer le compte) |
+| Agent | Consultation ; gestion du catalogue (pays, destinations, activités) ; liste des clients avec recherche, correction de leurs informations (sauf e-mail et mot de passe), envoi d'un lien de mot de passe |
+| Administrateur | Droits de l'agent + gestion du personnel |
