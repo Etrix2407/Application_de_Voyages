@@ -14,6 +14,17 @@
             <ul class="menu">
                 <li><a href="{% url 'accueil' %}">Accueil</a></li>
                 {% block menu %}{% endblock %}
+                {% if user.is_authenticated %}
+                    <li>
+                        <form class="form-deconnexion" method="post" action="{% url 'deconnexion' %}">
+                            {% csrf_token %}
+                            <button type="submit">Se déconnecter ({{ user.prenom }})</button>
+                        </form>
+                    </li>
+                {% else %}
+                    <li><a href="{% url 'connexion' %}">Se connecter</a></li>
+                    <li><a href="{% url 'inscription' %}">Créer un compte</a></li>
+                {% endif %}
             </ul>
         </nav>
     </header>
@@ -31,7 +42,7 @@
     </main>
 
     <footer class="pied">
-        <p>Application de voyage</p>
+        <p>Application de voyage — <a href="{% url 'confidentialite' %}">Politique de confidentialité</a></p>
     </footer>
 </body>
 </html>

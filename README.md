@@ -39,3 +39,11 @@ python manage.py test
 | `DJANGO_DEBUG` | `1` en développement, `0` en production | `1` |
 | `DJANGO_SECRET_KEY` | Clé secrète (obligatoire si `DJANGO_DEBUG=0`) | clé de développement |
 | `DJANGO_ALLOWED_HOSTS` | Hôtes autorisés, séparés par des virgules | vide |
+| `DJANGO_EMAIL_BACKEND` | Moteur d'envoi des e-mails | console (e-mails affichés dans le terminal) |
+| `DJANGO_DEFAULT_FROM_EMAIL` | Expéditeur des e-mails | `ne-pas-repondre@localhost` |
+
+## Sécurité des comptes
+
+- Mots de passe hachés, 12 caractères minimum avec au moins une lettre et un chiffre.
+- Lien « mot de passe oublié » valable 1 heure.
+- Connexion bloquée 15 minutes après 5 échecs pour une même adresse e-mail. Le compteur utilise le cache Django (en mémoire par défaut) : en production avec plusieurs processus, configurer un cache partagé.

@@ -24,6 +24,10 @@ def normaliser_email(email: str) -> str:
 class UtilisateurManager(BaseUserManager):
     use_in_migrations = True
 
+    def get_by_natural_key(self, email: str):
+        """Permet de se connecter quelle que soit la casse saisie."""
+        return self.get(email=normaliser_email(email))
+
     def create_user(self, email: str, password: str | None = None, **champs):
         if not email:
             raise ValueError("L'adresse e-mail est obligatoire.")
@@ -61,6 +65,9 @@ class Utilisateur(AbstractBaseUser, PermissionsMixin):
     is_active = models.BooleanField("actif", default=True)
     is_staff = models.BooleanField("accès à l'administration Django", default=False)
     date_inscription = models.DateTimeField("date d'inscription", default=timezone.now)
+    date_consentement = models.DateTimeField(
+        "date d'acceptation de la politique de confidentialité", null=True, blank=True
+    )
 
     objects = UtilisateurManager()
 

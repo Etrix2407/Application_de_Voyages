@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+
+{% block titre %}E-mail envoyé — Application de voyage{% endblock %}
+
+{% block contenu %}
+    <h1>Vérifiez votre boîte e-mail</h1>
+    <p>Si un compte existe pour cette adresse, un e-mail contenant un lien vient d'être envoyé.</p>
+    <p>Le lien est valable 1 heure. Pensez à regarder dans vos courriers indésirables.</p>
+    <p><a href="{% url 'connexion' %}">Retour à la connexion</a></p>
+{% endblock %}
