@@ -6,7 +6,8 @@ from django.test import SimpleTestCase, TestCase
 from django.urls import reverse
 
 from catalogue.models import Categorie, Continent, Difficulte, Mois
-from catalogue.recherche import Criteres, normaliser, rechercher
+from catalogue.recherche import Criteres, rechercher
+from config.texte import normaliser
 
 from .fabriques import creer_activite, creer_destination, creer_pays
 

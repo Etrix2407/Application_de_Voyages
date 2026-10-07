@@ -5,19 +5,14 @@ utilisé, les types qu'il ne concerne pas sont écartés : par exemple, filtrer 
 catégorie ne montre que des activités.
 """
 
-import unicodedata
 from dataclasses import dataclass, field
 from decimal import Decimal
 
 from django.db.models import Q
 
+from config.texte import normaliser
+
 from .models import Activite, Destination, Pays
-
-
-def normaliser(texte: str) -> str:
-    """Minuscules et sans accents : « Pérou » devient « perou »."""
-    decompose = unicodedata.normalize("NFKD", texte)
-    return "".join(c for c in decompose if not unicodedata.combining(c)).casefold()
 
 
 @dataclass(frozen=True)

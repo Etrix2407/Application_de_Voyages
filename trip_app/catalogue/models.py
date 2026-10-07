@@ -7,6 +7,8 @@ from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
+from config.texte import normaliser
+
 from .validators import valider_decalage_horaire
 
 
@@ -18,11 +20,6 @@ def afficher_decalage(heures: Decimal) -> str:
     total_minutes = int(abs(heures) * 60)
     h, minutes = divmod(total_minutes, 60)
     return f"{signe}{h} h {minutes:02d}" if minutes else f"{signe}{h} h"
-
-
-def cle_de_nom(nom: str) -> str:
-    """Compare les noms sans tenir compte des majuscules ni des espaces autour."""
-    return nom.strip().casefold()
 
 
 class Continent(models.TextChoices):
@@ -120,7 +117,7 @@ class Pays(models.Model):
     decalage_ete = _champ_decalage("décalage horaire en été")
     decalage_hiver = _champ_decalage("décalage horaire en hiver")
     actif = models.BooleanField(default=True)
-    # Nom normalisé (sans majuscules) garantissant l'unicité, y compris pour les accents.
+    # Nom normalisé (sans accents ni majuscules) : « Perou » et « PÉROU » sont des doublons.
     nom_cle = models.CharField(max_length=100, unique=True, editable=False)
 
     objects = PaysQuerySet.as_manager()
@@ -134,12 +131,12 @@ class Pays(models.Model):
 
     def clean(self) -> None:
         super().clean()
-        doublons = Pays.objects.filter(nom_cle=cle_de_nom(self.nom)).exclude(pk=self.pk)
+        doublons = Pays.objects.filter(nom_cle=normaliser(self.nom)).exclude(pk=self.pk)
         if self.nom and doublons.exists():
             raise ValidationError({"nom": "Un pays avec ce nom existe déjà."})
 
     def save(self, *args, **kwargs) -> None:
-        self.nom_cle = cle_de_nom(self.nom)
+        self.nom_cle = normaliser(self.nom)
         super().save(*args, **kwargs)
 
     def decalage_ete_affiche(self) -> str:

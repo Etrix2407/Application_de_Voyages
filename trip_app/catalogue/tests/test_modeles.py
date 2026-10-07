@@ -27,6 +27,20 @@ class PaysTests(TestCase):
             doublon.full_clean()
         self.assertIn("Un pays avec ce nom existe déjà.", str(erreur.exception))
 
+    def test_nom_identique_sans_accents_refuse(self):
+        creer_pays("Pérou")
+
+        with self.assertRaises(ValidationError):
+            Pays(
+                nom="Perou",
+                continent=Continent.AMERIQUE,
+                langue_principale="espagnol",
+                monnaie="sol",
+                description="x",
+                decalage_ete=0,
+                decalage_hiver=0,
+            ).full_clean()
+
     def test_pays_vide_supprimable(self):
         pays = creer_pays()
 
