@@ -1,21 +1,10 @@
-from datetime import date
-
-from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
 
 from catalogue.models import Activite, Destination, Pays
-from comptes.models import Role
+from comptes.tests.fabriques import creer_admin, creer_agent, creer_client
 
 from .fabriques import creer_activite, creer_destination, creer_pays
-
-Utilisateur = get_user_model()
-
-
-def creer_agent():
-    return Utilisateur.objects.create_user(
-        "agent@example.com", "voyage2026ok", nom="Martin", prenom="Luc", role=Role.AGENT
-    )
 
 
 def donnees_pays(**champs):
@@ -72,11 +61,7 @@ class AccesGestionTests(TestCase):
         ]
 
     def test_client_refuse(self):
-        self.client.force_login(
-            Utilisateur.objects.create_user(
-                "c@example.com", "voyage2026ok", nom="D", prenom="M", date_naissance=date(1950, 1, 1)
-            )
-        )
+        self.client.force_login(creer_client())
 
         for url in self.urls():
             with self.subTest(url=url):
@@ -90,10 +75,7 @@ class AccesGestionTests(TestCase):
                 self.assertRedirects(self.client.get(url), f"{reverse('connexion')}?next={url}")
 
     def test_agent_et_administrateur_autorises(self):
-        admin = Utilisateur.objects.create_superuser(
-            "admin@example.com", "voyage2026ok", nom="D", prenom="A"
-        )
-        for utilisateur in [creer_agent(), admin]:
+        for utilisateur in [creer_agent(), creer_admin()]:
             self.client.force_login(utilisateur)
             with self.subTest(role=utilisateur.role):
                 self.assertEqual(self.client.get(reverse("gestion_liste_pays")).status_code, 200)

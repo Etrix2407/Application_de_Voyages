@@ -10,23 +10,9 @@ from django.utils import timezone
 from comptes.models import Role
 from comptes.validators import valider_telephone_belge
 
+from .fabriques import MOT_DE_PASSE, creer_agent, creer_client
+
 Utilisateur = get_user_model()
-
-MOT_DE_PASSE = "voyage2026ok"
-
-
-def creer_client(email="client@example.com", **champs):
-    champs.setdefault("nom", "Dupont")
-    champs.setdefault("prenom", "Marie")
-    champs.setdefault("date_naissance", date(1955, 4, 12))
-    return Utilisateur.objects.create_user(email, MOT_DE_PASSE, **champs)
-
-
-def creer_agent(email="agent@example.com", **champs):
-    champs.setdefault("nom", "Martin")
-    champs.setdefault("prenom", "Luc")
-    return Utilisateur.objects.create_user(email, MOT_DE_PASSE, role=Role.AGENT, **champs)
-
 
 class CreationUtilisateurTests(TestCase):
     def test_client_par_defaut(self):

@@ -1,5 +1,4 @@
 import re
-from datetime import date
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -11,10 +10,9 @@ from django.urls import reverse
 from comptes import limitation
 from comptes.models import Role
 
+from .fabriques import MOT_DE_PASSE, creer_client
+
 Utilisateur = get_user_model()
-
-MOT_DE_PASSE = "voyage2026ok"
-
 
 def donnees_inscription(**champs):
     donnees = {
@@ -29,13 +27,6 @@ def donnees_inscription(**champs):
     }
     donnees.update(champs)
     return donnees
-
-
-def creer_client(email="client@example.com", **champs):
-    champs.setdefault("nom", "Dupont")
-    champs.setdefault("prenom", "Marie")
-    champs.setdefault("date_naissance", date(1955, 4, 12))
-    return Utilisateur.objects.create_user(email, MOT_DE_PASSE, **champs)
 
 
 class InscriptionTests(TestCase):

@@ -1,5 +1,4 @@
 import re
-from datetime import date
 
 from django.contrib.auth import get_user_model
 from django.core import mail
@@ -8,26 +7,9 @@ from django.urls import reverse
 
 from comptes.models import Role
 
+from .fabriques import creer_admin, creer_agent, creer_client
+
 Utilisateur = get_user_model()
-
-MOT_DE_PASSE = "voyage2026ok"
-
-
-def creer_admin(email="gerante@example.com"):
-    return Utilisateur.objects.create_superuser(email, MOT_DE_PASSE, nom="Durand", prenom="Anne")
-
-
-def creer_agent(email="agent@example.com", **champs):
-    return Utilisateur.objects.create_user(
-        email, MOT_DE_PASSE, nom="Martin", prenom="Luc", role=Role.AGENT, **champs
-    )
-
-
-def creer_client(email="client@example.com"):
-    return Utilisateur.objects.create_user(
-        email, MOT_DE_PASSE, nom="Dupont", prenom="Marie", date_naissance=date(1955, 4, 12)
-    )
-
 
 class AccesPersonnelTests(TestCase):
     def test_reserve_a_l_administrateur(self):
@@ -141,13 +123,12 @@ class ModificationMembreTests(TestCase):
         self.agent.refresh_from_db()
         self.assertEqual(self.agent.role, Role.AGENT)
 
-    def test_retrograder_un_superutilisateur_retire_l_acces_technique(self):
+    def test_retrograder_un_superutilisateur_retire_son_statut(self):
         autre_admin = creer_admin(email="admin2@example.com")
 
         self.modifier(autre_admin, role=Role.AGENT)
 
         autre_admin.refresh_from_db()
-        self.assertFalse(autre_admin.is_staff)
         self.assertFalse(autre_admin.is_superuser)
 
     def test_role_client_interdit(self):

@@ -22,7 +22,6 @@ ALLOWED_HOSTS = [
 
 
 INSTALLED_APPS = [
-    "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
@@ -112,7 +111,22 @@ LOGOUT_REDIRECT_URL = "accueil"
 PASSWORD_RESET_TIMEOUT = 60 * 60
 
 # En développement, les e-mails s'affichent dans le terminal.
+# En production : DJANGO_EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend et réglages SMTP.
 EMAIL_BACKEND = os.environ.get(
     "DJANGO_EMAIL_BACKEND", "django.core.mail.backends.console.EmailBackend"
 )
 DEFAULT_FROM_EMAIL = os.environ.get("DJANGO_DEFAULT_FROM_EMAIL", "ne-pas-repondre@localhost")
+EMAIL_HOST = os.environ.get("DJANGO_EMAIL_HOST", "localhost")
+EMAIL_PORT = int(os.environ.get("DJANGO_EMAIL_PORT", "587"))
+EMAIL_HOST_USER = os.environ.get("DJANGO_EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = os.environ.get("DJANGO_EMAIL_HOST_PASSWORD", "")
+EMAIL_USE_TLS = os.environ.get("DJANGO_EMAIL_USE_TLS", "1") == "1"
+
+
+# Sécurité en production (site servi en HTTPS).
+if not DEBUG:
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_SSL_REDIRECT = os.environ.get("DJANGO_SECURE_SSL_REDIRECT", "1") == "1"
+    # HSTS : à activer seulement une fois le HTTPS validé (ex. 31536000 = 1 an).
+    SECURE_HSTS_SECONDS = int(os.environ.get("DJANGO_HSTS_SECONDS", "0"))

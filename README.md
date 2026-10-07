@@ -1,19 +1,20 @@
 # Application_de_Voyages
 
-Application web (Python 3, Django) pour gérer les comptes des clients et des agents, ainsi qu'un catalogue de destinations et d'activités organisé par pays. Le cahier des charges est résumé dans [Recap.md](Recap.md).
+Application web (Python 3, Django 5.2) pour une agence de voyage. Elle gère les comptes des clients et du personnel, et propose un catalogue de pays, destinations et activités. Le cahier des charges est résumé dans [Recap.md](Recap.md).
 
-## Structure
+## Sommaire
 
-```
-trip_app/
-├── config/            # settings, urls
-├── comptes/           # utilisateurs, inscription, profil, RGPD
-├── catalogue/         # pays, destinations, activités
-├── templates/         # gabarits HTML partagés
-└── static/            # feuilles de style
-```
+- [Démarrage rapide](#démarrage-rapide)
+- [Guide d'utilisation](#guide-dutilisation)
+- [Fonctionnalités par rôle](#fonctionnalités-par-rôle)
+- [Règles de gestion appliquées](#règles-de-gestion-appliquées)
+- [Tests](#tests)
+- [Mise en production](#mise-en-production)
+- [Structure du code](#structure-du-code)
 
-## Installation
+## Démarrage rapide
+
+Prérequis : Python 3.10 ou plus récent.
 
 ```bash
 pip install -r trip_app/requirements.txt
@@ -23,7 +24,105 @@ python manage.py createsuperuser   # compte administrateur (la gérante)
 python manage.py runserver
 ```
 
-L'application est alors disponible sur http://127.0.0.1:8000/.
+Ouvrez ensuite http://127.0.0.1:8000/ et connectez-vous avec le compte administrateur.
+
+### Données de démonstration (facultatif)
+
+Pour essayer l'application sans tout saisir :
+
+```bash
+python manage.py charger_demo
+```
+
+La commande crée :
+
+- 3 pays **fictifs** dont le nom commence par « Exemple — ». Leurs langue, monnaie et description sont inventées : ce ne sont **pas** de vraies informations de voyage. L'un des pays est désactivé, pour montrer ce que voient les clients.
+- Un compte client `client.demo@example.com` et un compte agent `agent.demo@example.com`. Leurs mots de passe sont générés au hasard et **affichés dans le terminal** : notez-les.
+
+La commande refuse de s'exécuter en production (`DJANGO_DEBUG=0`). Elle peut être relancée sans créer de doublons.
+
+### E-mails en développement
+
+En développement, aucun e-mail n'est réellement envoyé : il s'affiche dans le terminal où tourne `runserver`. C'est le cas des liens « mot de passe oublié » et des liens d'activation des agents. Copiez le lien affiché dans le navigateur.
+
+## Guide d'utilisation
+
+### Premier démarrage (administrateur)
+
+1. Créez le compte de la gérante avec `python manage.py createsuperuser` (e-mail, nom, prénom, mot de passe).
+2. Connectez-vous, puis ouvrez le menu **Personnel** et cliquez sur **Créer un agent**.
+3. L'agent reçoit un e-mail avec un lien valable 1 heure pour choisir son mot de passe. S'il a expiré, utilisez **Envoyer un lien de mot de passe** dans la liste du personnel.
+4. Depuis **Personnel**, l'administrateur peut aussi :
+   - modifier un membre ;
+   - le promouvoir administrateur ou le rétrograder ;
+   - le désactiver (il est déconnecté immédiatement) ou le réactiver ;
+   - le supprimer.
+
+   Il ne peut jamais faire ces actions sur son propre compte.
+
+### Gérer le catalogue (agent ou administrateur)
+
+1. Menu **Gestion du catalogue**, puis **Ajouter un pays**.
+2. Cliquez sur le nom du pays pour ouvrir sa fiche. Ajoutez-y des **destinations**, puis des **activités**. Une activité peut être liée à une destination du même pays, ou à aucune.
+3. Pour **masquer** un élément aux clients, modifiez-le et décochez **Actif** :
+   - un pays désactivé masque toutes ses destinations et activités ;
+   - une destination désactivée masque ses activités.
+4. Un pays qui contient des destinations ou des activités **ne peut pas être supprimé** : désactivez-le.
+
+Formats à respecter :
+
+| Champ | Format |
+|---|---|
+| Décalage horaire (été / hiver) | Heures par rapport à la Belgique, par quart d'heure : `5.5`, `-6`, `5.75` |
+| Période idéale | Mois de début et mois de fin ; peut chevaucher l'année (novembre → mars). Facultative |
+| Durée d'une activité | En minutes : `90` pour 1 h 30 |
+| Photo | Adresse complète d'une image (`https://…`). Facultative |
+| Prix | En euros. Le prix « à partir de » d'une destination est facultatif |
+
+### Gérer les clients (agent ou administrateur)
+
+1. Menu **Clients** : liste par pages de 25, avec recherche par nom, prénom ou e-mail (sans tenir compte des accents).
+2. **Corriger** permet de modifier le prénom, le nom, le téléphone et la date de naissance. L'e-mail et le mot de passe restent gérés par le client.
+3. **Envoyer un lien de mot de passe** : le client reçoit un lien valable 1 heure pour choisir un nouveau mot de passe. L'agent ne voit jamais le mot de passe.
+
+### Utiliser l'application (client)
+
+1. **Créer un compte** : remplissez le formulaire et acceptez la politique de confidentialité. Le téléphone est facultatif ; s'il est rempli, il doit être un numéro belge.
+2. **Nos pays** : la liste des pays par continent est visible par tous. Le détail des pays, destinations et activités demande d'être connecté.
+3. **Rechercher** : recherche par mot-clé (sans tenir compte des accents) et filtres. Un filtre ne s'applique qu'au type de résultat qu'il concerne :
+
+   | Filtre | S'applique à |
+   |---|---|
+   | Continent | Pays, destinations et activités |
+   | Budget maximum | Destinations (prix « à partir de » ; une destination sans prix reste affichée) et activités (prix par personne) |
+   | Mois de voyage | Destinations dont la période idéale inclut ce mois |
+   | Catégorie, difficulté, âge du voyageur | Activités |
+
+4. **Favoris** : le bouton « Ajouter à mes favoris » se trouve sur la page d'une destination ou d'une activité. Retrouvez-les dans **Mes favoris**. Un favori devenu indisponible y reste signalé et peut être retiré.
+5. **Mon profil** : modifier ses informations, changer son mot de passe ou **supprimer son compte**. La suppression est définitive et efface aussi les favoris.
+
+### Mot de passe oublié
+
+Sur la page de connexion, **Mot de passe oublié ?** envoie un lien valable 1 heure. Après 5 tentatives de connexion échouées, la connexion est bloquée 15 minutes pour cette adresse e-mail.
+
+## Fonctionnalités par rôle
+
+| Rôle | Fonctionnalités |
+|---|---|
+| Visiteur | Liste des pays par continent ; inscription ; connexion |
+| Client | Détail des pays, destinations et activités ; recherche et filtres ; favoris ; profil (modifier, changer le mot de passe, supprimer le compte) |
+| Agent | Consultation et recherche ; gestion du catalogue ; liste des clients, correction de leurs informations (sauf e-mail et mot de passe), envoi d'un lien de mot de passe ; profil (consultation, changement du mot de passe) |
+| Administrateur | Droits de l'agent + gestion du personnel |
+
+## Règles de gestion appliquées
+
+- Un compte = une adresse e-mail unique, sans tenir compte des majuscules.
+- Mots de passe hachés (jamais stockés en clair) : au moins 12 caractères, avec au moins une lettre et un chiffre. Les mots de passe trop courants ou trop proches du nom ou de l'e-mail sont refusés.
+- Un nom de pays est unique, sans tenir compte des majuscules ni des accents (« Perou » = « Pérou »).
+- Un client ne voit jamais les données d'un autre client ni celles du personnel. Les agents ne voient pas les favoris des clients.
+- RGPD : consentement enregistré à l'inscription, page [politique de confidentialité](trip_app/templates/confidentialite.html), suppression réelle du compte par le client.
+
+> **À compléter avant la mise en ligne :** les mentions marquées « [À COMPLÉTER] » dans la politique de confidentialité (responsable du traitement, contact, durée de conservation).
 
 ## Tests
 
@@ -32,33 +131,46 @@ cd trip_app
 python manage.py test
 ```
 
-## Variables d'environnement
+Les tests utilisent un hachage de mot de passe rapide pour aller plus vite. L'application, elle, garde un hachage sécurisé (PBKDF2).
+
+## Mise en production
+
+Réglez ces variables d'environnement :
 
 | Variable | Rôle | Défaut |
 |---|---|---|
 | `DJANGO_DEBUG` | `1` en développement, `0` en production | `1` |
-| `DJANGO_SECRET_KEY` | Clé secrète (obligatoire si `DJANGO_DEBUG=0`) | clé de développement |
-| `DJANGO_ALLOWED_HOSTS` | Hôtes autorisés, séparés par des virgules | vide |
-| `DJANGO_EMAIL_BACKEND` | Moteur d'envoi des e-mails | console (e-mails affichés dans le terminal) |
+| `DJANGO_SECRET_KEY` | Clé secrète longue et aléatoire (obligatoire si `DJANGO_DEBUG=0`) | clé de développement |
+| `DJANGO_ALLOWED_HOSTS` | Noms de domaine autorisés, séparés par des virgules | vide |
+| `DJANGO_EMAIL_BACKEND` | `django.core.mail.backends.smtp.EmailBackend` pour envoyer de vrais e-mails | console |
+| `DJANGO_EMAIL_HOST` / `DJANGO_EMAIL_PORT` | Serveur SMTP | `localhost` / `587` |
+| `DJANGO_EMAIL_HOST_USER` / `DJANGO_EMAIL_HOST_PASSWORD` | Identifiants SMTP | vides |
+| `DJANGO_EMAIL_USE_TLS` | `1` pour chiffrer la connexion SMTP | `1` |
 | `DJANGO_DEFAULT_FROM_EMAIL` | Expéditeur des e-mails | `ne-pas-repondre@localhost` |
+| `DJANGO_SECURE_SSL_REDIRECT` | `1` pour rediriger HTTP vers HTTPS | `1` |
+| `DJANGO_HSTS_SECONDS` | Durée HSTS en secondes (ex. `31536000`), à activer une fois le HTTPS validé | `0` |
 
-## Sécurité des comptes
+Avec `DJANGO_DEBUG=0`, les cookies de session et CSRF ne sont envoyés qu'en HTTPS. Vérifiez la configuration avec :
 
-- Mots de passe hachés, 12 caractères minimum avec au moins une lettre et un chiffre.
-- Lien « mot de passe oublié » valable 1 heure.
-- Connexion bloquée 15 minutes après 5 échecs pour une même adresse e-mail. Le compteur utilise le cache Django (en mémoire par défaut) : en production avec plusieurs processus, configurer un cache partagé.
+```bash
+python manage.py check --deploy
+python manage.py collectstatic
+```
 
-## Gestion du personnel
+Points d'attention :
 
-- L'administrateur (créé avec `createsuperuser`) gère le personnel depuis le menu « Personnel ».
-- Un agent créé reçoit un e-mail avec un lien (valable 1 heure) pour choisir son mot de passe ; l'administrateur peut renvoyer un lien.
-- L'administrateur peut modifier, promouvoir administrateur, rétrograder, désactiver, réactiver ou supprimer un membre du personnel, mais jamais son propre compte (il reste donc toujours un administrateur actif).
+- **Ne committez jamais** la clé secrète ni les identifiants SMTP.
+- Le blocage après 5 échecs de connexion utilise le cache Django, en mémoire par défaut. Avec plusieurs processus serveur, configurez un cache partagé.
+- SQLite suffit pour le volume prévu (environ 1 000 clients).
 
-## Fonctionnalités par rôle
+## Structure du code
 
-| Rôle | Fonctionnalités |
-|---|---|
-| Visiteur | Liste des pays par continent ; inscription ; connexion |
-| Client | Détail des pays, destinations et activités ; recherche et filtres ; favoris ; profil (modifier, changer le mot de passe, supprimer le compte) |
-| Agent | Consultation ; gestion du catalogue (pays, destinations, activités) ; liste des clients avec recherche, correction de leurs informations (sauf e-mail et mot de passe), envoi d'un lien de mot de passe |
-| Administrateur | Droits de l'agent + gestion du personnel |
+```
+trip_app/
+├── config/            # paramètres, routes, outils partagés (texte.py)
+├── comptes/           # utilisateurs, inscription, connexion, profil, personnel, clients, RGPD
+├── catalogue/         # pays, destinations, activités, recherche, favoris, gestion
+│   └── management/commands/charger_demo.py
+├── templates/         # gabarits HTML (base.html, pages d'erreur, comptes/, catalogue/)
+└── static/css/        # feuille de style (texte lisible, adaptée au mobile)
+```

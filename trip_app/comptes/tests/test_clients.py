@@ -1,7 +1,6 @@
 import re
 from datetime import date
 
-from django.contrib.auth import get_user_model
 from django.core import mail
 from django.test import TestCase
 from django.urls import reverse
@@ -9,21 +8,7 @@ from django.urls import reverse
 from comptes.models import Role
 from comptes.views_clients import CLIENTS_PAR_PAGE
 
-Utilisateur = get_user_model()
-
-MOT_DE_PASSE = "voyage2026ok"
-
-
-def creer_client(email="client@example.com", nom="Dupont", prenom="Marie"):
-    return Utilisateur.objects.create_user(
-        email, MOT_DE_PASSE, nom=nom, prenom=prenom, date_naissance=date(1955, 4, 12)
-    )
-
-
-def creer_agent(email="agent@example.com"):
-    return Utilisateur.objects.create_user(
-        email, MOT_DE_PASSE, nom="Martin", prenom="Luc", role=Role.AGENT
-    )
+from .fabriques import MOT_DE_PASSE, creer_admin, creer_agent, creer_client
 
 
 class AccesClientsTests(TestCase):
@@ -42,10 +27,7 @@ class AccesClientsTests(TestCase):
         self.assertRedirects(self.client.get(url), f"{reverse('connexion')}?next={url}")
 
     def test_agent_et_administrateur_autorises(self):
-        admin = Utilisateur.objects.create_superuser(
-            "admin@example.com", MOT_DE_PASSE, nom="D", prenom="A"
-        )
-        for utilisateur in [creer_agent(), admin]:
+        for utilisateur in [creer_agent(), creer_admin()]:
             self.client.force_login(utilisateur)
             with self.subTest(role=utilisateur.role):
                 self.assertEqual(self.client.get(reverse("liste_clients")).status_code, 200)

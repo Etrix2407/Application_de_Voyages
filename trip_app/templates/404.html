@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+
+{% block titre %}Page introuvable — Application de voyage{% endblock %}
+
+{% block contenu %}
+    <h1>Page introuvable</h1>
+    <p>Cette page n'existe pas ou n'est plus disponible.</p>
+    <p><a class="bouton" href="{% url 'accueil' %}">Retour à l'accueil</a></p>
+{% endblock %}

@@ -1,6 +1,5 @@
 """Routes principales du projet."""
 
-from django.contrib import admin
 from django.urls import include, path
 from django.views.generic import TemplateView
 
@@ -13,5 +12,4 @@ urlpatterns = [
     ),
     path("comptes/", include("comptes.urls")),
     path("catalogue/", include("catalogue.urls")),
-    path("admin/", admin.site.urls),
 ]

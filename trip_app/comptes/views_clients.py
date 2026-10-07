@@ -5,7 +5,7 @@ from django.core.paginator import Paginator
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
-from catalogue.recherche import normaliser
+from config.texte import normaliser
 
 from .decorators import personnel_requis
 from .emails import envoyer_lien_mot_de_passe
