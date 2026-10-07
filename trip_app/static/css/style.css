@@ -161,3 +161,25 @@ button:hover {
     color: var(--couleur-erreur);
     padding-left: 1rem;
 }
+
+.helptext {
+    display: block;
+    margin-top: 0.25rem;
+    color: #444444;
+}
+
+.helptext ul {
+    margin: 0.25rem 0;
+}
+
+.form-deconnexion button {
+    margin: 0;
+    padding: 0;
+    color: #ffffff;
+    text-decoration: underline;
+    background: none;
+}
+
+.form-deconnexion button:hover {
+    background: none;
+}

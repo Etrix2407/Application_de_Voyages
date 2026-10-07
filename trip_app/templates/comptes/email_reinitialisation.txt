@@ -1,0 +1,8 @@
+Bonjour {{ user.prenom }},
+
+Vous avez demandé à changer le mot de passe de votre compte.
+Pour choisir un nouveau mot de passe, ouvrez ce lien (valable 1 heure) :
+
+{{ protocol }}://{{ domain }}{% url 'reinitialisation' uidb64=uid token=token %}
+
+Si vous n'êtes pas à l'origine de cette demande, ignorez simplement cet e-mail : votre mot de passe ne changera pas.

@@ -7,8 +7,8 @@ from django.db import IntegrityError
 from django.test import SimpleTestCase, TestCase
 from django.utils import timezone
 
-from .models import Role
-from .validators import valider_telephone_belge
+from comptes.models import Role
+from comptes.validators import valider_telephone_belge
 
 Utilisateur = get_user_model()
 
