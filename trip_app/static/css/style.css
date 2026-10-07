@@ -183,3 +183,28 @@ button:hover {
 .form-deconnexion button:hover {
     background: none;
 }
+
+.fiche dt {
+    margin-top: 0.75rem;
+    font-weight: bold;
+}
+
+.fiche dd {
+    margin-left: 0;
+}
+
+.actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    padding: 0;
+    list-style: none;
+}
+
+.bouton-danger {
+    background: var(--couleur-erreur);
+}
+
+.bouton-danger:hover {
+    background: #7a1013;
+}

@@ -15,6 +15,7 @@
                 <li><a href="{% url 'accueil' %}">Accueil</a></li>
                 {% block menu %}{% endblock %}
                 {% if user.is_authenticated %}
+                    <li><a href="{% url 'profil' %}">Mon profil</a></li>
                     <li>
                         <form class="form-deconnexion" method="post" action="{% url 'deconnexion' %}">
                             {% csrf_token %}

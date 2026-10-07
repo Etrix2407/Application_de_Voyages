@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block titre %}Supprimer mon compte — Application de voyage{% endblock %}
+
+{% block contenu %}
+    <h1>Supprimer mon compte</h1>
+
+    <p><strong>Attention : cette action est définitive.</strong></p>
+    <p>Votre compte et toutes vos données personnelles seront effacés. Vous ne pourrez pas les récupérer.</p>
+
+    <form method="post" novalidate>
+        {% csrf_token %}
+        {{ form }}
+        <button type="submit" class="bouton-danger">Supprimer définitivement mon compte</button>
+    </form>
+
+    <p><a href="{% url 'profil' %}">Annuler et revenir à mon profil</a></p>
+{% endblock %}

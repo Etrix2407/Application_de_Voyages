@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+
+{% block titre %}Accès refusé — Application de voyage{% endblock %}
+
+{% block contenu %}
+    <h1>Accès refusé</h1>
+    <p>Vous n'avez pas accès à cette page.</p>
+    <p><a href="{% url 'accueil' %}">Retour à l'accueil</a></p>
+{% endblock %}
