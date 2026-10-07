@@ -1,4 +1,4 @@
-"""Formulaires des comptes : inscription, connexion, profil."""
+"""Formulaires des comptes : inscription, connexion, profil, personnel."""
 
 from django import forms
 from django.contrib.auth.forms import AuthenticationForm, BaseUserCreationForm
@@ -6,7 +6,8 @@ from django.core.exceptions import ValidationError
 from django.utils import timezone
 
 from . import limitation
-from .models import Role, Utilisateur
+from .personnel import verifier_action_sur_soi
+from .models import ROLES_PERSONNEL, Role, Utilisateur
 
 
 CHAMPS_CLIENT = ("prenom", "nom", "email", "telephone", "date_naissance")
@@ -101,3 +102,55 @@ class SuppressionCompteForm(forms.Form):
         if not self.utilisateur.check_password(mot_de_passe):
             raise ValidationError("Mot de passe incorrect.", code="mot_de_passe_incorrect")
         return mot_de_passe
+
+
+class AgentCreationForm(forms.ModelForm):
+    """Création d'un agent sans mot de passe : il le choisira via le lien reçu par e-mail."""
+
+    class Meta:
+        model = Utilisateur
+        fields = ("prenom", "nom", "email")
+        labels = {"email": "Adresse e-mail professionnelle"}
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Le rôle doit être connu avant la validation du modèle (règles propres aux clients).
+        self.instance.role = Role.AGENT
+
+    def save(self, commit: bool = True) -> Utilisateur:
+        agent = super().save(commit=False)
+        agent.set_unusable_password()
+        if commit:
+            agent.save()
+        return agent
+
+
+class PersonnelModificationForm(forms.ModelForm):
+    role = forms.ChoiceField(
+        label="Rôle", choices=[(role.value, role.label) for role in ROLES_PERSONNEL]
+    )
+
+    class Meta:
+        model = Utilisateur
+        fields = ("prenom", "nom", "email", "role")
+        labels = {"email": "Adresse e-mail professionnelle"}
+
+    def __init__(self, *args, acteur: Utilisateur, **kwargs):
+        self.acteur = acteur
+        super().__init__(*args, **kwargs)
+
+    def clean_role(self) -> str:
+        role = self.cleaned_data["role"]
+        if role != self.instance.role:
+            verifier_action_sur_soi(self.instance, self.acteur)
+        return role
+
+    def save(self, commit: bool = True) -> Utilisateur:
+        membre = super().save(commit=False)
+        if membre.role == Role.AGENT:
+            # Un agent n'a pas accès à l'administration technique de Django.
+            membre.is_staff = False
+            membre.is_superuser = False
+        if commit:
+            membre.save()
+        return membre

@@ -16,6 +16,10 @@ class Role(models.TextChoices):
     ADMINISTRATEUR = "administrateur", "Administrateur"
 
 
+# Agents et administrateur ont les droits d'agent.
+ROLES_PERSONNEL = (Role.AGENT, Role.ADMINISTRATEUR)
+
+
 def normaliser_email(email: str) -> str:
     """Les adresses sont comparées sans tenir compte des majuscules."""
     return email.strip().lower()
@@ -88,8 +92,7 @@ class Utilisateur(AbstractBaseUser, PermissionsMixin):
 
     @property
     def est_personnel(self) -> bool:
-        """Agents et administrateur ont les droits d'agent."""
-        return self.role in (Role.AGENT, Role.ADMINISTRATEUR)
+        return self.role in ROLES_PERSONNEL
 
     @property
     def est_administrateur(self) -> bool:

@@ -1,0 +1,8 @@
+Bonjour {{ agent.prenom }},
+
+Un compte agent a été créé pour vous (numéro d'employé : {{ agent.numero_employe }}).
+Pour choisir votre mot de passe, ouvrez ce lien (valable 1 heure) :
+
+{{ lien }}
+
+Si le lien a expiré, demandez à l'administrateur de vous en renvoyer un.

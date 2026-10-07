@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block titre %}Modifier {{ membre.get_full_name }} — Application de voyage{% endblock %}
+
+{% block contenu %}
+    <h1>Modifier {{ membre.get_full_name }}</h1>
+    <p>Numéro d'employé : {{ membre.numero_employe }}</p>
+
+    <form method="post" novalidate>
+        {% csrf_token %}
+        {{ form }}
+        <button type="submit">Enregistrer</button>
+    </form>
+
+    <p><a href="{% url 'liste_personnel' %}">Retour au personnel</a></p>
+{% endblock %}
