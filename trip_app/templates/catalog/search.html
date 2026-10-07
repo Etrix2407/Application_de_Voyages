@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block title %}Rechercher — Application de voyage{% endblock %}
+
+{% block content %}
+    <h1>Rechercher</h1>
+    <p>Remplissez un ou plusieurs champs, puis cliquez sur « Rechercher ».</p>
+
+    <form method="get" novalidate class="search-form">
+        {{ form }}
+        <button type="submit">Rechercher</button>
+        <a class="button button-secondary" href="{% url 'search' %}">Effacer</a>
+    </form>
+
+    {% if results is not None %}
+        <section aria-label="Résultats de la recherche">
+            <p class="result-count" role="status">
+                {% if results.total %}
+                    {{ results.total }} résultat{{ results.total|pluralize }}
+                {% else %}
+                    Aucun résultat
+                {% endif %}
+            </p>
+
+            {% if not results.total %}
+                <p>Essayez avec moins de filtres ou un autre mot-clé.</p>
+            {% endif %}
+
+            {% if results.countries %}
+                <h2>Pays</h2>
+                <ul class="cards">
+                    {% for country in results.countries %}
+                        {% include "catalog/_country_card.html" %}
+                    {% endfor %}
+                </ul>
+            {% endif %}
+
+            {% if results.destinations %}
+                <h2>Destinations</h2>
+                <ul class="cards">
+                    {% for destination in results.destinations %}
+                        {% include "catalog/_destination_card.html" %}
+                    {% endfor %}
+                </ul>
+            {% endif %}
+
+            {% if results.activities %}
+                <h2>Activités</h2>
+                <ul class="cards">
+                    {% for activity in results.activities %}
+                        {% include "catalog/_activity_card.html" %}
+                    {% endfor %}
+                </ul>
+            {% endif %}
+        </section>
+    {% endif %}
+{% endblock %}

@@ -1,0 +1,15 @@
+{% if user.is_client %}
+    {% if is_favorite %}
+        <form method="post" action="{% url 'remove_favorite' item_type item.pk %}">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{{ request.path }}">
+            <button type="submit" class="button-secondary">★ Retirer de mes favoris</button>
+        </form>
+    {% else %}
+        <form method="post" action="{% url 'add_favorite' item_type item.pk %}">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{{ request.path }}">
+            <button type="submit">☆ Ajouter à mes favoris</button>
+        </form>
+    {% endif %}
+{% endif %}

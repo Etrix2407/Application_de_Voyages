@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+
+{% block title %}Modifier mes informations — Application de voyage{% endblock %}
+
+{% block content %}
+    <h1>Modifier mes informations</h1>
+
+    <form method="post" novalidate>
+        {% csrf_token %}
+        {{ form }}
+        <button type="submit">Enregistrer</button>
+    </form>
+
+    <p><a href="{% url 'profile' %}">Retour à mon profil</a></p>
+{% endblock %}

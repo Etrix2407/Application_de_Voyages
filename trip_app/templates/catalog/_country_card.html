@@ -1,0 +1,4 @@
+<li class="card">
+    <h3><a href="{% url 'country_detail' country.pk %}">{{ country.name }}</a></h3>
+    <p>{{ country.description|truncatewords:25 }}</p>
+</li>

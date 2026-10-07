@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block title %}Créer un agent — Application de voyage{% endblock %}
+
+{% block content %}
+    <h1>Créer un agent</h1>
+    <p>Le numéro d'employé est attribué automatiquement. L'agent recevra un e-mail pour choisir son mot de passe.</p>
+
+    <form method="post" novalidate>
+        {% csrf_token %}
+        {{ form }}
+        <button type="submit">Créer le compte</button>
+    </form>
+
+    <p><a href="{% url 'staff_list' %}">Retour au personnel</a></p>
+{% endblock %}

@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+
+{% block title %}Accueil — Application de voyage{% endblock %}
+
+{% block content %}
+    <h1>Bienvenue</h1>
+    <p>Découvrez nos pays, destinations et activités.</p>
+    <p><a class="button" href="{% url 'country_list' %}">Découvrir nos pays</a></p>
+{% endblock %}

@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+
+{% block title %}Clients — Application de voyage{% endblock %}
+
+{% block content %}
+    <h1>Clients</h1>
+
+    <form method="get" class="search-form" role="search">
+        <label for="q">Rechercher un client (nom, prénom ou e-mail)</label>
+        <input type="search" id="q" name="q" value="{{ query }}">
+        <button type="submit">Rechercher</button>
+        {% if query %}
+            <a class="button button-secondary" href="{% url 'client_list' %}">Effacer</a>
+        {% endif %}
+    </form>
+
+    <p class="result-count" role="status">
+        {{ page.paginator.count }} client{{ page.paginator.count|pluralize }}
+    </p>
+
+    {% if page.object_list %}
+        <div class="table-scroll">
+            <table>
+                <caption>Liste des clients{% if page.paginator.num_pages > 1 %}, page {{ page.number }} sur {{ page.paginator.num_pages }}{% endif %}</caption>
+                <thead>
+                    <tr>
+                        <th scope="col">Nom</th>
+                        <th scope="col">E-mail</th>
+                        <th scope="col">Téléphone</th>
+                        <th scope="col">Inscrit le</th>
+                        <th scope="col">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for client in page.object_list %}
+                        <tr>
+                            <td>{{ client.last_name }} {{ client.first_name }}</td>
+                            <td>{{ client.email }}</td>
+                            <td>{{ client.phone|default:"—" }}</td>
+                            <td>{{ client.date_joined|date:"j F Y" }}</td>
+                            <td><a href="{% url 'edit_client' client.pk %}">Corriger</a></td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if page.paginator.num_pages > 1 %}
+            <nav aria-label="Pages de la liste des clients">
+                <ul class="actions">
+                    {% if page.has_previous %}
+                        <li><a class="button" href="?q={{ query|urlencode }}&amp;page={{ page.previous_page_number }}">← Page précédente</a></li>
+                    {% endif %}
+                    {% if page.has_next %}
+                        <li><a class="button" href="?q={{ query|urlencode }}&amp;page={{ page.next_page_number }}">Page suivante →</a></li>
+                    {% endif %}
+                </ul>
+            </nav>
+        {% endif %}
+    {% else %}
+        <p>Aucun client trouvé.</p>
+    {% endif %}
+{% endblock %}

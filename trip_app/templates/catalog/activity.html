@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block title %}{{ activity.name }} — Application de voyage{% endblock %}
+
+{% block content %}
+    <p><a href="{% url 'country_detail' activity.country.pk %}">← {{ activity.country.name }}</a></p>
+
+    <h1>{{ activity.name }}</h1>
+    {% include "catalog/_favorite_button.html" with item_type="activite" item=activity %}
+    <p>{{ activity.description|linebreaksbr }}</p>
+
+    <dl class="details">
+        <dt>Catégorie</dt>
+        <dd>{{ activity.get_category_display }}</dd>
+        <dt>Durée</dt>
+        <dd>{{ activity.duration_display }}</dd>
+        <dt>Prix</dt>
+        <dd>{{ activity.price_per_person }} € par personne</dd>
+        <dt>Niveau de difficulté</dt>
+        <dd>{{ activity.get_difficulty_display }}</dd>
+        <dt>Âge minimum</dt>
+        <dd>{% if activity.minimum_age %}{{ activity.minimum_age }} ans{% else %}Tous âges{% endif %}</dd>
+        <dt>Lieu</dt>
+        <dd>
+            {% if activity.destination %}
+                <a href="{% url 'destination_detail' activity.destination.pk %}">{{ activity.destination.name }}</a>,
+            {% endif %}
+            {{ activity.country.name }}
+        </dd>
+    </dl>
+{% endblock %}

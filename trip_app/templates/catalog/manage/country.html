@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+
+{% block title %}{{ country.name }} — Gestion du catalogue{% endblock %}
+
+{% block content %}
+    <p><a href="{% url 'manage_country_list' %}">← Tous les pays</a></p>
+
+    <h1>{{ country.name }}{% if not country.active %} (désactivé){% endif %}</h1>
+
+    <dl class="details">
+        <dt>Continent</dt>
+        <dd>{{ country.get_continent_display }}</dd>
+        <dt>Langue principale</dt>
+        <dd>{{ country.main_language }}</dd>
+        <dt>Monnaie</dt>
+        <dd>{{ country.currency }}</dd>
+        <dt>Visa pour les Belges</dt>
+        <dd>{{ country.get_visa_display }}</dd>
+        <dt>Décalage horaire avec la Belgique</dt>
+        <dd>{{ country.summer_offset_display }} en été, {{ country.winter_offset_display }} en hiver</dd>
+        <dt>Description</dt>
+        <dd>{{ country.description|linebreaksbr }}</dd>
+    </dl>
+
+    <ul class="actions">
+        <li><a class="button" href="{% url 'manage_edit_country' country.pk %}">Modifier le pays</a></li>
+        <li><a class="button button-danger" href="{% url 'manage_delete_country' country.pk %}">Supprimer le pays</a></li>
+    </ul>
+
+    <h2>Destinations</h2>
+    <p><a class="button" href="{% url 'manage_create_destination' country.pk %}">Ajouter une destination</a></p>
+    {% if destinations %}
+        <div class="table-scroll">
+            <table>
+                <caption>Destinations de {{ country.name }}</caption>
+                <thead>
+                    <tr>
+                        <th scope="col">Photo</th>
+                        <th scope="col">Destination</th>
+                        <th scope="col">Période idéale</th>
+                        <th scope="col">À partir de</th>
+                        <th scope="col">État</th>
+                        <th scope="col">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for destination in destinations %}
+                        <tr>
+                            <td>
+                                {% if destination.photo %}
+                                    <img class="thumbnail" src="{{ destination.photo }}" alt="Photo : {{ destination.name }}" loading="lazy">
+                                {% endif %}
+                            </td>
+                            <td>{{ destination.name }}</td>
+                            <td>{{ destination.ideal_period|default:"—" }}</td>
+                            <td>{% if destination.price_from is not None %}{{ destination.price_from }} €{% else %}—{% endif %}</td>
+                            <td>{{ destination.active|yesno:"Active,Désactivée" }}</td>
+                            <td>
+                                <ul class="actions table-actions">
+                                    <li><a href="{% url 'manage_edit_destination' destination.pk %}">Modifier</a></li>
+                                    <li><a href="{% url 'manage_delete_destination' destination.pk %}">Supprimer</a></li>
+                                </ul>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <p>Aucune destination.</p>
+    {% endif %}
+
+    <h2>Activités</h2>
+    <p><a class="button" href="{% url 'manage_create_activity' country.pk %}">Ajouter une activité</a></p>
+    {% if activities %}
+        <div class="table-scroll">
+            <table>
+                <caption>Activités de {{ country.name }}</caption>
+                <thead>
+                    <tr>
+                        <th scope="col">Activité</th>
+                        <th scope="col">Catégorie</th>
+                        <th scope="col">Destination</th>
+                        <th scope="col">Durée</th>
+                        <th scope="col">Prix / pers.</th>
+                        <th scope="col">État</th>
+                        <th scope="col">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for activity in activities %}
+                        <tr>
+                            <td>{{ activity.name }}</td>
+                            <td>{{ activity.get_category_display }}</td>
+                            <td>{{ activity.destination|default:"—" }}</td>
+                            <td>{{ activity.duration_display }}</td>
+                            <td>{{ activity.price_per_person }} €</td>
+                            <td>{{ activity.active|yesno:"Active,Désactivée" }}</td>
+                            <td>
+                                <ul class="actions table-actions">
+                                    <li><a href="{% url 'manage_edit_activity' activity.pk %}">Modifier</a></li>
+                                    <li><a href="{% url 'manage_delete_activity' activity.pk %}">Supprimer</a></li>
+                                </ul>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <p>Aucune activité.</p>
+    {% endif %}
+{% endblock %}

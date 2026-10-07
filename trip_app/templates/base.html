@@ -3,45 +3,45 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{% block titre %}Application de voyage{% endblock %}</title>
+    <title>{% block title %}Application de voyage{% endblock %}</title>
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
 </head>
 <body>
-    <a class="lien-evitement" href="#contenu">Aller au contenu</a>
-    <header class="entete">
-        <a class="logo" href="{% url 'accueil' %}">Application de voyage</a>
+    <a class="skip-link" href="#content">Aller au contenu</a>
+    <header class="site-header">
+        <a class="logo" href="{% url 'home' %}">Application de voyage</a>
         <nav aria-label="Navigation principale">
             <ul class="menu">
-                <li><a href="{% url 'accueil' %}">Accueil</a></li>
-                <li><a href="{% url 'catalogue_pays' %}">Nos pays</a></li>
+                <li><a href="{% url 'home' %}">Accueil</a></li>
+                <li><a href="{% url 'country_list' %}">Nos pays</a></li>
                 {% if user.is_authenticated %}
-                    <li><a href="{% url 'recherche' %}">Rechercher</a></li>
-                    {% if user.est_client %}
-                        <li><a href="{% url 'mes_favoris' %}">Mes favoris</a></li>
+                    <li><a href="{% url 'search' %}">Rechercher</a></li>
+                    {% if user.is_client %}
+                        <li><a href="{% url 'favorite_list' %}">Mes favoris</a></li>
                     {% endif %}
-                    {% if user.est_personnel %}
-                        <li><a href="{% url 'gestion_liste_pays' %}">Gestion du catalogue</a></li>
-                        <li><a href="{% url 'liste_clients' %}">Clients</a></li>
+                    {% if user.is_staff_member %}
+                        <li><a href="{% url 'manage_country_list' %}">Gestion du catalogue</a></li>
+                        <li><a href="{% url 'client_list' %}">Clients</a></li>
                     {% endif %}
-                    {% if user.est_administrateur %}
-                        <li><a href="{% url 'liste_personnel' %}">Personnel</a></li>
+                    {% if user.is_administrator %}
+                        <li><a href="{% url 'staff_list' %}">Personnel</a></li>
                     {% endif %}
-                    <li><a href="{% url 'profil' %}">Mon profil</a></li>
+                    <li><a href="{% url 'profile' %}">Mon profil</a></li>
                     <li>
-                        <form class="form-deconnexion" method="post" action="{% url 'deconnexion' %}">
+                        <form class="logout-form" method="post" action="{% url 'logout' %}">
                             {% csrf_token %}
-                            <button type="submit">Se déconnecter ({{ user.prenom }})</button>
+                            <button type="submit">Se déconnecter ({{ user.first_name }})</button>
                         </form>
                     </li>
                 {% else %}
-                    <li><a href="{% url 'connexion' %}">Se connecter</a></li>
-                    <li><a href="{% url 'inscription' %}">Créer un compte</a></li>
+                    <li><a href="{% url 'login' %}">Se connecter</a></li>
+                    <li><a href="{% url 'sign_up' %}">Créer un compte</a></li>
                 {% endif %}
             </ul>
         </nav>
     </header>
 
-    <main id="contenu" class="contenu">
+    <main id="content" class="content">
         {% if messages %}
             <ul class="messages" role="status">
                 {% for message in messages %}
@@ -50,11 +50,11 @@
             </ul>
         {% endif %}
 
-        {% block contenu %}{% endblock %}
+        {% block content %}{% endblock %}
     </main>
 
-    <footer class="pied">
-        <p>Application de voyage — <a href="{% url 'confidentialite' %}">Politique de confidentialité</a></p>
+    <footer class="site-footer">
+        <p>Application de voyage — <a href="{% url 'privacy' %}">Politique de confidentialité</a></p>
     </footer>
 </body>
 </html>

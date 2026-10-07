@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+
+{% block title %}Supprimer « {{ item }} » — Gestion du catalogue{% endblock %}
+
+{% block content %}
+    <h1>Supprimer « {{ item }} »</h1>
+
+    <p><strong>Attention : cette action est définitive.</strong></p>
+    {% if consequence %}
+        <p>{{ consequence }}</p>
+    {% endif %}
+    <p>Pour simplement le masquer aux clients, préférez le désactiver.</p>
+
+    <form method="post">
+        {% csrf_token %}
+        <button type="submit" class="button-danger">Supprimer définitivement</button>
+    </form>
+
+    <p><a href="{{ back_url }}">Annuler et revenir</a></p>
+{% endblock %}

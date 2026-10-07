@@ -1,0 +1,12 @@
+<li class="card">
+    {% if destination.photo %}
+        <img class="card-photo" src="{{ destination.photo }}" alt="Photo : {{ destination.name }}" loading="lazy">
+    {% endif %}
+    <h3><a href="{% url 'destination_detail' destination.pk %}">{{ destination.name }}</a></h3>
+    {% if destination.ideal_period %}
+        <p>Période idéale : {{ destination.ideal_period }}</p>
+    {% endif %}
+    {% if destination.price_from is not None %}
+        <p>À partir de {{ destination.price_from }} €</p>
+    {% endif %}
+</li>

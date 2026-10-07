@@ -31,7 +31,7 @@ Ouvrez ensuite http://127.0.0.1:8000/ et connectez-vous avec le compte administr
 Pour essayer l'application sans tout saisir :
 
 ```bash
-python manage.py charger_demo
+python manage.py load_demo
 ```
 
 La commande crée :
@@ -165,12 +165,14 @@ Points d'attention :
 
 ## Structure du code
 
+Le code (identifiants, fichiers, routes internes) est en anglais ; l'interface, les adresses visibles, les commentaires et la documentation sont en français.
+
 ```
 trip_app/
-├── config/            # paramètres, routes, outils partagés (texte.py)
-├── comptes/           # utilisateurs, inscription, connexion, profil, personnel, clients, RGPD
-├── catalogue/         # pays, destinations, activités, recherche, favoris, gestion
-│   └── management/commands/charger_demo.py
-├── templates/         # gabarits HTML (base.html, pages d'erreur, comptes/, catalogue/)
+├── config/            # paramètres, routes, outils partagés (text.py)
+├── accounts/          # utilisateurs, inscription, connexion, profil, personnel, clients, RGPD
+├── catalog/           # pays, destinations, activités, recherche, favoris, gestion
+│   └── management/commands/load_demo.py
+├── templates/         # gabarits HTML (base.html, pages d'erreur, accounts/, catalog/)
 └── static/css/        # feuille de style (texte lisible, adaptée au mobile)
 ```

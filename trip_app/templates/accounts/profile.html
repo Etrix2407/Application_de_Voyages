@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block title %}Mon profil — Application de voyage{% endblock %}
+
+{% block content %}
+    <h1>Mon profil</h1>
+
+    <dl class="details">
+        <dt>Prénom</dt>
+        <dd>{{ user.first_name }}</dd>
+        <dt>Nom</dt>
+        <dd>{{ user.last_name }}</dd>
+        <dt>Adresse e-mail</dt>
+        <dd>{{ user.email }}</dd>
+        {% if user.is_client %}
+            <dt>Téléphone</dt>
+            <dd>{{ user.phone|default:"Non renseigné" }}</dd>
+            <dt>Date de naissance</dt>
+            <dd>{{ user.birth_date|date:"j F Y" }}</dd>
+        {% else %}
+            <dt>Numéro d'employé</dt>
+            <dd>{{ user.employee_number }}</dd>
+            <dt>Rôle</dt>
+            <dd>{{ user.get_role_display }}</dd>
+        {% endif %}
+    </dl>
+
+    <ul class="actions">
+        {% if user.is_client %}
+            <li><a class="button" href="{% url 'edit_profile' %}">Modifier mes informations</a></li>
+        {% endif %}
+        <li><a class="button" href="{% url 'change_password' %}">Changer mon mot de passe</a></li>
+        {% if user.is_client %}
+            <li><a class="button button-danger" href="{% url 'delete_account' %}">Supprimer mon compte</a></li>
+        {% endif %}
+    </ul>
+{% endblock %}

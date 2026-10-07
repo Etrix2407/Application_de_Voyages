@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block title %}{{ destination.name }} — Application de voyage{% endblock %}
+
+{% block content %}
+    <p><a href="{% url 'country_detail' destination.country.pk %}">← {{ destination.country.name }}</a></p>
+
+    <h1>{{ destination.name }}</h1>
+    {% include "catalog/_favorite_button.html" with item_type="destination" item=destination %}
+    {% if destination.photo %}
+        <img class="photo" src="{{ destination.photo }}" alt="Photo : {{ destination.name }}">
+    {% endif %}
+    <p>{{ destination.description|linebreaksbr }}</p>
+
+    <dl class="details">
+        <dt>Pays</dt>
+        <dd>{{ destination.country.name }}</dd>
+        <dt>Période idéale</dt>
+        <dd>{{ destination.ideal_period|default:"Non précisée" }}</dd>
+        <dt>Prix indicatif</dt>
+        <dd>{% if destination.price_from is not None %}À partir de {{ destination.price_from }} €{% else %}Non précisé{% endif %}</dd>
+    </dl>
+
+    <h2>Activités sur place</h2>
+    {% if activities %}
+        <ul class="cards">
+            {% for activity in activities %}
+                {% include "catalog/_activity_card.html" %}
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p>Aucune activité pour cette destination. Voir les activités de <a href="{% url 'country_detail' destination.country.pk %}">{{ destination.country.name }}</a>.</p>
+    {% endif %}
+{% endblock %}

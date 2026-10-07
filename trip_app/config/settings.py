@@ -27,8 +27,8 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    "comptes",
-    "catalogue",
+    "accounts",
+    "catalog",
 ]
 
 MIDDLEWARE = [
@@ -69,20 +69,20 @@ DATABASES = {
 }
 
 
-AUTH_USER_MODEL = "comptes.Utilisateur"
+AUTH_USER_MODEL = "accounts.User"
 
 # Les mots de passe sont hachés (PBKDF2 par défaut) et doivent respecter ces règles.
 AUTH_PASSWORD_VALIDATORS = [
     {
         "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
-        "OPTIONS": {"user_attributes": ("email", "nom", "prenom")},
+        "OPTIONS": {"user_attributes": ("email", "nom", "first_name")},
     },
     {
         "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
         "OPTIONS": {"min_length": 12},
     },
     {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
-    {"NAME": "comptes.validators.LettreEtChiffreValidator"},
+    {"NAME": "accounts.validators.LetterAndDigitValidator"},
 ]
 
 # Pendant les tests uniquement : hachage rapide pour accélérer la suite (jamais en production).
@@ -103,9 +103,9 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 
-LOGIN_URL = "connexion"
-LOGIN_REDIRECT_URL = "accueil"
-LOGOUT_REDIRECT_URL = "accueil"
+LOGIN_URL = "login"
+LOGIN_REDIRECT_URL = "home"
+LOGOUT_REDIRECT_URL = "home"
 
 # Le lien « mot de passe oublié » est valable 1 heure.
 PASSWORD_RESET_TIMEOUT = 60 * 60
