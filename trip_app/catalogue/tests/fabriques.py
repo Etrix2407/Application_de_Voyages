@@ -21,7 +21,8 @@ def creer_pays(nom="Japon", **champs):
 
 
 def creer_destination(pays, nom="Kyoto", **champs):
-    return Destination.objects.create(pays=pays, nom=nom, description="Description.", **champs)
+    champs.setdefault("description", "Description.")
+    return Destination.objects.create(pays=pays, nom=nom, **champs)
 
 
 def creer_activite(pays, nom="Cérémonie du thé", **champs):

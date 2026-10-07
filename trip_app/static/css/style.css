@@ -291,3 +291,25 @@ td {
 .photo {
     max-width: 40rem;
 }
+
+.form-recherche {
+    padding: 1rem;
+    background: var(--couleur-fond-doux);
+    border-radius: 6px;
+}
+
+.bouton-secondaire {
+    margin-left: 0.5rem;
+    color: var(--couleur-principale);
+    background: var(--couleur-fond);
+    border: 2px solid var(--couleur-principale);
+}
+
+.bouton-secondaire:hover {
+    color: #ffffff;
+}
+
+.nombre-resultats {
+    font-size: 1.2rem;
+    font-weight: bold;
+}
