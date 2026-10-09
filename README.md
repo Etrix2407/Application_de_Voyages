@@ -138,6 +138,7 @@ Limites par adresse IP, contre les robots : 20 échecs de connexion par 15 minut
 - Mots de passe hachés (jamais stockés en clair) : au moins 12 caractères, avec au moins une lettre et un chiffre. Les mots de passe trop courants ou trop proches du nom ou de l'e-mail sont refusés.
 - Hachage PBKDF2-SHA256 avec un **sel** aléatoire propre à chaque mot de passe (stocké dans la base) et un **poivre** (`DJANGO_PASSWORD_PEPPER`, gardé dans le `.env`, hors de la base) : une base volée seule ne suffit pas. **Sauvegardez le poivre à part : le perdre ou le changer rend tous les mots de passe inutilisables** (chacun devrait passer par « Mot de passe oublié »). Les anciens mots de passe sans poivre sont convertis à la connexion suivante.
 - Un nom de pays est unique, sans tenir compte des majuscules ni des accents (« Perou » = « Pérou »).
+- **Avis vérifiés (v3)** : un avis ne peut être laissé que pour une demande de voyage **confirmée par l'agence** dont la **date de retour est passée** : seuls les clients réellement partis donnent leur avis. Un seul avis par demande (garanti par la base). Si l'agence annule ensuite ce voyage, l'avis est retiré automatiquement (« Refusé », motif « Voyage annulé »).
 - Une demande de voyage garde les **noms** (pays, destination, activités) et l'**estimation** du jour où elle a été envoyée : un renommage ou un changement de tarif dans le catalogue ne les modifie pas. À la **confirmation**, le prix est **recalculé aux tarifs du jour** (le prix peut varier entre la demande et la confirmation) ; l'estimation de départ reste affichée, et un changement de prix est noté dans l'historique.
 - Un client ne voit jamais les données d'un autre client ni celles du personnel. Les agents ne voient pas les favoris des clients.
 - RGPD : consentement enregistré à l'inscription, page [politique de confidentialité](trip_app/templates/privacy.html), suppression réelle du compte par le client.
@@ -217,6 +218,10 @@ trip_app/
 │   ├── services/           # pricing, placing (création), status (changements d'état),
 │   │                       # filtering (liste du personnel), privacy (anonymisation RGPD)
 │   ├── models.py · forms.py · signals.py · urls.py
+│   └── tests/
+├── reviews/                # avis clients (v3) : modèle, avis vérifiés, lien avec les demandes
+│   ├── services/           # eligibility (qui peut donner un avis), order_events (voyage annulé)
+│   ├── models.py · signals.py
 │   └── tests/
 ├── templates/
 │   ├── base.html · home.html · privacy.html · 403/404/500.html
