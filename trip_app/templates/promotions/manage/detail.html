@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block title %}{{ promotion.name }} — Promotions{% endblock %}
+
+{% block content %}
+    <p><a href="{% url 'manage_promotions' %}">← Toutes les promotions</a></p>
+
+    <h1>{{ promotion.name }}</h1>
+    <p>État : <span class="status status-{{ state.value }}">{{ state.label }}</span></p>
+
+    {% if can_manage %}
+        <ul class="actions">
+            <li><a class="button" href="{% url 'manage_edit_promotion' promotion.pk %}">Modifier</a></li>
+            {% if can_disable %}
+                <li>
+                    <form method="post" action="{% url 'manage_disable_promotion' promotion.pk %}">
+                        {% csrf_token %}
+                        <button type="submit" class="button-secondary">Désactiver (plus proposée)</button>
+                    </form>
+                </li>
+            {% endif %}
+            <li><a class="button button-danger" href="{% url 'manage_delete_promotion' promotion.pk %}">Supprimer</a></li>
+        </ul>
+    {% endif %}
+
+    <dl class="details">
+        <dt>Description</dt>
+        <dd>{{ promotion.description|default:"—" }}</dd>
+        <dt>Remise</dt>
+        <dd>{{ promotion.discount_label }} ({{ promotion.get_kind_display|lower }})</dd>
+        <dt>Assiette</dt>
+        <dd>{{ promotion.get_base_display }}</dd>
+        <dt>Portée</dt>
+        <dd>{{ promotion.targets_label }}</dd>
+        <dt>Validité (date de la demande)</dt>
+        <dd>du {{ promotion.starts_on|date:"j F Y" }} au {{ promotion.ends_on|date:"j F Y" }} inclus</dd>
+        <dt>Départs autorisés</dt>
+        <dd>{% if promotion.departure_from %}du {{ promotion.departure_from|date:"j F Y" }} au {{ promotion.departure_until|date:"j F Y" }}{% else %}Tous les départs{% endif %}</dd>
+        <dt>Code promo</dt>
+        <dd>{% if promotion.code %}{{ promotion.code }} (jamais affiché au public){% else %}Aucun : promotion automatique{% endif %}</dd>
+        <dt>Limites</dt>
+        <dd>
+            {% if promotion.max_uses %}{{ promotion.max_uses }} demandes au total{% else %}Illimité au total{% endif %} ;
+            {% if promotion.max_uses_per_client %}{{ promotion.max_uses_per_client }} par client{% else %}illimité par client{% endif %}
+        </dd>
+    </dl>
+
+    <h2>Historique</h2>
+    {% if history %}
+        <ul>
+            {% for change in history %}
+                <li>
+                    {{ change.changed_at|date:"j F Y à H:i" }} — <strong>{{ change.get_action_display }}</strong>
+                    par {{ change.author_name }}{% if change.details %} : {{ change.details }}{% endif %}
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p>Aucun historique.</p>
+    {% endif %}
+{% endblock %}

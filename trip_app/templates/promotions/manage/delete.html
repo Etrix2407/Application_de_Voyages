@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+
+{% block title %}Supprimer « {{ promotion }} » — Promotions{% endblock %}
+
+{% block content %}
+    <h1>Supprimer « {{ promotion }} »</h1>
+
+    <p><strong>Attention : cette action est définitive</strong>, historique compris.</p>
+    <p>Seule une promotion jamais utilisée peut être supprimée. Pour simplement ne plus la proposer, préférez la désactiver.</p>
+
+    <form method="post">
+        {% csrf_token %}
+        <button type="submit" class="button-danger">Supprimer définitivement</button>
+    </form>
+
+    <p><a href="{% url 'manage_promotion_detail' promotion.pk %}">Annuler et revenir</a></p>
+{% endblock %}

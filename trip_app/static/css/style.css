@@ -358,6 +358,21 @@ td {
     color: var(--color-error);
 }
 
+/* États des promotions. */
+
+.status-upcoming {
+    color: #8a4b00;
+}
+
+.status-running {
+    color: var(--color-success);
+}
+
+.status-finished,
+.status-disabled {
+    color: #444444;
+}
+
 .badge-negative {
     display: inline-block;
     padding: 0.1rem 0.5rem;

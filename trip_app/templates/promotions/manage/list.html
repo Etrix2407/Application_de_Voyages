@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block title %}Promotions — Gestion{% endblock %}
+
+{% block content %}
+    <h1>Promotions</h1>
+    {% if can_manage %}
+        <p><a class="button" href="{% url 'manage_create_promotion' %}">Créer une promotion</a></p>
+    {% else %}
+        <p>Consultation seulement : les promotions sont gérées par l'administrateur.</p>
+    {% endif %}
+
+    {% if rows %}
+        <div class="table-scroll">
+            <table>
+                <caption>Promotions, de la plus récente à la plus ancienne{% if page.paginator.num_pages > 1 %}, page {{ page.number }} sur {{ page.paginator.num_pages }}{% endif %}</caption>
+                <thead>
+                    <tr>
+                        <th scope="col">Nom</th>
+                        <th scope="col">Remise</th>
+                        <th scope="col">Portée</th>
+                        <th scope="col">Code</th>
+                        <th scope="col">Validité</th>
+                        <th scope="col">État</th>
+                        <th scope="col">Détail</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for promotion, state in rows %}
+                        <tr>
+                            <td>{{ promotion.name }}</td>
+                            <td>{{ promotion.discount_label }} sur {{ promotion.get_base_display|lower }}</td>
+                            <td>{{ promotion.targets_label }}</td>
+                            <td>{% if promotion.code %}{{ promotion.code }}{% else %}Automatique{% endif %}</td>
+                            <td>du {{ promotion.starts_on|date:"j F Y" }} au {{ promotion.ends_on|date:"j F Y" }}</td>
+                            <td><span class="status status-{{ state.value }}">{{ state.label }}</span></td>
+                            <td><a href="{% url 'manage_promotion_detail' promotion.pk %}">Voir</a></td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% include "_pagination.html" with page=page label="liste des promotions" %}
+    {% else %}
+        <p>Aucune promotion pour l'instant.</p>
+    {% endif %}
+{% endblock %}
