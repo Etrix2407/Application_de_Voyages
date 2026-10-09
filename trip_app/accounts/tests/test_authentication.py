@@ -330,3 +330,10 @@ class PrivacyTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, f'href="{reverse("privacy")}"')
+
+    def test_no_placeholder_left_and_contact_given(self):
+        response = self.client.get(reverse("privacy"))
+
+        self.assertNotContains(response, "COMPLÉTER")
+        self.assertContains(response, "mailto:")
+        self.assertContains(response, "Durée de conservation")

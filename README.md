@@ -132,7 +132,7 @@ Limites par adresse IP, contre les robots : 20 échecs de connexion par 15 minut
 - RGPD : consentement enregistré à l'inscription, page [politique de confidentialité](trip_app/templates/privacy.html), suppression réelle du compte par le client.
 - L'inscription ne révèle jamais si une adresse est déjà cliente : la page est identique et la propriétaire de l'adresse est prévenue par e-mail. Le mot de passe est choisi après confirmation, ce qui empêche de « réserver » le compte de quelqu'un d'autre.
 
-> **À compléter avant la mise en ligne :** les mentions marquées « [À COMPLÉTER] » dans la politique de confidentialité (responsable du traitement, contact, durée de conservation).
+> **Avant la mise en ligne :** dans la politique de confidentialité, remplacez l'adresse e-mail **fictive** `vie-privee@horizons-lointains.example` par la vraie adresse de contact et ajoutez l'adresse postale de l'agence (rappel en commentaire dans `trip_app/templates/privacy.html`).
 
 ## Tests
 

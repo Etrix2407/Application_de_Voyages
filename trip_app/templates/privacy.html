@@ -3,16 +3,18 @@
 {% block title %}Politique de confidentialité{% endblock %}
 
 {% block content %}
+    {# Avant la mise en ligne : remplacer l'adresse e-mail fictive (domaine .example) et ajouter l'adresse postale de l'agence. #}
     <h1>Politique de confidentialité</h1>
 
     <h2>Responsable du traitement</h2>
-    <p>[À COMPLÉTER : nom de l'agence, adresse, adresse e-mail de contact]</p>
+    <p>{{ site_name }}, agence de voyage.</p>
+    <p>Contact pour toute question sur vos données : <a href="mailto:vie-privee@horizons-lointains.example">vie-privee@horizons-lointains.example</a></p>
 
     <h2>Données collectées</h2>
     <ul>
         <li>Clients : nom, prénom, adresse e-mail, mot de passe (enregistré sous forme chiffrée, jamais en clair), téléphone (facultatif), date de naissance.</li>
         <li>Personnel : nom, prénom, adresse e-mail professionnelle, mot de passe (chiffré), numéro d'employé, rôle.</li>
-        <li>La date à laquelle vous avez accepté cette politique.</li>
+        <li>La date à laquelle vous avez accepté cette politique et celle de la confirmation de votre adresse e-mail.</li>
         <li>Vos favoris (destinations et activités), supprimés avec votre compte.</li>
     </ul>
 
@@ -20,6 +22,7 @@
     <ul>
         <li>Créer et gérer votre compte.</li>
         <li>Vous permettre de consulter notre catalogue de destinations et d'activités.</li>
+        <li>Protéger le site contre les abus (voir « Sécurité » ci-dessous).</li>
     </ul>
     <p>Vos données ne sont ni vendues ni utilisées pour des e-mails promotionnels.</p>
 
@@ -27,10 +30,16 @@
     <p>Seuls les agents de l'agence peuvent consulter et corriger vos informations. Aucun autre client ne voit vos données.</p>
 
     <h2>Durée de conservation</h2>
-    <p>Une inscription dont l'adresse e-mail n'a pas été confirmée est effacée au bout de 7 jours.</p>
-    <p>[À COMPLÉTER : durée de conservation des comptes]</p>
+    <ul>
+        <li>Compte client : vos données sont conservées tant que votre compte existe. Lorsque vous supprimez votre compte depuis votre profil, elles sont effacées définitivement et immédiatement, avec vos favoris.</li>
+        <li>Inscription non confirmée : effacée au bout de 7 jours si l'adresse e-mail n'a pas été confirmée.</li>
+        <li>Compte du personnel : supprimé par l'administrateur lorsque la personne quitte l'agence.</li>
+    </ul>
+
+    <h2>Sécurité</h2>
+    <p>Pour bloquer les tentatives répétées (connexion, inscription, demande de lien), l'adresse IP de votre connexion et l'adresse e-mail saisie sont comptées temporairement. Ces compteurs s'effacent d'eux-mêmes après une heure au plus et ne servent à rien d'autre.</p>
 
     <h2>Vos droits</h2>
-    <p>Vous pouvez à tout moment consulter et modifier vos informations, ou supprimer votre compte depuis votre profil. Pour toute question : [À COMPLÉTER : contact].</p>
+    <p>Vous pouvez à tout moment consulter et modifier vos informations, ou supprimer votre compte depuis votre profil. Pour toute autre demande (accès, rectification, effacement), écrivez à <a href="mailto:vie-privee@horizons-lointains.example">vie-privee@horizons-lointains.example</a> : nous répondons dans un délai d'un mois.</p>
     <p>Vous pouvez aussi introduire une réclamation auprès de l'Autorité de protection des données (Belgique).</p>
 {% endblock %}
