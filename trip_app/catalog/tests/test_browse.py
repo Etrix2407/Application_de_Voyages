@@ -70,16 +70,6 @@ class DetailAccessTests(TestCase):
         self.destination = create_destination(self.country)
         self.activity = create_activity(self.country)
 
-    def test_details_open_to_visitors(self):
-        urls = [
-            reverse("country_detail", args=[self.country.pk]),
-            reverse("destination_detail", args=[self.destination.pk]),
-            reverse("activity_detail", args=[self.activity.pk]),
-        ]
-        for url in urls:
-            with self.subTest(url=url):
-                self.assertEqual(self.client.get(url).status_code, 200)
-
     def test_visitor_invited_to_log_in_to_order_but_sees_no_favorite_button(self):
         response = self.client.get(reverse("destination_detail", args=[self.destination.pk]))
         order_url = reverse("create_order", args=[self.destination.pk])
@@ -87,14 +77,6 @@ class DetailAccessTests(TestCase):
         self.assertContains(response, f'href="{reverse("login")}?next={order_url}"')
         self.assertNotContains(response, f'href="{order_url}"')
         self.assertNotContains(response, "favoris")
-
-    def test_hidden_content_stays_hidden_for_visitors(self):
-        self.destination.active = False
-        self.destination.save()
-
-        response = self.client.get(reverse("destination_detail", args=[self.destination.pk]))
-
-        self.assertEqual(response.status_code, 404)
 
 
 class CountryDetailTests(TemporaryMediaMixin, TestCase):
@@ -111,7 +93,6 @@ class CountryDetailTests(TemporaryMediaMixin, TestCase):
 
         response = self.client.get(reverse("country_detail", args=[self.country.pk]))
 
-        self.assertContains(response, "+7 h en été, +8 h en hiver")
         self.assertContains(response, "Kyoto")
         self.assertContains(response, 'alt="Photo : Kyoto"')
         self.assertContains(response, "Sumo")

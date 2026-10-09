@@ -91,8 +91,3 @@ class StaffReviewListTests(TestCase):
 
     def test_reachable_from_moderation_queue(self):
         self.assertContains(self.client.get(reverse("manage_pending_reviews")), self.url)
-
-    def test_clients_forbidden(self):
-        self.client.force_login(create_client(email="marie@example.com"))
-
-        self.assertEqual(self.client.get(self.url).status_code, 403)

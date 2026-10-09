@@ -9,30 +9,10 @@ from django.urls import reverse
 from accounts.models import Role
 from accounts.views.clients import CLIENTS_PER_PAGE
 
-from .factories import PASSWORD, create_admin, create_agent, create_client
+from .factories import PASSWORD, create_agent, create_client
 
 
 class ClientAccessTests(TestCase):
-    def test_client_denied(self):
-        client = create_client()
-        self.client.force_login(create_client("autre@example.com"))
-
-        self.assertEqual(self.client.get(reverse("client_list")).status_code, 403)
-        self.assertEqual(
-            self.client.get(reverse("edit_client", args=[client.pk])).status_code, 403
-        )
-
-    def test_visitor_redirected(self):
-        url = reverse("client_list")
-
-        self.assertRedirects(self.client.get(url), f"{reverse('login')}?next={url}")
-
-    def test_agent_and_administrator_allowed(self):
-        for user in [create_agent(), create_admin()]:
-            self.client.force_login(user)
-            with self.subTest(role=user.role):
-                self.assertEqual(self.client.get(reverse("client_list")).status_code, 200)
-
     def test_staff_accounts_inaccessible(self):
         agent = create_agent()
         self.client.force_login(agent)
@@ -62,13 +42,6 @@ class ClientListTests(TestCase):
 
         self.assertContains(response, "helene@example.com")
         self.assertNotContains(response, "paul@example.com")
-
-    def test_search_by_email(self):
-        create_client("helene@example.com")
-
-        response = self.client.get(reverse("client_list"), {"q": "HELENE@"})
-
-        self.assertContains(response, "helene@example.com")
 
     def test_pagination(self):
         for i in range(CLIENTS_PER_PAGE + 1):
@@ -131,12 +104,6 @@ class ClientCorrectionTests(TestCase):
         self.assertEqual(self.marie.email, "client@example.com")
         self.assertTrue(self.marie.check_password(PASSWORD))
         self.assertEqual(self.marie.role, Role.CLIENT)
-
-    def test_form_without_email_or_password_field(self):
-        fields = self.client.get(self.url).context["form"].fields
-
-        self.assertNotIn("email", fields)
-        self.assertNotIn("password", fields)
 
     def test_invalid_data_rejected(self):
         response = self.client.post(

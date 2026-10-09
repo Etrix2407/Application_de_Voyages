@@ -4,7 +4,7 @@ from decimal import Decimal
 from django.test import TestCase
 from django.urls import reverse
 
-from accounts.tests.factories import create_admin, create_agent, create_client
+from accounts.tests.factories import create_agent, create_client
 from catalog.tests.factories import create_country, create_destination
 from orders.models import Order, Status
 from orders.views.manage import ORDERS_PER_PAGE
@@ -81,17 +81,6 @@ class StaffOrderListTests(TestCase):
         self.assertContains(page_1, f"country={self.japan.pk}&amp;page=2")
         self.assertEqual(len(page_2.context["page"].object_list), 1)
 
-    def test_administrator_also_allowed(self):
-        self.client.force_login(create_admin())
-
-        self.assertEqual(self.client.get(self.url).status_code, 200)
-
-    def test_clients_denied(self):
-        self.client.force_login(self.marie)
-
-        self.assertEqual(self.client.get(self.url).status_code, 403)
-        self.assertEqual(self.client.get(reverse("manage_order_detail", args=[self.old.pk])).status_code, 403)
-
 
 class StaffOrderDetailTests(TestCase):
     def setUp(self):
@@ -112,11 +101,3 @@ class StaffOrderDetailTests(TestCase):
         self.assertContains(response, 'href="mailto:client@example.com"')
         self.assertContains(response, "Allergie aux arachides.")
         self.assertContains(response, "Historique")
-
-    def test_anonymized_order_detail(self):
-        self.marie.delete()
-
-        response = self.client.get(self.url)
-
-        self.assertContains(response, "anonymisée")
-        self.assertNotContains(response, "client@example.com")

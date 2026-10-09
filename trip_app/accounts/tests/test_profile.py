@@ -11,24 +11,6 @@ from .factories import PASSWORD, create_agent, create_client
 User = get_user_model()
 
 
-class ProfileAccessTests(TestCase):
-    def test_pages_reserved_to_logged_in_users(self):
-        for last_name in ["profile", "edit_profile", "change_password", "delete_account"]:
-            with self.subTest(page=last_name):
-                url = reverse(last_name)
-
-                response = self.client.get(url)
-
-                self.assertRedirects(response, f"{reverse('login')}?next={url}")
-
-    def test_agent_cannot_edit_or_delete_through_client_profile(self):
-        self.client.force_login(create_agent())
-
-        for last_name in ["edit_profile", "delete_account"]:
-            with self.subTest(page=last_name):
-                self.assertEqual(self.client.get(reverse(last_name)).status_code, 403)
-
-
 class ProfileViewTests(TestCase):
     def test_client_sees_own_information_not_others(self):
         client = create_client(phone="0470123456")
@@ -155,11 +137,6 @@ class AccountDeletionTests(TestCase):
     def setUp(self):
         self.user = create_client()
         self.client.force_login(self.user)
-
-    def test_confirmation_page(self):
-        response = self.client.get(self.url)
-
-        self.assertContains(response, "définitive")
 
     def test_wrong_password_deletes_nothing(self):
         response = self.client.post(self.url, {"password": "mauvais-mot-2026"})

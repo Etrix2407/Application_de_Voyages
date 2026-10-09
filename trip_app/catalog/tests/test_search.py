@@ -146,14 +146,6 @@ class SearchPageTests(TestCase):
         self.client.force_login(create_client())
         create_activity(create_country("Japon"), "Cérémonie du thé", category=Category.CULTURE)
 
-    def test_open_to_visitors(self):
-        self.client.logout()
-
-        response = self.client.get(self.url, {"keyword": "thé"})
-
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Cérémonie du thé")
-
     def test_empty_form_without_results(self):
         response = self.client.get(self.url)
 

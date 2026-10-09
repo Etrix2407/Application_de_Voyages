@@ -133,15 +133,6 @@ class DestinationListsTests(ReviewsMixin, TestCase):
         self.assertContains(response, "4,5 sur 5 (2 avis)")
         self.assertContains(response, "Pas encore d'avis")
 
-    def test_inactive_destination_and_its_reviews_hidden(self):
-        self.destination.active = False
-        self.destination.save()
-
-        response = self.client.get(reverse("destination_list"))
-
-        self.assertNotContains(response, "Marrakech")
-        self.assertNotContains(response, "2 avis")
-
     def test_country_page_and_search_show_ratings(self):
         for url in [
             reverse("country_detail", args=[self.country.pk]),

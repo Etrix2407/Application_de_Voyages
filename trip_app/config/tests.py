@@ -3,13 +3,6 @@ from django.urls import reverse
 
 
 class HomeTests(TestCase):
-    def test_home_accessible_without_login(self):
-        response = self.client.get(reverse("home"))
-
-        self.assertEqual(response.status_code, 200)
-        self.assertTemplateUsed(response, "home.html")
-        self.assertTemplateUsed(response, "base.html")
-
     def test_page_in_french(self):
         response = self.client.get(reverse("home"))
 

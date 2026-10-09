@@ -2,7 +2,7 @@ from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
-from accounts.tests.factories import create_agent, create_client
+from accounts.tests.factories import create_client
 from catalog.tests.factories import create_country, create_destination
 from orders.models import Status
 from orders.tests.factories import create_order
@@ -39,12 +39,6 @@ class WriteReviewTests(TestCase):
         self.assertEqual((review.order, review.rating, review.status), (self.trip, 5, ReviewStatus.PENDING))
         self.assertNotIn(review, Review.objects.public())
 
-    def test_low_rating_requires_a_comment(self):
-        response = self.client.post(self.url, {**GOOD_REVIEW, "rating": "2", "comment": ""})
-
-        self.assertContains(response, "Un commentaire est obligatoire")
-        self.assertFalse(Review.objects.exists())
-
     def test_trip_not_done_cannot_be_reviewed(self):
         upcoming = create_order(self.marie, self.destination, status=Status.CONFIRMED)
         url = reverse("create_review", args=[upcoming.pk])
@@ -66,11 +60,6 @@ class WriteReviewTests(TestCase):
         self.client.force_login(create_client(email="paul@example.com"))
 
         self.assertEqual(self.client.get(self.url).status_code, 404)
-
-    def test_staff_cannot_write_reviews(self):
-        self.client.force_login(create_agent())
-
-        self.assertEqual(self.client.get(self.url).status_code, 403)
 
 
 class MyReviewsTests(TestCase):

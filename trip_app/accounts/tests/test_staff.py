@@ -14,23 +14,16 @@ User = get_user_model()
 
 
 class StaffAccessTests(TestCase):
-    def test_reserved_to_administrator(self):
+    def test_only_administrator_can_deactivate_by_post(self):
+        # L'accès en GET est couvert par la matrice d'accès (config/test_access.py).
         agent = create_agent()
-        urls_get = [reverse("staff_list"), reverse("create_agent")]
 
         for user in [agent, create_client()]:
-            self.client.force_login(user)
-            for url in urls_get:
-                with self.subTest(user=user.role, url=url):
-                    self.assertEqual(self.client.get(url).status_code, 403)
-            with self.subTest(user=user.role, action="désactiver"):
-                url = reverse("deactivate_staff_member", args=[agent.pk])
-                self.assertEqual(self.client.post(url).status_code, 403)
-
-    def test_visitor_redirected_to_login(self):
-        url = reverse("staff_list")
-
-        self.assertRedirects(self.client.get(url), f"{reverse('login')}?next={url}")
+            with self.subTest(user=user.role):
+                self.client.force_login(user)
+                self.assertEqual(self.client.post(reverse("deactivate_staff_member", args=[agent.pk])).status_code, 403)
+        agent.refresh_from_db()
+        self.assertTrue(agent.is_active)
 
     def test_client_accounts_inaccessible(self):
         client = create_client()

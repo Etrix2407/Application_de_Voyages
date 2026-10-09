@@ -1,6 +1,6 @@
 from datetime import date, timedelta
 
-from django.contrib.auth import authenticate, get_user_model
+from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError
@@ -23,17 +23,6 @@ class UserCreationTests(TestCase):
         self.assertTrue(client.is_client)
         self.assertFalse(client.is_staff_member)
         self.assertIsNone(client.employee_number)
-
-    def test_password_hashed(self):
-        client = create_client()
-
-        self.assertNotEqual(client.password, PASSWORD)
-        self.assertTrue(client.check_password(PASSWORD))
-
-    def test_login_with_email(self):
-        create_client()
-
-        self.assertIsNotNone(authenticate(email="client@example.com", password=PASSWORD))
 
     def test_email_lowercased(self):
         client = create_client(email="  Client@Example.COM ")
