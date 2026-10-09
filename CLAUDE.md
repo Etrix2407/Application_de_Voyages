@@ -40,6 +40,8 @@ sqLite pour la db
 - Ne jamais inventer ni modifier des faits (dates, postes, entreprises, chiffres, compétences). Si une information manque ou semble incohérente, poser la question.
 - Code en anglais uniquement (identifiants, noms de fichiers, routes internes).
 - Markdown, commentaires et textes affichés aux utilisateurs en français.
+- test uniquement ce qui est necesaire
+
 
 ## Règles de code
 
