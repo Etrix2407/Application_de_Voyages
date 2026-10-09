@@ -160,7 +160,7 @@ Réglez ces variables dans le `.env` du serveur, ou directement comme variables 
 
 | Variable | Rôle | Défaut |
 |---|---|---|
-| `DJANGO_DEBUG` | `1` en développement, `0` en production | `1` |
+| `DJANGO_DEBUG` | `1` en développement, `0` en production | `0` (désactivé si absent) |
 | `DJANGO_SECRET_KEY` | Clé secrète longue et aléatoire (obligatoire si `DJANGO_DEBUG=0`) | clé de développement |
 | `DJANGO_ALLOWED_HOSTS` | Noms de domaine autorisés, séparés par des virgules | vide |
 | `DJANGO_EMAIL_BACKEND` | `django.core.mail.backends.smtp.EmailBackend` pour envoyer de vrais e-mails | console |
