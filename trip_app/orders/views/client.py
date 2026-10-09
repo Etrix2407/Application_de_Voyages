@@ -14,6 +14,7 @@ from orders.services.placing import (
     NO_DISCOUNT,
     AlreadySubmitted,
     DailyLimitReached,
+    PromotionUnavailable,
     daily_limit_reached,
     find_pending_duplicates,
     parts_for,
@@ -41,16 +42,9 @@ def create_order(request, destination_pk):
         return render(request, "orders/create.html", {"form": form, "destination": destination})
 
     data = form.cleaned_data
-    activities, adults, children = data["activities"], data["adults"], data["children"]
-    choice = choose_promotion(
-        request.user, destination, data["departure_date"], parts_for(destination, activities, adults, children),
-        data["promo_code"],
-    )
+    choice, quote = _price(request.user, destination, data)
     if choice.code_error:
-        # Code refusé (ou devenu invalide depuis la vérification) : rien n'est envoyé, le client corrige.
-        form.add_error("promo_code", choice.code_error)
-        return render(request, "orders/create.html", {"form": form, "destination": destination})
-    quote = quote_for(destination, activities, adults, children, choice.offer.discount if choice.offer else NO_DISCOUNT)
+        return _code_refused(request, form, destination, choice)
     if "confirm" not in request.POST:
         return _review(request, form, destination, quote, choice)
 
@@ -66,6 +60,13 @@ def create_order(request, destination_pk):
         return redirect("my_order_detail", pk=duplicate.order.pk)
     except DailyLimitReached:
         return _daily_limit_refusal(request)
+    except PromotionUnavailable:
+        # Dernière utilisation de la promotion prise au même instant : rien n'a été enregistré.
+        # Code : message sous le champ ; promotion automatique : récapitulatif au nouveau prix.
+        choice, quote = _price(request.user, destination, data)
+        if choice.code_error:
+            return _code_refused(request, form, destination, choice)
+        return _review(request, form, destination, quote, choice, price_changed=True)
     except ValidationError as error:
         # Ex. activité désactivée entre la vérification et l'envoi : rien n'a été enregistré.
         for message in error.messages:
@@ -73,6 +74,23 @@ def create_order(request, destination_pk):
         return render(request, "orders/create.html", {"form": form, "destination": destination})
     messages.success(request, "Votre demande a bien été enregistrée, un conseiller vous rappellera sous 48 heures.")
     return redirect("my_order_detail", pk=order.pk)
+
+
+def _price(client, destination, data):
+    """Promotion retenue et prix de la demande, recalculés à chaque passage (vérification, envoi)."""
+    activities, adults, children = data["activities"], data["adults"], data["children"]
+    choice = choose_promotion(
+        client, destination, data["departure_date"], parts_for(destination, activities, adults, children),
+        data["promo_code"],
+    )
+    discount = choice.offer.discount if choice.offer else NO_DISCOUNT
+    return choice, quote_for(destination, activities, adults, children, discount)
+
+
+def _code_refused(request, form, destination, choice):
+    # Code refusé (ou devenu invalide depuis la vérification) : rien n'est envoyé, le client corrige.
+    form.add_error("promo_code", choice.code_error)
+    return render(request, "orders/create.html", {"form": form, "destination": destination})
 
 
 def _daily_limit_refusal(request):
