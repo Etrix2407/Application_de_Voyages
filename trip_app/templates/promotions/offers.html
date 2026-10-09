@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block title %}Nos offres du moment{% endblock %}
+
+{% block content %}
+    <h1>Nos offres du moment</h1>
+    <p>Pas de code à saisir : la remise est calculée automatiquement dans votre demande de voyage. Les offres ne se cumulent pas : la plus avantageuse s'applique.</p>
+
+    {% if offers %}
+        <ul class="cards">
+            {% for promotion in offers %}
+                <li class="card">
+                    <h2>{{ promotion.name }}</h2>
+                    {% if promotion.description %}<p>{{ promotion.description }}</p>{% endif %}
+                    <p>{% include "promotions/_offer_terms.html" %}</p>
+                    <p>Pour : {{ promotion.targets_label }}</p>
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p>Aucune offre en ce moment. Revenez bientôt !</p>
+    {% endif %}
+{% endblock %}

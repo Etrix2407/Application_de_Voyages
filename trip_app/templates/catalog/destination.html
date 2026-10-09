@@ -7,6 +7,16 @@
 
     <h1>{{ destination.name }}</h1>
     <p>{% include "reviews/_summary.html" with summary=destination.rating_summary %} — <a href="#avis">lire les avis</a></p>
+    {% if offers %}
+        <section class="promo-banner" aria-label="Offres en cours">
+            <ul>
+                {% for promotion in offers %}
+                    <li>{{ promotion.name }} : {% include "promotions/_offer_terms.html" %}</li>
+                {% endfor %}
+            </ul>
+            <p>Remise calculée automatiquement dans votre demande. <a href="{% url 'offers' %}">Toutes nos offres du moment</a></p>
+        </section>
+    {% endif %}
     {% include "catalog/_favorite_button.html" with item_type="destination" item=destination %}
     {% if user.is_client %}
         <p><a class="button" href="{% url 'create_order' destination.pk %}">Faire une demande de voyage</a></p>

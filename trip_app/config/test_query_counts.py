@@ -174,6 +174,25 @@ class QueryCountTests(TestCase):
 
         self.assert_constant_queries(reverse("manage_reviews"), lambda: self.add_published_review(destination))
 
+    # --- Promotions visibles par le public (v4) ---
+
+    def test_destination_list_with_promo_labels(self):
+        create_promotion(scope=Scope.COUNTRIES, countries=[self.country])
+
+        def add_promoted_destination():
+            destination = create_destination(self.country, self.unique("Ville"))
+            create_promotion(scope=Scope.DESTINATIONS, destinations=[destination])
+
+        self.assert_constant_queries(reverse("destination_list"), add_promoted_destination)
+
+    def test_public_offers(self):
+        def add_offer():
+            destination = create_destination(self.country, self.unique("Ville"))
+            create_promotion(scope=Scope.DESTINATIONS, destinations=[destination])
+            create_promotion(scope=Scope.COUNTRIES, countries=[self.country])
+
+        self.assert_constant_queries(reverse("offers"), add_offer)
+
     def test_home_with_top_reviews(self):
         def add_top_review():
             self.add_published_review(create_destination(self.country, self.unique("Ville")))
