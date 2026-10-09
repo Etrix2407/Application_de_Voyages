@@ -3,7 +3,7 @@
 | Action                | Depuis                    | Par                       | Motif       |
 | --------------------- | ------------------------- | ------------------------- | ----------- |
 | cancel_by_client      | En attente                | le client                 | facultatif  |
-| confirm_by_staff      | En attente                | agent ou administrateur   | — (prix)    |
+| confirm_by_staff      | En attente, départ à venir | agent ou administrateur  | — (prix)    |
 | cancel_by_staff       | En attente ou Confirmée   | agent ou administrateur   | obligatoire |
 | cancel_after_account_deletion | En attente        | automatique (« Client »)  | fixé        |
 """
@@ -11,6 +11,7 @@
 from decimal import Decimal
 
 from django.db import transaction
+from django.utils import timezone
 
 from orders.models import Order, Status, StatusChange
 from orders.services.placing import price_at_current_rates
@@ -30,8 +31,13 @@ def client_can_cancel(order: Order) -> bool:
     return order.status in CLIENT_CANCELLABLE
 
 
+def departure_passed(order: Order) -> bool:
+    return order.departure_date < timezone.localdate()
+
+
 def staff_can_confirm(order: Order) -> bool:
-    return order.status in CONFIRMABLE
+    # Décision de la cliente : une demande dont le départ est passé ne se confirme plus.
+    return order.status in CONFIRMABLE and not departure_passed(order)
 
 
 def staff_can_cancel(order: Order) -> bool:
@@ -50,6 +56,8 @@ def confirm_by_staff(order: Order, staff_member) -> None:
 
     Si le prix a changé depuis la demande, l'historique l'indique (visible par le client).
     """
+    if departure_passed(order):
+        raise TransitionNotAllowed("La date de départ est passée : cette demande ne peut plus être confirmée.")
     price = price_at_current_rates(order)
     note = "" if price == order.estimated_price else (
         f"Prix recalculé aux tarifs du jour : {_euros(order.estimated_price)} → {_euros(price)}."
