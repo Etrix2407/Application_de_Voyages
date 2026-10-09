@@ -16,6 +16,8 @@ trip_app/
 ├── catalog/           # pays, destinations, activités, recherche, favoris
 │   ├── views/
 │   └── services/
+├── orders/            # demandes de voyage (v2)
+│   └── services/
 ├── templates/         # accounts/ et catalog/ rangés par sous-dossier
 └── static/
 ```

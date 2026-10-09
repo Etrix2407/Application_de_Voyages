@@ -1,7 +1,7 @@
 """Gestion du catalogue par le personnel (règle 6), organisée par pays."""
 
 from django.contrib import messages
-from django.db.models import Count
+from django.db.models import Count, ProtectedError
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 
@@ -29,7 +29,16 @@ def _render_form(request, form, title: str, back_url: str):
 def _confirm_delete(request, item, back_url: str, consequence: str = ""):
     """Page de confirmation, puis suppression définitive en POST."""
     if request.method == "POST":
-        item.delete()
+        try:
+            item.delete()
+        except ProtectedError:
+            # Ex. une destination ou une activité déjà présente dans des demandes de voyage.
+            messages.error(
+                request,
+                f"« {item} » est utilisé dans des demandes de voyage : il ne peut pas être "
+                "supprimé. Vous pouvez le désactiver pour le masquer aux clients.",
+            )
+            return redirect(back_url)
         messages.success(request, f"« {item} » a été supprimé.")
         return redirect(back_url)
     context = {"item": item, "back_url": back_url, "consequence": consequence}
