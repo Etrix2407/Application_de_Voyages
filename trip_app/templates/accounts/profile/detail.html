@@ -28,6 +28,7 @@
     <ul class="actions">
         {% if user.is_client %}
             <li><a class="button" href="{% url 'edit_profile' %}">Modifier mes informations</a></li>
+            <li><a class="button" href="{% url 'change_email' %}">Changer mon adresse e-mail</a></li>
         {% endif %}
         <li><a class="button" href="{% url 'change_password' %}">Changer mon mot de passe</a></li>
         {% if user.is_client %}

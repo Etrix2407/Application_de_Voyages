@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+
+{% block title %}Changer mon adresse e-mail{% endblock %}
+
+{% block content %}
+    <h1>Changer mon adresse e-mail</h1>
+    <p>Adresse actuelle : {{ user.email }}</p>
+    <p>Un lien de confirmation sera envoyé à la nouvelle adresse. Votre adresse ne changera qu'après un clic sur ce lien.</p>
+
+    <form method="post" novalidate>
+        {% csrf_token %}
+        {{ form }}
+        <button type="submit">Envoyer le lien de confirmation</button>
+    </form>
+
+    <p><a href="{% url 'profile' %}">Annuler et revenir à mon profil</a></p>
+{% endblock %}

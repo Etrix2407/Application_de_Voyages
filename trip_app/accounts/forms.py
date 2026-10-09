@@ -4,7 +4,7 @@ from django import forms
 from django.contrib.auth.forms import AuthenticationForm, PasswordResetForm
 from django.core.exceptions import ValidationError
 
-from .models import STAFF_ROLES, Role, User
+from .models import STAFF_ROLES, Role, User, normalize_email_address
 from .services.throttling import (
     get_client_ip,
     login_failures,
@@ -106,9 +106,11 @@ class PasswordResetRequestForm(PasswordResetForm):
 
 
 class ClientProfileForm(forms.ModelForm):
+    """L'e-mail se change à part (mot de passe + lien de confirmation) : voir EmailChangeForm."""
+
     class Meta:
         model = User
-        fields = CLIENT_FIELDS
+        fields = tuple(field_name for field_name in CLIENT_FIELDS if field_name != "email")
         widgets = CLIENT_WIDGETS
         help_texts = CLIENT_HELP_TEXTS
 
@@ -120,8 +122,32 @@ class ClientProfileForm(forms.ModelForm):
 class ClientCorrectionForm(ClientProfileForm):
     """Correction par un agent : ni mot de passe ni e-mail (identifiant géré par le client)."""
 
-    class Meta(ClientProfileForm.Meta):
-        fields = tuple(field_name for field_name in CLIENT_FIELDS if field_name != "email")
+
+class EmailChangeForm(forms.Form):
+    new_email = forms.EmailField(
+        label="Nouvelle adresse e-mail", widget=forms.EmailInput(attrs={"autocomplete": "email"})
+    )
+    password = forms.CharField(
+        label="Votre mot de passe actuel",
+        strip=False,
+        widget=forms.PasswordInput(attrs={"autocomplete": "current-password"}),
+    )
+
+    def __init__(self, user: User, *args, **kwargs):
+        self.user = user
+        super().__init__(*args, **kwargs)
+
+    def clean_password(self) -> str:
+        password = self.cleaned_data["password"]
+        if not self.user.check_password(password):
+            raise ValidationError("Mot de passe incorrect.", code="incorrect_password")
+        return password
+
+    def clean_new_email(self) -> str:
+        new_email = normalize_email_address(self.cleaned_data["new_email"])
+        if new_email == self.user.email:
+            raise ValidationError("C'est déjà votre adresse actuelle.", code="same_email")
+        return new_email
 
 
 class AccountDeletionForm(forms.Form):

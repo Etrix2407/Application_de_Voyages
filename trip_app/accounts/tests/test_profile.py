@@ -78,23 +78,16 @@ class ProfileEditTests(TestCase):
         self.assertRedirects(response, reverse("profile"))
         self.user.refresh_from_db()
         self.assertEqual(self.user.last_name, "Durand")
-        self.assertEqual(self.user.email, "nouvelle@example.com")
         self.assertEqual(self.user.phone, "+3221234567")
         self.assertEqual(self.user.birth_date, date(1956, 5, 1))
 
-    def test_email_already_taken_rejected(self):
-        create_client(email="pris@example.com")
+    def test_email_cannot_be_changed_from_this_form(self):
+        # Audit : l'e-mail se change à part, avec mot de passe et lien de confirmation.
+        self.client.post(self.url, self.data(email="pirate@example.com"))
 
-        response = self.client.post(self.url, self.data(email="PRIS@example.com"))
-
-        self.assertEqual(response.status_code, 200)
         self.user.refresh_from_db()
         self.assertEqual(self.user.email, "client@example.com")
-
-    def test_keep_own_email(self):
-        response = self.client.post(self.url, self.data(email="client@example.com"))
-
-        self.assertRedirects(response, reverse("profile"))
+        self.assertNotIn("email", self.client.get(self.url).context["form"].fields)
 
     def test_role_not_editable(self):
         self.client.post(self.url, self.data(role=Role.ADMINISTRATOR))
