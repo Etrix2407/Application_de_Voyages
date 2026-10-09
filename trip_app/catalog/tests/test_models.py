@@ -5,7 +5,6 @@ from django.db.models import ProtectedError
 from django.test import SimpleTestCase, TestCase
 
 from catalog.models import Activity, Category, Continent, Destination, Difficulty, Month, Country
-from catalog.validators import validate_time_offset
 
 from .factories import create_activity, create_destination, create_country
 
@@ -19,8 +18,7 @@ class CountryTests(TestCase):
             main_language="japonais",
             currency="yen",
             description="x",
-            summer_offset=0,
-            winter_offset=0,
+            time_zone="Asia/Tokyo",
         )
 
         with self.assertRaises(ValidationError) as error:
@@ -37,8 +35,7 @@ class CountryTests(TestCase):
                 main_language="espagnol",
                 currency="sol",
                 description="x",
-                summer_offset=0,
-                winter_offset=0,
+                time_zone="Asia/Tokyo",
             ).full_clean()
 
     def test_empty_country_can_be_deleted(self):
@@ -63,18 +60,6 @@ class CountryTests(TestCase):
         self.assertFalse(country.can_be_deleted())
         with self.assertRaises(ProtectedError):
             country.delete()
-
-
-class TimeOffsetTests(SimpleTestCase):
-    def test_valid_values(self):
-        for value in ["-12", "0", "5.5", "5.75", "14"]:
-            with self.subTest(value=value):
-                validate_time_offset(Decimal(value))
-
-    def test_invalid_values(self):
-        for value in ["-12.25", "14.5", "5.1", "3.33"]:
-            with self.subTest(value=value), self.assertRaises(ValidationError):
-                validate_time_offset(Decimal(value))
 
 
 class IdealPeriodTests(SimpleTestCase):

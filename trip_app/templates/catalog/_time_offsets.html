@@ -1,0 +1,9 @@
+<dt>Décalage horaire avec la Belgique</dt>
+<dd>
+    {% if time_offsets %}
+        {{ time_offsets.summer_display }} en été, {{ time_offsets.winter_display }} en hiver
+        (aujourd'hui : {{ time_offsets.today_display }})
+    {% else %}
+        Fuseau horaire à renseigner
+    {% endif %}
+</dd>

@@ -4,11 +4,27 @@ from django import forms
 
 from .models import Activity, Category, Continent, Destination, Difficulty, Month, Country
 from .services.photos import without_metadata
+from .services.time_zones import time_zone_choices
 from .services.search import Criteria
 from .validators import PHOTO_FORMATS
 
 
+def _time_zone_choices():
+    return [("", "— Choisir la ville de référence —"), *time_zone_choices()]
+
+
 class CountryForm(forms.ModelForm):
+    time_zone = forms.ChoiceField(
+        label="Fuseau horaire principal",
+        choices=_time_zone_choices,
+        help_text=(
+            "Choisissez la ville de référence du pays (pour un pays à plusieurs fuseaux, celle de la "
+            "destination principale). Le décalage avec la Belgique est calculé automatiquement, "
+            "changements d'heure compris."
+        ),
+        error_messages={"required": "Choisissez le fuseau horaire du pays."},
+    )
+
     class Meta:
         model = Country
         fields = (
@@ -18,8 +34,7 @@ class CountryForm(forms.ModelForm):
             "currency",
             "description",
             "visa",
-            "summer_offset",
-            "winter_offset",
+            "time_zone",
             "active",
         )
         help_texts = {"active": "Décochez pour masquer ce pays et tout son contenu aux clients."}

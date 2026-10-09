@@ -21,8 +21,7 @@ COUNTRIES = [
         "name": "Exemple — Pays des Lacs",
         "continent": Continent.EUROPE,
         "visa": Visa.NOT_REQUIRED,
-        "summer_offset": Decimal("0"),
-        "winter_offset": Decimal("0"),
+        "time_zone": "Europe/Brussels",
         "destinations": [
             ("Exemple — Ville des Ponts", Month.MAY, Month.SEPTEMBER, Decimal("450")),
             ("Exemple — Vallée Verte", Month.JUNE, Month.AUGUST, None),
@@ -37,8 +36,7 @@ COUNTRIES = [
         "name": "Exemple — Royaume des Épices",
         "continent": Continent.ASIA,
         "visa": Visa.E_VISA,
-        "summer_offset": Decimal("4.5"),
-        "winter_offset": Decimal("5.5"),
+        "time_zone": "Asia/Kolkata",
         "destinations": [
             ("Exemple — Cité du Marché", Month.NOVEMBER, Month.MARCH, Decimal("1200")),
         ],
@@ -54,8 +52,7 @@ INACTIVE_COUNTRY = {
     "name": "Exemple — Île Fermée",
     "continent": Continent.OCEANIA,
     "visa": Visa.BEFORE_DEPARTURE,
-    "summer_offset": Decimal("10"),
-    "winter_offset": Decimal("9"),
+    "time_zone": "Pacific/Noumea",
     "destinations": [],
     "activities": [],
 }
@@ -91,8 +88,7 @@ class Command(BaseCommand):
             currency="monnaie fictive",
             description="Pays fictif de démonstration. Ces informations ne sont pas réelles.",
             visa=data["visa"],
-            summer_offset=data["summer_offset"],
-            winter_offset=data["winter_offset"],
+            time_zone=data["time_zone"],
             active=active,
         )
         destinations = [

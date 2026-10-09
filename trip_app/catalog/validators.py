@@ -4,6 +4,15 @@ from decimal import Decimal
 
 from django.core.exceptions import ValidationError
 
+from .services.time_zones import is_known_time_zone
+
+
+def validate_time_zone(name: str) -> None:
+    if not is_known_time_zone(name):
+        raise ValidationError("Choisissez un fuseau horaire de la liste.", code="unknown_time_zone")
+
+
+# Ancien décalage saisi à la main : n'est plus utilisé que par la migration 0001.
 OFFSET_MIN = Decimal("-12")
 OFFSET_MAX = Decimal("14")
 

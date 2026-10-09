@@ -21,8 +21,7 @@ def country_data(**fields):
         "currency": "sol",
         "description": "Description.",
         "visa": "not_required",
-        "summer_offset": "-7",
-        "winter_offset": "-6",
+        "time_zone": "America/Lima",
         "active": "on",
     }
     data.update(fields)
