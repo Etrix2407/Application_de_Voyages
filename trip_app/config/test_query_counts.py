@@ -161,3 +161,9 @@ class QueryCountTests(TestCase):
         destination = create_destination(self.country, "Kyoto")
 
         self.assert_constant_queries(reverse("manage_reviews"), lambda: self.add_published_review(destination))
+
+    def test_home_with_top_reviews(self):
+        def add_top_review():
+            self.add_published_review(create_destination(self.country, self.unique("Ville")))
+
+        self.assert_constant_queries(reverse("home"), add_top_review)

@@ -6,4 +6,25 @@
     <h1>Bienvenue</h1>
     <p>Découvrez nos pays, destinations et activités.</p>
     <p><a class="button" href="{% url 'country_list' %}">Découvrir nos pays</a></p>
+
+    {% if top_reviews %}
+        <section>
+            <h2>Ils sont partis avec nous</h2>
+            <p>Les derniers avis à 5 étoiles de nos voyageurs, tous vérifiés.</p>
+            <ul class="reviews">
+                {% for review in top_reviews %}
+                    <li class="review">
+                        <h3>{{ review.title }}</h3>
+                        <p>{% include "reviews/_rating.html" %}</p>
+                        <p class="verified">✓ Voyage vérifié — séjour de {{ review.order.departure_date|date:"F Y" }}</p>
+                        {% if review.comment %}<p>{{ review.comment|truncatechars:200|linebreaksbr }}</p>{% endif %}
+                        <p class="review-meta">
+                            {{ review.author_name }} —
+                            <a href="{% url 'destination_detail' review.order.destination_id %}#avis">{{ review.order.destination.name }}</a>
+                        </p>
+                    </li>
+                {% endfor %}
+            </ul>
+        </section>
+    {% endif %}
 {% endblock %}
