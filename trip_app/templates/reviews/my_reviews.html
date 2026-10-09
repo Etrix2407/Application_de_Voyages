@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+
+{% block title %}Mes avis{% endblock %}
+
+{% block content %}
+    <h1>Mes avis</h1>
+
+    {% if to_review %}
+        <h2>Vos voyages en attente de votre avis</h2>
+        <ul class="actions">
+            {% for order in to_review %}
+                <li>
+                    {{ order.destination_name }} ({{ order.country_name }}), retour le {{ order.return_date|date:"j F Y" }} :
+                    <a class="button" href="{% url 'create_review' order.pk %}">Donner mon avis</a>
+                </li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+
+    <h2>Vos avis</h2>
+    {% if reviews %}
+        <div class="table-scroll">
+            <table>
+                <caption>Vos avis, du plus récent au plus ancien</caption>
+                <thead>
+                    <tr>
+                        <th scope="col">Destination</th>
+                        <th scope="col">Séjour</th>
+                        <th scope="col">Note et titre</th>
+                        <th scope="col">État</th>
+                        <th scope="col">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for review, can_edit, can_delete in reviews %}
+                        <tr>
+                            <td>{{ review.order.destination_name }} ({{ review.order.country_name }})</td>
+                            <td>{{ review.order.departure_date|date:"F Y" }}</td>
+                            <td>{% include "reviews/_rating.html" %}<br>« {{ review.title }} »</td>
+                            <td>
+                                <span class="status status-{{ review.status }}">{{ review.get_status_display }}</span>
+                                {% if review.refusal_reason %}
+                                    <br>Motif : {{ review.get_refusal_reason_display }}{% if review.refusal_details %} — {{ review.refusal_details }}{% endif %}
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if can_edit %}<a href="{% url 'edit_review' review.pk %}">Modifier</a><br>{% endif %}
+                                {% if can_delete %}
+                                    <a href="{% url 'remove_review' review.pk %}">Supprimer</a>
+                                    <br>Jusqu'au {{ review.editable_until|date:"j F Y" }}
+                                {% else %}
+                                    Avis définitif
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <p>Vous n'avez pas encore donné d'avis. Après un voyage confirmé par l'agence, vous pourrez raconter votre séjour ici.</p>
+    {% endif %}
+{% endblock %}

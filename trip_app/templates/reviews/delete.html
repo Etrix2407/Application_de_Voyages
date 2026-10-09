@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block title %}Supprimer mon avis{% endblock %}
+
+{% block content %}
+    <h1>Supprimer mon avis</h1>
+    <p>Avis sur <strong>{{ review.order.destination_name }}</strong> : « {{ review.title }} » ({% include "reviews/_rating.html" %}).</p>
+    <p><strong>La suppression est définitive.</strong></p>
+
+    <form method="post">
+        {% csrf_token %}
+        <button type="submit" class="button-danger">Supprimer définitivement</button>
+    </form>
+
+    <p><a href="{% url 'my_reviews' %}">Ne pas supprimer et revenir à mes avis</a></p>
+{% endblock %}

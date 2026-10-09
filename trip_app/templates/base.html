@@ -19,6 +19,7 @@
                 {% if user.is_authenticated %}
                     {% if user.is_client %}
                         <li><a href="{% url 'my_orders' %}">Mes demandes</a></li>
+                        <li><a href="{% url 'my_reviews' %}">Mes avis</a></li>
                         <li><a href="{% url 'favorite_list' %}">Mes favoris</a></li>
                     {% endif %}
                     {% if user.is_staff_member %}

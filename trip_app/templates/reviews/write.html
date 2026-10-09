@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block title %}{% if review %}Modifier mon avis{% else %}Donner mon avis{% endif %} — {{ order.destination_name }}{% endblock %}
+
+{% block content %}
+    <p><a href="{% url 'my_reviews' %}">← Mes avis</a></p>
+
+    <h1>{% if review %}Modifier mon avis{% else %}Donner mon avis{% endif %}</h1>
+    <p>
+        Voyage à <strong>{{ order.destination_name }} ({{ order.country_name }})</strong>,
+        du {{ order.departure_date|date:"j F Y" }} au {{ order.return_date|date:"j F Y" }}.
+    </p>
+    <p>Votre avis sera publié après sa validation par l'agence. Vous pourrez le modifier ou le supprimer pendant 30 jours.</p>
+    {% if review.status == "published" %}
+        <p class="message">Votre avis est publié : en le modifiant, il sera masqué jusqu'à sa nouvelle validation.</p>
+    {% endif %}
+
+    <form method="post" novalidate>
+        {% csrf_token %}
+        {{ form }}
+        <button type="submit">{% if review %}Enregistrer les modifications{% else %}Envoyer mon avis{% endif %}</button>
+    </form>
+{% endblock %}

@@ -19,6 +19,7 @@ from orders.services.placing import (
     place_order,
 )
 from orders.services.status import TransitionNotAllowed, cancel_by_client, client_can_cancel
+from reviews.services.eligibility import can_review
 
 
 @client_required
@@ -114,6 +115,8 @@ def my_order_detail(request, pk):
         "history": order.history.all(),
         "can_cancel": client_can_cancel(order),
         "is_confirmed": order.status == Status.CONFIRMED,
+        "can_review": can_review(request.user, order),
+        "review": getattr(order, "review", None),
     }
     return render(request, "orders/my_order_detail.html", context)
 

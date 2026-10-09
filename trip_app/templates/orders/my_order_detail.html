@@ -16,6 +16,19 @@
         <p>Cette demande est confirmée : pour l'annuler, appelez l'agence.</p>
     {% endif %}
 
+    {% if can_review %}
+        <p class="message">
+            Vous êtes rentré de ce voyage : racontez-le aux futurs voyageurs.
+            <a class="button" href="{% url 'create_review' order.pk %}">Donner mon avis</a>
+        </p>
+    {% elif review %}
+        <p>
+            Votre avis sur ce voyage : {% include "reviews/_rating.html" %} —
+            <span class="status status-{{ review.status }}">{{ review.get_status_display }}</span>
+            (<a href="{% url 'my_reviews' %}">voir mes avis</a>)
+        </p>
+    {% endif %}
+
     <h2>Historique</h2>
     {% include "orders/_history.html" %}
 {% endblock %}

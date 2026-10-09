@@ -347,3 +347,18 @@ td {
 .status-cancelled {
     color: var(--color-error);
 }
+
+/* États des avis. */
+
+.status-published {
+    color: var(--color-success);
+}
+
+.status-refused {
+    color: var(--color-error);
+}
+
+.stars {
+    color: #8a4b00;
+    letter-spacing: 0.1em;
+}

@@ -95,6 +95,11 @@ class Review(models.Model):
         return f"Avis {self.rating}/5 — {self.title}"
 
     @property
+    def stars(self) -> str:
+        """« ★★★★☆ » : repère visuel, toujours accompagné de la note écrite (« 4 sur 5 »)."""
+        return "★" * self.rating + "☆" * (MAX_RATING - self.rating)
+
+    @property
     def is_negative(self) -> bool:
         return self.rating <= NEGATIVE_RATING
 
