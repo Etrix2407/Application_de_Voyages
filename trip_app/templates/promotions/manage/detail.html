@@ -7,6 +7,7 @@
 
     <h1>{{ promotion.name }}</h1>
     <p>État : <span class="status status-{{ state.value }}">{{ state.label }}</span></p>
+    <p><a href="{% url 'manage_promotion_statistics' promotion.pk %}">Voir les statistiques de la promotion</a></p>
 
     {% if can_manage %}
         <ul class="actions">

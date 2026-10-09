@@ -1,0 +1,27 @@
+<div class="table-scroll">
+    <table>
+        <caption>{{ caption }}</caption>
+        <thead>
+            <tr>
+                <th scope="col">N°</th>
+                <th scope="col">Demandée le</th>
+                <th scope="col">Client</th>
+                <th scope="col">Destination</th>
+                <th scope="col">État</th>
+                <th scope="col">Remise</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for order in orders %}
+                <tr>
+                    <td><a href="{% url 'manage_order_detail' order.pk %}">{{ order.pk }}</a></td>
+                    <td>{{ order.created_at|date:"j F Y" }}</td>
+                    <td>{% if order.client %}{{ order.client.last_name }} {{ order.client.first_name }}{% else %}Client supprimé{% endif %}</td>
+                    <td>{{ order.destination_name }} ({{ order.country_name }})</td>
+                    <td><span class="status status-{{ order.status }}">{{ order.get_status_display }}</span></td>
+                    <td>{{ order.latest_discount|floatformat:2 }} €</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>

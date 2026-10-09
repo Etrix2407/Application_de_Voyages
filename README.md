@@ -123,6 +123,7 @@ Formats à respecter :
 3. **Modifier** : la date de fin peut être avancée, mais pas placée dans le passé. Chaque modification est notée dans l'**historique** de la fiche, avec la date, l'auteur et les champs modifiés.
 4. **Désactiver** : la promotion n'est plus proposée mais reste dans l'historique. **Supprimer** n'est possible que pour une promotion jamais utilisée.
 5. Un pays ou une destination visé par une promotion ne peut pas être supprimé : désactivez-le.
+6. **Statistiques** (lien depuis la fiche, agents et administrateur) : nombre de demandes qui ont utilisé la promotion, total des remises accordées (pour une demande confirmée, la remise recalculée à la confirmation), nombre de clients différents, et liste des demandes avec un lien vers chacune. Les demandes annulées ne comptent dans aucun chiffre et sont listées à part. Les demandes de clients ayant supprimé leur compte sont comptées dans les demandes (« dont 2 demandes de clients ayant supprimé leur compte ») mais pas dans les clients différents : on ne peut plus savoir de qui il s'agit.
 
 ### Utiliser l'application (client)
 
@@ -278,7 +279,8 @@ trip_app/
 ├── orders/                 # demandes de voyage (v2) : modèles, prix estimé, historique
 │   ├── views/              # client (faire, suivre, annuler), manage (personnel)
 │   ├── services/           # pricing, placing (création), promotions (choix de la promotion), status (changements d'état),
-│   │                       # filtering (liste du personnel), privacy (anonymisation RGPD)
+│   │                       # filtering (liste du personnel), privacy (anonymisation RGPD),
+│   │                       # promotion_statistics (statistiques d'une promotion)
 │   ├── models.py · forms.py · signals.py · urls.py
 │   └── tests/
 ├── reviews/                # avis clients (v3) : modèle, avis vérifiés, lien avec les demandes
@@ -292,7 +294,7 @@ trip_app/
 │   ├── accounts/           # auth/ · profile/ · staff/ · clients/ · emails/
 │   ├── catalog/            # pages publiques, fragments _*.html, manage/
 │   ├── orders/             # demandes côté client, fragments _*.html, manage/
-│   ├── promotions/         # manage/ (gestion)
+│   ├── promotions/         # manage/ (gestion, statistiques)
 │   └── reviews/            # avis côté client, fragments publics _*.html, manage/ (modération)
 └── static/css/             # feuille de style (texte lisible, adaptée au mobile)
 ```
