@@ -137,6 +137,7 @@ class StatusChange(models.Model):
     """Historique : chaque changement d'état, avec sa date et son auteur."""
 
     CLIENT_AUTHOR = "Client"
+    AGENCY_AUTHOR = "Agence"
 
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name="history")
     status = models.CharField("état", max_length=20, choices=Status.choices)
@@ -154,3 +155,8 @@ class StatusChange(models.Model):
 
     def __str__(self) -> str:
         return f"{self.get_status_display()} — {self.author_name}"
+
+    @property
+    def author_for_client(self) -> str:
+        """Auteur montré au client : « Agence » plutôt que le nom de l'agent."""
+        return self.CLIENT_AUTHOR if self.author_name == self.CLIENT_AUTHOR else self.AGENCY_AUTHOR

@@ -114,7 +114,22 @@ class StaffProcessingTests(TestCase):
 
         self.assertContains(response, "Annulée")
         self.assertContains(response, "Destination fermée cette saison.")
-        self.assertContains(response, "Luc Martin")
+        self.assertContains(response, "Agence")
+        self.assertNotContains(response, "Luc Martin")
+
+    def test_staff_sees_agent_name_in_history(self):
+        cancel_by_staff(self.order, self.agent, "Destination fermée cette saison.")
+
+        self.assertContains(self.client.get(self.detail), "Luc Martin")
+
+    def test_client_sees_own_actions_as_client(self):
+        cancel_by_client(self.order)
+        self.client.force_login(self.marie)
+
+        response = self.client.get(reverse("my_order_detail", args=[self.order.pk]))
+
+        self.assertContains(response, "<td>Client</td>", html=True)
+        self.assertNotContains(response, "Agence")
 
 
 class TransitionServiceTests(TestCase):
