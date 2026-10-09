@@ -9,6 +9,8 @@
     --color-success: #1e6b2f;
     --color-error: #a4161a;
     --color-background-soft: #f2f5f8;
+    /* Contour de focus : orange foncé, contraste supérieur à 3:1 sur le blanc (WCAG). */
+    --color-focus: #b35c00;
 }
 
 *,
@@ -38,7 +40,7 @@ button:focus-visible,
 input:focus-visible,
 select:focus-visible,
 textarea:focus-visible {
-    outline: 3px solid #f5a623;
+    outline: 3px solid var(--color-focus);
     outline-offset: 2px;
 }
 
@@ -246,7 +248,8 @@ td {
 
 .table-actions button {
     margin: 0;
-    padding: 0.4rem 0.8rem;
+    /* Assez grand pour être visé facilement, même dans un tableau. */
+    padding: 0.7rem 1rem;
 }
 
 .thumbnail {
@@ -269,7 +272,7 @@ td {
 
 .card {
     padding: 1rem;
-    border: 2px solid var(--color-background-soft);
+    border: 2px solid var(--color-border);
     border-radius: 6px;
     background: var(--color-background);
 }

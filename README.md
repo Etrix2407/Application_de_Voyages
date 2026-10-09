@@ -1,6 +1,6 @@
 # Application_de_Voyages
 
-Application web (Python 3, Django 5.2) pour une agence de voyage. Elle gère les comptes des clients et du personnel, et propose un catalogue de pays, destinations et activités. Le cahier des charges est résumé dans [Recap.md](Recap.md).
+Application web (Python 3, Django 5.2) pour une agence de voyage. Elle gère les comptes des clients et du personnel, et propose un catalogue de pays, destinations et activités. Le cahier des charges est résumé dans [Recap.md](Recap.md) (v1 : comptes et catalogue) et [Recap_2.md](Recap_2.md) (v2 : demandes de voyage).
 
 ## Sommaire
 
@@ -128,8 +128,8 @@ Limites par adresse IP, contre les robots : 20 échecs de connexion par 15 minut
 | Rôle | Fonctionnalités |
 |---|---|
 | Visiteur | Liste des pays par continent ; inscription ; connexion |
-| Client | Détail des pays, destinations et activités ; recherche et filtres ; favoris ; profil (modifier, changer le mot de passe, supprimer le compte) |
-| Agent | Consultation et recherche ; gestion du catalogue ; liste des clients, correction de leurs informations (sauf e-mail et mot de passe), envoi d'un lien de mot de passe ; profil (consultation, changement du mot de passe) |
+| Client | Détail des pays, destinations et activités ; recherche et filtres ; favoris ; demandes de voyage (faire une demande, suivre et annuler ses demandes en attente) ; profil (modifier, changer le mot de passe ou l'adresse e-mail, supprimer le compte) |
+| Agent | Consultation et recherche ; gestion du catalogue ; liste des clients, correction de leurs informations (sauf e-mail et mot de passe), envoi d'un lien de mot de passe ; traitement des demandes de voyage (filtrer, confirmer, annuler avec motif) ; profil (consultation, changement du mot de passe) |
 | Administrateur | Droits de l'agent + gestion du personnel |
 
 ## Règles de gestion appliquées
@@ -162,6 +162,7 @@ Réglez ces variables dans le `.env` du serveur, ou directement comme variables 
 |---|---|---|
 | `DJANGO_DEBUG` | `1` en développement, `0` en production | `0` (désactivé si absent) |
 | `DJANGO_SECRET_KEY` | Clé secrète longue et aléatoire (obligatoire si `DJANGO_DEBUG=0`) | clé de développement |
+| `DJANGO_PASSWORD_PEPPER` | « Poivre » des mots de passe, long et aléatoire (obligatoire si `DJANGO_DEBUG=0`). **Ne jamais le perdre ni le changer** : tous les mots de passe deviendraient inutilisables | vide |
 | `DJANGO_ALLOWED_HOSTS` | Noms de domaine autorisés, séparés par des virgules | vide |
 | `DJANGO_EMAIL_BACKEND` | `django.core.mail.backends.smtp.EmailBackend` pour envoyer de vrais e-mails | console |
 | `DJANGO_EMAIL_HOST` / `DJANGO_EMAIL_PORT` | Serveur SMTP | `localhost` / `587` |
@@ -197,7 +198,8 @@ trip_app/
 ├── common/                 # outils partagés entre applications (normalisation du texte)
 ├── accounts/               # comptes : utilisateurs, rôles, RGPD
 │   ├── views/              # auth, profile, staff, clients (une responsabilité par module)
-│   ├── services/           # règles métier : e-mails de lien, règles du personnel, limitation des connexions
+│   ├── services/           # inscription, changement d'e-mail, e-mails de lien, règles du personnel,
+│   │                       # recherche de client, limites anti-abus
 │   ├── models.py · forms.py · validators.py · decorators.py · urls.py
 │   └── tests/
 ├── catalog/                # catalogue : pays, destinations, activités, favoris
@@ -207,12 +209,16 @@ trip_app/
 │   ├── models.py · forms.py · validators.py · urls.py
 │   └── tests/
 ├── orders/                 # demandes de voyage (v2) : modèles, prix estimé, historique
-│   ├── services/           # calcul du prix estimé
+│   ├── views/              # client (faire, suivre, annuler), manage (personnel)
+│   ├── services/           # pricing, placing (création), status (changements d'état),
+│   │                       # filtering (liste du personnel), privacy (anonymisation RGPD)
+│   ├── models.py · forms.py · signals.py · urls.py
 │   └── tests/
 ├── templates/
 │   ├── base.html · home.html · privacy.html · 403/404/500.html
 │   ├── accounts/           # auth/ · profile/ · staff/ · clients/ · emails/
-│   └── catalog/            # pages publiques, fragments _*.html, manage/
+│   ├── catalog/            # pages publiques, fragments _*.html, manage/
+│   └── orders/             # demandes côté client, fragments _*.html, manage/
 └── static/css/             # feuille de style (texte lisible, adaptée au mobile)
 ```
 
