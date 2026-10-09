@@ -11,6 +11,8 @@ from django.urls import reverse_lazy
 from accounts.decorators import client_required
 from accounts.forms import AccountDeletionForm, AccountPasswordChangeForm, ClientProfileForm, EmailChangeForm
 from accounts.services.email_change import apply_email_change, request_email_change
+from accounts.forms import AccountDeletionForm, ClientProfileForm, EmailChangeForm
+from accounts.services.email_change import apply_email_change, pending_email_change, request_email_change
 
 
 @login_required
@@ -63,7 +65,16 @@ def change_email(request):
 
 
 def confirm_email_change(request, token):
-    """Lien reçu à la nouvelle adresse : il suffit de l'ouvrir pour appliquer le changement."""
+    """Lien reçu à la nouvelle adresse : la page demande un clic sur un bouton (POST).
+
+    Ouvrir le lien ne change rien : les logiciels qui inspectent les liens des e-mails
+    ne peuvent pas appliquer le changement à la place de la personne.
+    """
+    pending = pending_email_change(token)
+    if pending is None:
+        return render(request, "accounts/profile/email_change_invalid.html")
+    if request.method != "POST":
+        return render(request, "accounts/profile/confirm_email_change.html", {"new_email": pending[1]})
     user = apply_email_change(token)
     if user is None:
         return render(request, "accounts/profile/email_change_invalid.html")
