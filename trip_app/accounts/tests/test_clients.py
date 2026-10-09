@@ -183,7 +183,9 @@ class ClientPasswordLinkTests(TestCase):
         self.client.force_login(create_agent())
         client = create_client()
 
-        response = self.client.post(reverse("send_client_link", args=[client.pk]), follow=True)
+        with self.assertLogs("accounts.services.emails", level="ERROR") as logs:
+            response = self.client.post(reverse("send_client_link", args=[client.pk]), follow=True)
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "n&#x27;a pas pu être envoyé")
+        self.assertIn("serveur SMTP injoignable", logs.output[0])

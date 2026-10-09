@@ -167,6 +167,8 @@ class AccessMatrixTests(TestCase):
                     if role in ALLOWED[level]:
                         self.assertFalse(denied, f"{role} devrait accéder à {url} ({response.status_code})")
                     elif user is None:
-                        self.assertTrue(redirected_to_login, f"un visiteur devrait être renvoyé vers la connexion ({url})")
+                        self.assertTrue(
+                            redirected_to_login, f"un visiteur devrait être renvoyé vers la connexion ({url})"
+                        )
                     else:
                         self.assertEqual(response.status_code, 403, f"{role} ne devrait pas accéder à {url}")

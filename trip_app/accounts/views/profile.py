@@ -10,8 +10,6 @@ from django.urls import reverse_lazy
 
 from accounts.decorators import client_required
 from accounts.forms import AccountDeletionForm, AccountPasswordChangeForm, ClientProfileForm, EmailChangeForm
-from accounts.services.email_change import apply_email_change, request_email_change
-from accounts.forms import AccountDeletionForm, ClientProfileForm, EmailChangeForm
 from accounts.services.email_change import apply_email_change, pending_email_change, request_email_change
 
 
