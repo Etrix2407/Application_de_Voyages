@@ -1,12 +1,15 @@
-"""Demandes de voyage côté personnel : liste filtrée et détail."""
+"""Demandes de voyage côté personnel : liste filtrée, détail, confirmation et annulation."""
 
+from django.contrib import messages
 from django.core.paginator import Paginator
-from django.shortcuts import get_object_or_404, render
+from django.shortcuts import get_object_or_404, redirect, render
+from django.views.decorators.http import require_POST
 
 from accounts.decorators import staff_required
-from orders.forms import StaffOrderFilterForm
-from orders.models import Order
+from orders.forms import StaffCancelForm, StaffOrderFilterForm
+from orders.models import Order, Status
 from orders.services.filtering import filter_orders
+from orders.services.status import TransitionNotAllowed, cancel_by_staff, confirm_by_staff
 
 ORDERS_PER_PAGE = 25
 
@@ -30,5 +33,35 @@ def order_detail(request, pk):
         "order": order,
         "activities": order.activities.select_related("activity"),
         "history": order.history.all(),
+        "can_confirm": order.status == Status.PENDING,
+        "can_cancel": order.status in (Status.PENDING, Status.CONFIRMED),
     }
     return render(request, "orders/manage/detail.html", context)
+
+
+@staff_required
+@require_POST
+def confirm_order(request, pk):
+    order = get_object_or_404(Order, pk=pk)
+    try:
+        confirm_by_staff(order, request.user)
+    except TransitionNotAllowed as error:
+        messages.error(request, str(error))
+    else:
+        messages.success(request, f"La demande n° {order.pk} est confirmée.")
+    return redirect("manage_order_detail", pk=order.pk)
+
+
+@staff_required
+def cancel_order(request, pk):
+    order = get_object_or_404(Order.objects.select_related("client", "destination"), pk=pk)
+    form = StaffCancelForm(request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        try:
+            cancel_by_staff(order, request.user, form.cleaned_data["reason"])
+        except TransitionNotAllowed as error:
+            messages.error(request, str(error))
+        else:
+            messages.success(request, f"La demande n° {order.pk} est annulée.")
+        return redirect("manage_order_detail", pk=order.pk)
+    return render(request, "orders/manage/cancel.html", {"order": order, "form": form})

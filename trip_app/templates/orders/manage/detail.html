@@ -22,6 +22,23 @@
         <p>Le client a supprimé son compte : cette demande est anonymisée.</p>
     {% endif %}
 
+    {% if can_confirm or can_cancel %}
+        <h2>Traitement</h2>
+        <ul class="actions">
+            {% if can_confirm %}
+                <li>
+                    <form method="post" action="{% url 'manage_confirm_order' order.pk %}">
+                        {% csrf_token %}
+                        <button type="submit">Confirmer la demande (client rappelé)</button>
+                    </form>
+                </li>
+            {% endif %}
+            {% if can_cancel %}
+                <li><a class="button button-danger" href="{% url 'manage_cancel_order' order.pk %}">Annuler la demande</a></li>
+            {% endif %}
+        </ul>
+    {% endif %}
+
     <h2>Demande</h2>
     {% include "orders/_order_summary.html" %}
 

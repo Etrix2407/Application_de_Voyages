@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+
+{% block title %}Annuler la demande n° {{ order.pk }} — Gestion{% endblock %}
+
+{% block content %}
+    <h1>Annuler la demande n° {{ order.pk }}</h1>
+    <p>
+        {{ order.destination.name }}, du {{ order.departure_date|date:"j F Y" }} au {{ order.return_date|date:"j F Y" }}
+        — état actuel : <span class="status status-{{ order.status }}">{{ order.get_status_display }}</span>.
+    </p>
+    <p><strong>L'annulation est définitive.</strong></p>
+
+    <form method="post" novalidate>
+        {% csrf_token %}
+        {{ form }}
+        <button type="submit" class="button-danger">Confirmer l'annulation</button>
+    </form>
+
+    <p><a href="{% url 'manage_order_detail' order.pk %}">Ne pas annuler et revenir à la demande</a></p>
+{% endblock %}
