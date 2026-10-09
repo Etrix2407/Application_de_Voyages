@@ -118,6 +118,36 @@ class SignUpTests(TestCase):
 
         self.assertEqual(User.objects.get(email="marie@example.com").first_name, "Marie")
 
+    def test_new_attempt_invalidates_earlier_link(self):
+        # Marie s'inscrit, puis un tiers réinscrit son adresse avec d'autres données.
+        self.client.post(self.url, sign_up_data())
+        marie_link = link_in_last_email()
+        with mock.patch("django.utils.timezone.now", return_value=timezone.now() + timedelta(minutes=1)):
+            self.client.post(self.url, sign_up_data(first_name="Pirate", phone="0470 99 99 99"))
+
+        # Le lien de Marie ne peut plus activer le compte avec les données du tiers.
+        self.assertContains(self.client.get(marie_link), "plus valable")
+        passwords = {"new_password1": "soleil-plage-42", "new_password2": "soleil-plage-42"}
+        response = self.client.post(marie_link, passwords)
+        self.assertContains(response, "plus valable")
+        self.assertFalse(User.objects.get(email="marie@example.com").is_active)
+
+    def test_activation_page_shows_data_before_activating(self):
+        self.client.post(self.url, sign_up_data(first_name="Pirate"))
+
+        page = self.client.get(link_in_last_email())
+
+        self.assertContains(page, "Pirate Dupont")
+        self.assertContains(page, "0470123456")
+        self.assertContains(page, "12 avril 1955")
+        self.assertContains(page, "recommencez l'inscription")
+
+    def test_resent_link_works(self):
+        self.client.post(self.url, sign_up_data())
+        self.client.post(reverse("resend_confirmation"), {"email": "marie@example.com"})
+
+        self.assertContains(self.client.get(link_in_last_email()), "Bienvenue Marie")
+
     def test_role_forced_even_if_sent(self):
         self.client.post(self.url, sign_up_data(role=Role.ADMINISTRATOR))
 
