@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}Statistiques — {{ promotion.name }}{% endblock %}
+
+{% block content %}
+    <p><a href="{% url 'manage_promotion_detail' promotion.pk %}">← Retour à la promotion</a></p>
+
+    <h1>Statistiques de « {{ promotion.name }} »</h1>
+    <p>Les demandes annulées ne comptent dans aucun chiffre : elles sont listées à part, en bas de la page.</p>
+
+    <dl class="details">
+        <dt>Demandes qui l'ont utilisée</dt>
+        <dd>
+            {{ statistics.order_count }}{% if statistics.anonymized_count %},
+                dont {{ statistics.anonymized_count }} demande{{ statistics.anonymized_count|pluralize }} de clients ayant supprimé leur compte{% endif %}
+        </dd>
+        <dt>Total des remises accordées</dt>
+        <dd>{{ statistics.total_discount|floatformat:2 }} € (remise recalculée à la confirmation pour les demandes confirmées)</dd>
+        <dt>Clients différents</dt>
+        <dd>{{ statistics.client_count }}{% if statistics.anonymized_count %} (sans compter les clients ayant supprimé leur compte){% endif %}</dd>
+    </dl>
+
+    <h2>Demandes concernées</h2>
+    {% if statistics.orders %}
+        {% include "promotions/manage/_order_table.html" with orders=statistics.orders caption="Demandes qui ont utilisé la promotion" %}
+    {% else %}
+        <p>Aucune demande n'a utilisé cette promotion.</p>
+    {% endif %}
+
+    <h2>Demandes annulées</h2>
+    {% if statistics.cancelled_orders %}
+        {% include "promotions/manage/_order_table.html" with orders=statistics.cancelled_orders caption="Demandes annulées (non comptées)" %}
+    {% else %}
+        <p>Aucune demande annulée.</p>
+    {% endif %}
+{% endblock %}

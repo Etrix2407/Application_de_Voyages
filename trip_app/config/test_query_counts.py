@@ -15,6 +15,7 @@ from django.urls import reverse
 from accounts.tests.factories import create_admin, create_agent, create_client
 from catalog.models import FavoriteActivity, FavoriteDestination
 from catalog.tests.factories import create_activity, create_country, create_destination
+from orders.models import Status
 from orders.tests.factories import create_order
 from promotions.models import Scope
 from promotions.tests.factories import create_promotion
@@ -129,6 +130,18 @@ class QueryCountTests(TestCase):
             create_promotion(scope=Scope.COUNTRIES, countries=[self.country])
 
         self.assert_constant_queries(reverse("manage_promotions"), add_promotion)
+
+    def test_promotion_statistics(self):
+        self.client.force_login(create_agent())
+        promotion = create_promotion()
+
+        def add_orders():
+            client = create_client(email=f"{self.unique('client').replace(' ', '')}@example.com")
+            destination = create_destination(self.country, self.unique("Ville"))
+            create_order(client, destination, promotion=promotion)
+            create_order(client, destination, promotion=promotion, status=Status.CANCELLED)
+
+        self.assert_constant_queries(reverse("manage_promotion_statistics", args=[promotion.pk]), add_orders)
 
     def test_manage_country_page(self):
         self.client.force_login(create_agent())

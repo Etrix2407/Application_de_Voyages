@@ -7,6 +7,7 @@ from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from accounts.decorators import administrator_required, staff_required
+from orders.services.promotion_statistics import promotion_statistics
 from promotions.forms import PromotionForm
 from promotions.models import Promotion, State
 from promotions.services.management import (
@@ -55,6 +56,13 @@ def promotion_detail(request, pk):
         "used": used,
     }
     return render(request, "promotions/manage/detail.html", context)
+
+
+@staff_required
+def statistics(request, pk):
+    promotion = get_object_or_404(Promotion, pk=pk)
+    context = {"promotion": promotion, "statistics": promotion_statistics(promotion)}
+    return render(request, "promotions/manage/statistics.html", context)
 
 
 @administrator_required
