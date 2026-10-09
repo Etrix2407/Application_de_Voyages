@@ -1,15 +1,16 @@
 """Catalogue : pays, destinations et activités."""
 
+import uuid
 from decimal import Decimal
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
-from django.core.validators import MaxValueValidator, MinValueValidator
-from django.db import models
+from django.core.validators import FileExtensionValidator, MaxValueValidator, MinValueValidator
+from django.db import models, transaction
 
 from common.text import normalize
 
-from .validators import validate_time_offset
+from .validators import PHOTO_EXTENSIONS, validate_photo_size, validate_time_offset
 
 
 def format_offset(hours: Decimal) -> str:
@@ -150,6 +151,17 @@ class Country(models.Model):
         return not (self.destinations.exists() or self.activities.exists())
 
 
+def _delete_file_after_commit(storage, name: str) -> None:
+    """Supprime le fichier seulement si l'enregistrement en base a réussi."""
+    transaction.on_commit(lambda: storage.delete(name))
+
+
+def _photo_path(instance, filename: str) -> str:
+    """Nom de fichier aléatoire : le nom d'origine (parfois personnel) n'est jamais publié."""
+    extension = filename.rsplit(".", 1)[-1].lower()
+    return f"destinations/{uuid.uuid4().hex}.{extension}"
+
+
 class Destination(models.Model):
     name = models.CharField("nom", max_length=150)
     description = models.TextField()
@@ -160,7 +172,18 @@ class Destination(models.Model):
         "période idéale : à", choices=Month.choices, null=True, blank=True
     )
     price_from = _price_field("prix indicatif « à partir de »", null=True, blank=True)
-    photo = models.URLField("adresse (URL) de la photo", blank=True)
+    photo = models.ImageField(
+        "photo",
+        upload_to=_photo_path,
+        blank=True,
+        validators=[
+            FileExtensionValidator(
+                PHOTO_EXTENSIONS, message="Formats acceptés : JPEG, PNG ou WebP."
+            ),
+            validate_photo_size,
+        ],
+        help_text="Facultatif. JPEG, PNG ou WebP, 5 Mo maximum.",
+    )
     # Règle 3 : une destination appartient à un seul pays ; PROTECT applique la règle 5.
     country = models.ForeignKey(
         Country, on_delete=models.PROTECT, verbose_name="pays", related_name="destinations"
@@ -181,6 +204,21 @@ class Destination(models.Model):
             raise ValidationError(
                 "Indiquez le mois de début et le mois de fin de la période idéale, ou aucun des deux."
             )
+
+    def save(self, *args, **kwargs) -> None:
+        old_photo = ""
+        if self.pk:
+            old_photo = Destination.objects.filter(pk=self.pk).values_list("photo", flat=True).first() or ""
+        super().save(*args, **kwargs)
+        if old_photo and old_photo != self.photo.name:
+            _delete_file_after_commit(self.photo.storage, old_photo)
+
+    def delete(self, *args, **kwargs):
+        photo = self.photo
+        result = super().delete(*args, **kwargs)
+        if photo:
+            _delete_file_after_commit(photo.storage, photo.name)
+        return result
 
     def ideal_months(self) -> list[int]:
         """Mois de la période idéale ; elle peut chevaucher l'année (novembre à mars)."""

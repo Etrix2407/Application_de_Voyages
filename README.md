@@ -76,7 +76,7 @@ Formats à respecter :
 | Décalage horaire (été / hiver) | Heures par rapport à la Belgique, par quart d'heure : `5.5`, `-6`, `5.75` |
 | Période idéale | Mois de début et mois de fin ; peut chevaucher l'année (novembre → mars). Facultative |
 | Durée d'une activité | En minutes : `90` pour 1 h 30 |
-| Photo | Adresse complète d'une image (`https://…`). Facultative |
+| Photo | Fichier JPEG, PNG ou WebP de 5 Mo maximum, envoyé depuis l'ordinateur. Facultative ; une nouvelle photo remplace l'ancienne |
 | Prix | En euros. Le prix « à partir de » d'une destination est facultatif |
 
 ### Gérer les clients (agent ou administrateur)
@@ -162,6 +162,7 @@ Points d'attention :
 - **Ne committez jamais** la clé secrète ni les identifiants SMTP.
 - Le blocage après 5 échecs de connexion utilise le cache Django, en mémoire par défaut. Avec plusieurs processus serveur, configurez un cache partagé.
 - SQLite suffit pour le volume prévu (environ 1 000 clients).
+- Les photos envoyées sont stockées dans `trip_app/media/` (hors git). En développement, Django les sert lui-même ; en production, configurez le serveur web pour servir ce dossier à l'adresse `/media/`, et sauvegardez-le avec la base.
 
 ## Structure du code
 

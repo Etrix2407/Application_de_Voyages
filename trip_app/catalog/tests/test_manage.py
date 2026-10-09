@@ -4,7 +4,13 @@ from django.urls import reverse
 from catalog.models import Activity, Destination, Country
 from accounts.tests.factories import create_admin, create_agent, create_client
 
-from .factories import create_activity, create_destination, create_country
+from .factories import (
+    TemporaryMediaMixin,
+    create_activity,
+    create_country,
+    create_destination,
+    make_image,
+)
 
 
 def country_data(**fields):
@@ -81,8 +87,9 @@ class ManageAccessTests(TestCase):
                 self.assertEqual(self.client.get(reverse("manage_country_list")).status_code, 200)
 
 
-class ManageCountryTests(TestCase):
+class ManageCountryTests(TemporaryMediaMixin, TestCase):
     def setUp(self):
+        super().setUp()
         self.client.force_login(create_agent())
 
     def test_list_includes_inactive_countries(self):
@@ -138,7 +145,7 @@ class ManageCountryTests(TestCase):
 
     def test_page_shows_destinations_and_activities(self):
         country = create_country()
-        create_destination(country, "Kyoto", photo="https://example.com/kyoto.jpg")
+        create_destination(country, "Kyoto", photo=make_image())
         create_activity(country, "Sumo")
 
         response = self.client.get(reverse("manage_country", args=[country.pk]))

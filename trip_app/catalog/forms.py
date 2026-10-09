@@ -4,6 +4,7 @@ from django import forms
 
 from .models import Activity, Category, Continent, Destination, Difficulty, Month, Country
 from .services.search import Criteria
+from .validators import PHOTO_FORMATS
 
 
 class CountryForm(forms.ModelForm):
@@ -46,9 +47,16 @@ class DestinationForm(_CountryContentForm):
         )
         help_texts = {
             "start_month": "Facultatif. La période peut chevaucher l'année (de novembre à mars).",
-            "photo": "Facultatif. Adresse complète commençant par https://",
             "active": "Décochez pour masquer cette destination et ses activités aux clients.",
         }
+
+    def clean_photo(self):
+        photo = self.cleaned_data.get("photo")
+        # Pillow lit le vrai format : un GIF renommé en .jpg est refusé.
+        image = getattr(photo, "image", None)
+        if image is not None and image.format not in PHOTO_FORMATS:
+            raise forms.ValidationError("Formats acceptés : JPEG, PNG ou WebP.", code="invalid_photo_format")
+        return photo
 
 
 class ActivityForm(_CountryContentForm):

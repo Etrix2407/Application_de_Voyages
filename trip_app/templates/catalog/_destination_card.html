@@ -1,6 +1,6 @@
 <li class="card">
     {% if destination.photo %}
-        <img class="card-photo" src="{{ destination.photo }}" alt="Photo : {{ destination.name }}" loading="lazy">
+        <img class="card-photo" src="{{ destination.photo.url }}" alt="Photo : {{ destination.name }}" loading="lazy">
     {% endif %}
     <h3><a href="{% url 'destination_detail' destination.pk %}">{{ destination.name }}</a></h3>
     {% if destination.ideal_period %}
