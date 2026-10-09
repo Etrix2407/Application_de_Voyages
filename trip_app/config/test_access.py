@@ -38,6 +38,7 @@ ACCESS = {
     "favorite_list": CLIENT,
     "add_favorite": CLIENT,
     "remove_favorite": CLIENT,
+    "create_order": CLIENT,
     "client_list": STAFF,
     "edit_client": STAFF,
     "send_client_link": STAFF,
@@ -117,6 +118,7 @@ class AccessMatrixTests(TestCase):
             "manage_delete_activity": {"pk": self.activity.pk},
             "password_reset_confirm": {"uidb64": "MQ", "token": "jeton-invalide"},
             "confirm_sign_up": {"token": "jeton-invalide"},
+            "create_order": {"destination_pk": self.destination.pk},
         }.get(name, {})
 
     def test_every_route_declares_its_access(self):
