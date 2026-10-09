@@ -7,7 +7,7 @@ from django.urls import reverse
 from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
 
-from .models import User
+from accounts.models import User
 
 
 def send_password_link(request, user: User, subject: str, template_name: str) -> None:

@@ -6,9 +6,8 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 
 from accounts.decorators import staff_required
-
-from .forms import ActivityForm, DestinationForm, CountryForm
-from .models import Activity, Destination, Country
+from catalog.forms import ActivityForm, CountryForm, DestinationForm
+from catalog.models import Activity, Country, Destination
 
 
 def _country_page_url(item: Country | Destination | Activity) -> str:

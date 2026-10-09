@@ -4,9 +4,9 @@ from django.test import SimpleTestCase, TestCase
 from django.urls import reverse
 
 from catalog.models import Category, Continent, Difficulty, Month
-from catalog.search import Criteria, search
+from catalog.services.search import Criteria, search
 from accounts.tests.factories import create_client
-from config.text import normalize
+from common.text import normalize
 
 from .factories import create_activity, create_destination, create_country
 

@@ -2,8 +2,8 @@
 
 from django.core.exceptions import ValidationError
 
-from .emails import send_password_link
-from .models import User
+from accounts.models import User
+from accounts.services.emails import send_password_link
 
 
 def check_not_self(target: User, actor: User) -> None:
