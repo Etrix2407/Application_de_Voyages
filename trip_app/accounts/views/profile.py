@@ -9,7 +9,8 @@ from django.shortcuts import redirect, render
 from django.urls import reverse_lazy
 
 from accounts.decorators import client_required
-from accounts.forms import AccountDeletionForm, ClientProfileForm
+from accounts.forms import AccountDeletionForm, ClientProfileForm, EmailChangeForm
+from accounts.services.email_change import apply_email_change, request_email_change
 
 
 @login_required
@@ -43,3 +44,27 @@ def delete_account(request):
         messages.success(request, "Votre compte et vos données ont été supprimés.")
         return redirect("home")
     return render(request, "accounts/profile/delete.html", {"form": form})
+
+
+@client_required
+def change_email(request):
+    form = EmailChangeForm(request.user, request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        request_email_change(request, request.user, form.cleaned_data["new_email"])
+        # Même message dans tous les cas : rien ne révèle si l'adresse est déjà prise.
+        messages.success(
+            request,
+            "Si cette adresse peut être utilisée, un lien de confirmation vient d'y être envoyé. "
+            "Votre adresse ne changera qu'après un clic sur ce lien.",
+        )
+        return redirect("profile")
+    return render(request, "accounts/profile/change_email.html", {"form": form})
+
+
+def confirm_email_change(request, token):
+    """Lien reçu à la nouvelle adresse : il suffit de l'ouvrir pour appliquer le changement."""
+    user = apply_email_change(token)
+    if user is None:
+        return render(request, "accounts/profile/email_change_invalid.html")
+    messages.success(request, f"Votre adresse e-mail est maintenant {user.email}.")
+    return redirect("profile" if request.user.is_authenticated else "login")

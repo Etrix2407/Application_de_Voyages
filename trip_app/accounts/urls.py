@@ -13,6 +13,12 @@ urlpatterns = [
     path("deconnexion/", auth_views.LogoutView.as_view(), name="logout"),
     path("profil/", profile.profile, name="profile"),
     path("profil/modifier/", profile.edit_profile, name="edit_profile"),
+    path("profil/adresse-email/", profile.change_email, name="change_email"),
+    path(
+        "profil/adresse-email/confirmer/<str:token>/",
+        profile.confirm_email_change,
+        name="confirm_email_change",
+    ),
     path(
         "profil/mot-de-passe/",
         profile.AccountPasswordChangeView.as_view(),
