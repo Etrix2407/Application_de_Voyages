@@ -1,8 +1,10 @@
+from decimal import Decimal
+
 from django.test import TestCase
 from django.urls import reverse
 
 from accounts.tests.factories import create_admin, create_agent, create_client
-from catalog.tests.factories import create_country, create_destination
+from catalog.tests.factories import create_activity, create_country, create_destination
 from orders.models import Order, Status, StatusChange
 from orders.services.status import TransitionNotAllowed, cancel_by_client, cancel_by_staff, confirm_by_staff
 
@@ -172,3 +174,66 @@ class TransitionServiceTests(TestCase):
 
         with self.assertRaises(TransitionNotAllowed):
             cancel_by_client(self.order)
+
+
+class PriceAtConfirmationTests(TestCase):
+    """Le prix peut varier entre la demande et la confirmation : il est recalculé aux tarifs du jour."""
+
+    def setUp(self):
+        self.agent = create_agent()
+        self.marie = create_client()
+        country = create_country()
+        self.destination = create_destination(country, "Kyoto", price_from=Decimal("1000"))
+        self.tea = create_activity(country, "Cérémonie du thé", price_per_person=Decimal("50"))
+        # 2 adultes : (1000 + 50) × 2
+        self.order = create_order(
+            self.marie, self.destination, [self.tea], adults=2, estimated_price=Decimal("2100.00")
+        )
+
+    def raise_prices(self):
+        self.destination.price_from = Decimal("1100")
+        self.destination.save()
+        self.tea.price_per_person = Decimal("60")
+        self.tea.save()
+
+    def test_confirmation_uses_current_rates(self):
+        self.raise_prices()
+
+        confirm_by_staff(self.order, self.agent)
+
+        self.order.refresh_from_db()
+        self.assertEqual(self.order.confirmed_price, Decimal("2320.00"))  # (1100 + 60) × 2
+        self.assertEqual(self.order.estimated_price, Decimal("2100.00"))
+        self.assertEqual(self.order.latest_price, Decimal("2320.00"))
+        self.assertEqual(
+            self.order.history.get().reason, "Prix recalculé aux tarifs du jour : 2100,00 € → 2320,00 €."
+        )
+
+    def test_unchanged_price_leaves_no_note(self):
+        confirm_by_staff(self.order, self.agent)
+
+        self.order.refresh_from_db()
+        self.assertEqual(self.order.confirmed_price, Decimal("2100.00"))
+        self.assertEqual(self.order.history.get().reason, "")
+
+    def test_agent_sees_the_price_before_confirming(self):
+        self.raise_prices()
+        self.client.force_login(self.agent)
+
+        response = self.client.get(reverse("manage_order_detail", args=[self.order.pk]))
+
+        self.assertContains(response, "Prix aux tarifs actuels : <strong>2320,00 €</strong>", html=False)
+
+    def test_client_sees_both_prices(self):
+        self.raise_prices()
+        confirm_by_staff(self.order, self.agent)
+        self.client.force_login(self.marie)
+
+        detail = self.client.get(reverse("my_order_detail", args=[self.order.pk]))
+        listing = self.client.get(reverse("my_orders"))
+
+        self.assertContains(detail, "2100,00 €")
+        self.assertContains(detail, "Prix à la confirmation")
+        self.assertContains(detail, "2320,00 €")
+        self.assertContains(listing, "2320,00 €")
+        self.assertNotContains(listing, "2100,00 €")

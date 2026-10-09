@@ -37,7 +37,7 @@
                             <td>{{ order.destination_name }} ({{ order.country_name }})</td>
                             <td>{{ order.departure_date|date:"j F Y" }}</td>
                             <td><span class="status status-{{ order.status }}">{{ order.get_status_display }}</span></td>
-                            <td>{{ order.estimated_price }} €{% if order.is_quote_required %} + sur devis{% endif %}</td>
+                            <td>{{ order.latest_price }} €{% if order.is_quote_required %} + sur devis{% endif %}</td>
                         </tr>
                     {% endfor %}
                 </tbody>

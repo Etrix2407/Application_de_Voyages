@@ -3,14 +3,17 @@
 | Action                | Depuis                    | Par                       | Motif       |
 | --------------------- | ------------------------- | ------------------------- | ----------- |
 | cancel_by_client      | En attente                | le client                 | facultatif  |
-| confirm_by_staff      | En attente                | agent ou administrateur   | —           |
+| confirm_by_staff      | En attente                | agent ou administrateur   | — (prix)    |
 | cancel_by_staff       | En attente ou Confirmée   | agent ou administrateur   | obligatoire |
 | cancel_after_account_deletion | En attente        | automatique (« Client »)  | fixé        |
 """
 
+from decimal import Decimal
+
 from django.db import transaction
 
 from orders.models import Order, Status, StatusChange
+from orders.services.placing import price_at_current_rates
 
 
 # États de départ permis pour chaque action : seule source de ces règles (services et pages).
@@ -43,10 +46,23 @@ def cancel_by_client(order: Order, reason: str = "") -> None:
 
 
 def confirm_by_staff(order: Order, staff_member) -> None:
-    _change_status(
-        order, CONFIRMABLE, Status.CONFIRMED, staff_member, staff_member.get_full_name(), "",
-        "Seule une demande en attente peut être confirmée.",
+    """Confirme la demande au prix recalculé aux tarifs du jour.
+
+    Si le prix a changé depuis la demande, l'historique l'indique (visible par le client).
+    """
+    price = price_at_current_rates(order)
+    note = "" if price == order.estimated_price else (
+        f"Prix recalculé aux tarifs du jour : {_euros(order.estimated_price)} → {_euros(price)}."
     )
+    _change_status(
+        order, CONFIRMABLE, Status.CONFIRMED, staff_member, staff_member.get_full_name(), note,
+        "Seule une demande en attente peut être confirmée.", updates={"confirmed_price": price},
+    )
+    order.confirmed_price = price
+
+
+def _euros(amount: Decimal) -> str:
+    return f"{amount:.2f}".replace(".", ",") + " €"
 
 
 def cancel_by_staff(order: Order, staff_member, reason: str) -> None:
@@ -71,9 +87,13 @@ def cancel_after_account_deletion(order: Order) -> None:
 
 
 @transaction.atomic
-def _change_status(order, allowed_from, new_status, author, author_name, reason, refusal, by_client=False) -> None:
+def _change_status(
+    order, allowed_from, new_status, author, author_name, reason, refusal, by_client=False, updates=None
+) -> None:
     # Mise à jour conditionnelle : deux actions simultanées ne peuvent pas passer toutes les deux.
-    updated = Order.objects.filter(pk=order.pk, status__in=allowed_from).update(status=new_status)
+    updated = Order.objects.filter(pk=order.pk, status__in=allowed_from).update(
+        status=new_status, **(updates or {})
+    )
     if not updated:
         raise TransitionNotAllowed(refusal)
     order.status = new_status

@@ -20,6 +20,12 @@ def estimate_for(destination: Destination, activities, adults: int, children: in
     )
 
 
+def price_at_current_rates(order: Order) -> Decimal:
+    """Estimation d'une demande existante recalculée avec les tarifs actuels du catalogue."""
+    activities = [line.activity for line in order.activities.select_related("activity")]
+    return estimate_for(order.destination, activities, order.adults, order.children)
+
+
 def find_pending_duplicates(client, destination: Destination, departure_date, return_date):
     """Demandes « En attente » du client pour la même destination aux mêmes dates."""
     return Order.objects.filter(

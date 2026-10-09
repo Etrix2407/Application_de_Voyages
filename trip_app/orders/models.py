@@ -5,6 +5,7 @@ au moment de la demande : un changement de tarif ultérieur ne la modifie pas.
 """
 
 from datetime import timedelta
+from decimal import Decimal
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
@@ -65,6 +66,9 @@ class Order(models.Model):
     # Prix figés au moment de la demande. Prix de destination vide = « sur devis ».
     destination_price = _price_field("prix indicatif de la destination", null=True, blank=True)
     estimated_price = _price_field("prix estimé")
+    # Recalculé aux tarifs du jour quand le personnel confirme (le prix peut avoir changé
+    # depuis la demande). L'estimation de départ reste conservée à côté.
+    confirmed_price = _price_field("prix recalculé à la confirmation", null=True, blank=True)
     status = models.CharField("état", max_length=20, choices=Status.choices, default=Status.PENDING)
     created_at = models.DateTimeField("date de la demande", default=timezone.now)
     # Jeton de la page de vérification : unique, il empêche qu'un double clic crée deux demandes.
@@ -82,6 +86,11 @@ class Order(models.Model):
     @property
     def traveller_count(self) -> int:
         return self.adults + self.children
+
+    @property
+    def latest_price(self) -> Decimal:
+        """Prix le plus récent : celui de la confirmation s'il existe, sinon l'estimation de départ."""
+        return self.estimated_price if self.confirmed_price is None else self.confirmed_price
 
     @property
     def is_quote_required(self) -> bool:

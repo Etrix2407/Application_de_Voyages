@@ -141,3 +141,12 @@ class PendingOrdersOfDeletedAccountTests(TestCase):
 
         self.assertContains(response, "Compte client supprimé")
         self.assertNotContains(response, reverse("manage_confirm_order", args=[self.pending.pk]))
+
+    def test_cancelled_when_deleting_through_the_profile_page(self):
+        self.client.force_login(self.marie)
+
+        self.client.post(reverse("delete_account"), {"password": PASSWORD})
+
+        self.pending.refresh_from_db()
+        self.assertEqual(self.pending.status, Status.CANCELLED)
+        self.assertEqual(self.pending.history.get().reason, ACCOUNT_DELETED_REASON)

@@ -11,11 +11,15 @@
         </dd>
         <dt>Remarques</dt>
         <dd>{{ order.remarks|default:"Aucune"|linebreaksbr }}</dd>
-        <dt>Prix estimé</dt>
+        <dt>Prix estimé à la demande</dt>
         <dd>
             <strong>{{ order.estimated_price }} €</strong> — estimation, non contractuel, calculée le {{ order.created_at|date:"j F Y" }}.
             {% if order.is_quote_required %}<br>Le prix de la destination est donné sur devis par votre conseiller.{% endif %}
         </dd>
+        {% if order.confirmed_price is not None %}
+            <dt>Prix à la confirmation</dt>
+            <dd><strong>{{ order.confirmed_price }} €</strong> — recalculé aux tarifs du jour de la confirmation, non contractuel.</dd>
+        {% endif %}
         <dt>Demande faite le</dt>
         <dd>{{ order.created_at|date:"j F Y à H:i" }}</dd>
     </dl>

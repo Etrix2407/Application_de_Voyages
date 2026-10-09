@@ -9,6 +9,7 @@ from accounts.decorators import staff_required
 from orders.forms import StaffCancelForm, StaffOrderFilterForm
 from orders.models import Order
 from orders.services.filtering import filter_orders
+from orders.services.placing import price_at_current_rates
 from orders.services.status import (
     TransitionNotAllowed,
     cancel_by_staff,
@@ -43,6 +44,9 @@ def order_detail(request, pk):
         "can_confirm": staff_can_confirm(order),
         "can_cancel": staff_can_cancel(order),
     }
+    if context["can_confirm"]:
+        # Prix qui sera enregistré si l'agent confirme maintenant.
+        context["price_if_confirmed"] = price_at_current_rates(order)
     return render(request, "orders/manage/detail.html", context)
 
 
