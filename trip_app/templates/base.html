@@ -6,7 +6,8 @@
     <title>{% block title %}{% endblock %} — {{ site_name }}</title>
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
 </head>
-<body>
+{# spellcheck désactivé : pas de soulignement rouge dans les champs (motifs, remarques, descriptions). #}
+<body spellcheck="false">
     <a class="skip-link" href="#content">Aller au contenu</a>
     <header class="site-header">
         <a class="logo" href="{% url 'home' %}">{{ site_name }}</a>
