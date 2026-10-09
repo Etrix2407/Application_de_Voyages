@@ -180,3 +180,10 @@ if not DEBUG and not TESTING:
     SECURE_SSL_REDIRECT = os.environ.get("DJANGO_SECURE_SSL_REDIRECT", "1") == "1"
     # HSTS : à activer seulement une fois le HTTPS validé (ex. 31536000 = 1 an).
     SECURE_HSTS_SECONDS = int(os.environ.get("DJANGO_HSTS_SECONDS", "0"))
+    # Seulement si tous les sous-domaines du site sont eux aussi en HTTPS.
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = os.environ.get("DJANGO_HSTS_INCLUDE_SUBDOMAINS", "0") == "1"
+    if NUM_PROXIES:
+        # Derrière un proxy qui gère le HTTPS, Django reçoit la requête en HTTP : l'en-tête
+        # posé par le proxy indique l'origine HTTPS (liens des e-mails en https://, pas de
+        # boucle de redirection). Le proxy doit toujours remplacer cet en-tête.
+        SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
