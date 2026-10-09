@@ -104,6 +104,19 @@ AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "accounts.validators.LetterAndDigitValidator"},
 ]
 
+# « Poivre » : secret commun ajouté au hachage des mots de passe, gardé hors de la base.
+# Obligatoire en production. Ne jamais le perdre ni le changer : tous les mots de passe
+# deviendraient inutilisables (voir accounts/hashers.py).
+PASSWORD_PEPPER = os.environ.get("DJANGO_PASSWORD_PEPPER", "")
+if not PASSWORD_PEPPER and not DEBUG and not TESTING:
+    raise RuntimeError("La variable d'environnement DJANGO_PASSWORD_PEPPER est obligatoire.")
+if PASSWORD_PEPPER:
+    PASSWORD_HASHERS = [
+        "accounts.hashers.PepperedPBKDF2PasswordHasher",
+        # Anciens mots de passe sans poivre : acceptés, puis convertis à la connexion suivante.
+        "django.contrib.auth.hashers.PBKDF2PasswordHasher",
+    ]
+
 # Pendant les tests uniquement : hachage rapide pour accélérer la suite (jamais en production).
 if TESTING:
     PASSWORD_HASHERS = ["django.contrib.auth.hashers.MD5PasswordHasher"]
