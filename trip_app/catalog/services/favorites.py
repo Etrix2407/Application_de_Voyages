@@ -5,7 +5,8 @@ from catalog.models import Activity, Destination, FavoriteActivity, FavoriteDest
 
 def is_favorite(user, item: Destination | Activity) -> bool:
     """Pour afficher le bon bouton sur les pages de détail (clients uniquement)."""
-    if not user.is_client:
+    # Un visiteur (non connecté) n'a pas de favoris.
+    if not user.is_authenticated or not user.is_client:
         return False
     if isinstance(item, Destination):
         return FavoriteDestination.objects.filter(client=user, destination=item).exists()

@@ -70,7 +70,7 @@ class DetailAccessTests(TestCase):
         self.destination = create_destination(self.country)
         self.activity = create_activity(self.country)
 
-    def test_details_reserved_to_logged_in_users(self):
+    def test_details_open_to_visitors(self):
         urls = [
             reverse("country_detail", args=[self.country.pk]),
             reverse("destination_detail", args=[self.destination.pk]),
@@ -78,12 +78,23 @@ class DetailAccessTests(TestCase):
         ]
         for url in urls:
             with self.subTest(url=url):
-                self.assertRedirects(self.client.get(url), f"{reverse('login')}?next={url}")
-
-                self.client.force_login(create_client())
                 self.assertEqual(self.client.get(url).status_code, 200)
-                self.client.logout()
-                User.objects.all().delete()
+
+    def test_visitor_invited_to_log_in_to_order_but_sees_no_favorite_button(self):
+        response = self.client.get(reverse("destination_detail", args=[self.destination.pk]))
+        order_url = reverse("create_order", args=[self.destination.pk])
+
+        self.assertContains(response, f'href="{reverse("login")}?next={order_url}"')
+        self.assertNotContains(response, f'href="{order_url}"')
+        self.assertNotContains(response, "favoris")
+
+    def test_hidden_content_stays_hidden_for_visitors(self):
+        self.destination.active = False
+        self.destination.save()
+
+        response = self.client.get(reverse("destination_detail", args=[self.destination.pk]))
+
+        self.assertEqual(response.status_code, 404)
 
 
 class CountryDetailTests(TemporaryMediaMixin, TestCase):
