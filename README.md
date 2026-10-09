@@ -105,8 +105,9 @@ Formats à respecter :
    | Mois de voyage | Destinations dont la période idéale inclut ce mois |
    | Catégorie, difficulté, âge du voyageur | Activités |
 
-4. **Favoris** : le bouton « Ajouter à mes favoris » se trouve sur la page d'une destination ou d'une activité. Retrouvez-les dans **Mes favoris**. Un favori devenu indisponible y reste signalé et peut être retiré.
-5. **Mon profil** : modifier ses informations, changer son mot de passe ou **supprimer son compte**. La suppression est définitive et efface aussi les favoris.
+4. **Demande de voyage** : sur la page d'une destination, « Faire une demande de voyage ». Choisissez les dates (départ au moins 7 jours plus tard), le nombre d'adultes et d'enfants (10 voyageurs au plus), les activités du pays et vos remarques. Une page de vérification affiche le **prix estimé** (estimation, non contractuel ; enfants à 50 %) avant l'envoi. Un conseiller vous rappelle sous 48 heures.
+5. **Favoris** : le bouton « Ajouter à mes favoris » se trouve sur la page d'une destination ou d'une activité. Retrouvez-les dans **Mes favoris**. Un favori devenu indisponible y reste signalé et peut être retiré.
+6. **Mon profil** : modifier ses informations, changer son mot de passe ou **supprimer son compte**. La suppression est définitive et efface aussi les favoris.
 
 ### Mot de passe oublié
 

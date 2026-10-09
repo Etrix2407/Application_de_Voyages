@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block title %}Vérifiez votre demande — {{ destination.name }}{% endblock %}
+
+{% block content %}
+    <h1>Vérifiez votre demande</h1>
+
+    {% if duplicates %}
+        <p class="message message-warning" role="alert">
+            Vous avez déjà une demande en attente pour {{ destination.name }} aux mêmes dates.
+            Vous pouvez tout de même envoyer celle-ci si c'est voulu.
+        </p>
+    {% endif %}
+
+    <dl class="details">
+        <dt>Destination</dt>
+        <dd>{{ destination.name }} ({{ destination.country.name }})</dd>
+        <dt>Dates</dt>
+        <dd>Du {{ form.cleaned_data.departure_date|date:"j F Y" }} au {{ form.cleaned_data.return_date|date:"j F Y" }}</dd>
+        <dt>Voyageurs</dt>
+        <dd>{{ form.cleaned_data.adults }} adulte{{ form.cleaned_data.adults|pluralize }}, {{ form.cleaned_data.children }} enfant{{ form.cleaned_data.children|pluralize }}</dd>
+        <dt>Activités</dt>
+        <dd>
+            {% for activity in activities %}{{ activity.name }} ({{ activity.price_per_person }} € par personne){% if not forloop.last %}, {% endif %}{% empty %}Aucune{% endfor %}
+        </dd>
+        <dt>Remarques</dt>
+        <dd>{{ form.cleaned_data.remarks|default:"Aucune"|linebreaksbr }}</dd>
+        <dt>Prix estimé</dt>
+        <dd>
+            <strong>{{ estimated_price }} €</strong> — estimation, non contractuel.
+            {% if destination.price_from is None %}
+                <br>Le prix de la destination est donné sur devis par votre conseiller : ce montant ne compte que les activités.
+            {% endif %}
+        </dd>
+    </dl>
+
+    <form method="post">
+        {% csrf_token %}
+        {% for field in form %}{{ field.as_hidden }}{% endfor %}
+        <ul class="actions">
+            <li><button type="submit" name="confirm">Envoyer ma demande</button></li>
+            <li><button type="submit" name="edit" class="button-secondary">Modifier</button></li>
+        </ul>
+    </form>
+{% endblock %}

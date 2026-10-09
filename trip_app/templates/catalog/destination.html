@@ -7,6 +7,9 @@
 
     <h1>{{ destination.name }}</h1>
     {% include "catalog/_favorite_button.html" with item_type="destination" item=destination %}
+    {% if user.is_client %}
+        <p><a class="button" href="{% url 'create_order' destination.pk %}">Faire une demande de voyage</a></p>
+    {% endif %}
     {% if destination.photo %}
         <img class="photo" src="{{ destination.photo.url }}" alt="Photo : {{ destination.name }}">
     {% endif %}

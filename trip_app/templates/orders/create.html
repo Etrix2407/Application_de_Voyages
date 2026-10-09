@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block title %}Demande de voyage — {{ destination.name }}{% endblock %}
+
+{% block content %}
+    <p><a href="{% url 'destination_detail' destination.pk %}">← {{ destination.name }}</a></p>
+
+    <h1>Demande de voyage : {{ destination.name }}</h1>
+    <p>Remplissez ce formulaire. Vous pourrez vérifier votre demande et son prix estimé avant de l'envoyer.</p>
+
+    <form method="post" novalidate>
+        {% csrf_token %}
+        {{ form }}
+        <button type="submit">Vérifier ma demande</button>
+    </form>
+{% endblock %}
