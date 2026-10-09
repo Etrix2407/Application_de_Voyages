@@ -1,6 +1,7 @@
 import html
 import re
 from datetime import timedelta
+from unittest import mock
 from decimal import Decimal
 
 from django.core.exceptions import ValidationError
@@ -14,6 +15,7 @@ from orders.models import (
     MAX_DAYS_BEFORE_DEPARTURE,
     MAX_REMARKS_LENGTH,
     MAX_STAY_DAYS,
+    MAX_TRAVELLERS,
     MIN_DAYS_BEFORE_DEPARTURE,
     Order,
     Status,
@@ -131,8 +133,20 @@ class CreateOrderTests(TestCase):
                 self.assertTemplateUsed(response, "orders/create.html")
                 self.assertFalse(Order.objects.exists())
 
+    def test_rule_refused_at_the_last_moment_shows_message(self):
+        # Ex. activité désactivée entre la page de vérification et l'envoi.
+        refusal = ValidationError({"activity": "Cette activité n'est plus proposée."})
+        with mock.patch("orders.views.client.place_order", side_effect=refusal):
+            response = submit_order(self.client, self.url, self.data())
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "orders/create.html")
+        self.assertContains(response, "Cette activité n&#x27;est plus proposée.")
+        self.assertFalse(Order.objects.exists())
+
     def test_form_shows_limits_to_the_browser(self):
         response = self.client.get(self.url)
+        self.assertContains(response, f'max="{MAX_TRAVELLERS}"')
 
         self.assertContains(response, f'max="{departure_in(MAX_DAYS_BEFORE_DEPARTURE).isoformat()}"')
         self.assertContains(response, f'maxlength="{MAX_REMARKS_LENGTH}"')

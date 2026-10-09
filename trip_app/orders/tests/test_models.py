@@ -71,7 +71,8 @@ class OrderValidationTests(TestCase):
                 self.assert_invalid(self.new_order(departure_date=departure, return_date=return_date), "return_date")
 
     def test_departure_at_least_seven_days_ahead(self):
-        self.assert_invalid(self.new_order(departure_date=departure_in(MIN_DAYS_BEFORE_DEPARTURE - 1)), "departure_date")
+        too_soon = departure_in(MIN_DAYS_BEFORE_DEPARTURE - 1)
+        self.assert_invalid(self.new_order(departure_date=too_soon), "departure_date")
         self.new_order(departure_date=departure_in(MIN_DAYS_BEFORE_DEPARTURE)).full_clean()
 
     def test_departure_within_two_years(self):

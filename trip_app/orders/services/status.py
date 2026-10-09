@@ -37,7 +37,7 @@ def staff_can_cancel(order: Order) -> bool:
 def cancel_by_client(order: Order, reason: str = "") -> None:
     _change_status(
         order, CLIENT_CANCELLABLE, Status.CANCELLED, order.client, StatusChange.CLIENT_AUTHOR, reason,
-        "Seule une demande en attente peut être annulée par le client.",
+        "Seule une demande en attente peut être annulée par le client.", by_client=True,
     )
 
 
@@ -58,7 +58,7 @@ def cancel_by_staff(order: Order, staff_member, reason: str) -> None:
 
 
 @transaction.atomic
-def _change_status(order, allowed_from, new_status, author, author_name, reason, refusal) -> None:
+def _change_status(order, allowed_from, new_status, author, author_name, reason, refusal, by_client=False) -> None:
     # Mise à jour conditionnelle : deux actions simultanées ne peuvent pas passer toutes les deux.
     updated = Order.objects.filter(pk=order.pk, status__in=allowed_from).update(status=new_status)
     if not updated:
@@ -66,5 +66,6 @@ def _change_status(order, allowed_from, new_status, author, author_name, reason,
     order.status = new_status
     # Nom figé : l'historique reste lisible même si le compte de l'agent est supprimé ensuite.
     StatusChange.objects.create(
-        order=order, status=new_status, author=author, author_name=author_name, reason=reason.strip()
+        order=order, status=new_status, author=author, author_name=author_name, reason=reason.strip(),
+        by_client=by_client,
     )

@@ -19,7 +19,9 @@ class MyOrdersTests(TestCase):
         self.country = create_country()
         self.destination = create_destination(self.country, "Kyoto", price_from=Decimal("1000"))
         self.order = create_order(self.marie, self.destination, estimated_price=Decimal("2100.00"))
-        StatusChange.objects.create(order=self.order, status=Status.PENDING, author_name=StatusChange.CLIENT_AUTHOR)
+        StatusChange.objects.create(
+            order=self.order, status=Status.PENDING, author_name=StatusChange.CLIENT_AUTHOR, by_client=True
+        )
 
     def test_menu_link_for_clients(self):
         self.assertContains(self.client.get(reverse("home")), reverse("my_orders"))

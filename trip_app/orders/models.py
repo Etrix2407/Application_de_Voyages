@@ -152,6 +152,8 @@ class StatusChange(models.Model):
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="+"
     )
     reason = models.TextField("motif", blank=True)
+    # Action du client lui-même (sinon : le personnel). Ne dépend pas du libellé affiché.
+    by_client = models.BooleanField("par le client", default=False)
 
     class Meta:
         verbose_name = "changement d'état"
@@ -163,4 +165,4 @@ class StatusChange(models.Model):
     @property
     def author_for_client(self) -> str:
         """Auteur montré au client : « Agence » plutôt que le nom de l'agent."""
-        return self.CLIENT_AUTHOR if self.author_name == self.CLIENT_AUTHOR else self.AGENCY_AUTHOR
+        return self.CLIENT_AUTHOR if self.by_client else self.AGENCY_AUTHOR

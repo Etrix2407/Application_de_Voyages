@@ -42,8 +42,7 @@ def confirm_sign_up(request, token):
 
     form = SetPasswordForm(user, request.POST or None)
     if request.method == "POST" and form.is_valid():
-        form.save(commit=False)
-        sign_up_service.confirm(user)
+        sign_up_service.confirm(user, form.cleaned_data["new_password1"])
         login(request, user)
         messages.success(request, f"Bienvenue {user.first_name}, votre compte est activé.")
         return redirect("home")

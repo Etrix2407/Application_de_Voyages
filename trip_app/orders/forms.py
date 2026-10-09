@@ -5,7 +5,15 @@ from datetime import timedelta
 from django import forms
 
 from catalog.models import Activity, Country, Destination
-from orders.models import MAX_REMARKS_LENGTH, MAX_STAY_DAYS, MIN_DAYS_BEFORE_DEPARTURE, Order, Status, departure_window
+from orders.models import (
+    MAX_REMARKS_LENGTH,
+    MAX_STAY_DAYS,
+    MAX_TRAVELLERS,
+    MIN_DAYS_BEFORE_DEPARTURE,
+    Order,
+    Status,
+    departure_window,
+)
 from orders.services.filtering import NEWEST_FIRST, OLDEST_FIRST
 
 
@@ -31,14 +39,14 @@ class OrderForm(forms.ModelForm):
         widgets = {
             "departure_date": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
             "return_date": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
-            "adults": forms.NumberInput(attrs={"min": 1, "max": 10}),
-            "children": forms.NumberInput(attrs={"min": 0, "max": 9}),
+            "adults": forms.NumberInput(attrs={"min": 1, "max": MAX_TRAVELLERS}),
+            "children": forms.NumberInput(attrs={"min": 0, "max": MAX_TRAVELLERS - 1}),
             "remarks": forms.Textarea(attrs={"rows": 4}),
         }
         help_texts = {
             "departure_date": f"Au moins {MIN_DAYS_BEFORE_DEPARTURE} jours après aujourd'hui, et dans les deux ans.",
             "return_date": f"Séjour de {MAX_STAY_DAYS} jours au maximum.",
-            "children": "Au total, 10 voyageurs maximum.",
+            "children": f"Au total, {MAX_TRAVELLERS} voyageurs maximum.",
             "remarks": (
                 f"Facultatif : vos souhaits, questions, contraintes… ({MAX_REMARKS_LENGTH} caractères au maximum)."
             ),
@@ -92,7 +100,10 @@ class StaffOrderFilterForm(forms.Form):
     sort = forms.ChoiceField(
         label="Tri",
         required=False,
-        choices=[(NEWEST_FIRST, "Demandes les plus récentes d'abord"), (OLDEST_FIRST, "Demandes les plus anciennes d'abord")],
+        choices=[
+            (NEWEST_FIRST, "Demandes les plus récentes d'abord"),
+            (OLDEST_FIRST, "Demandes les plus anciennes d'abord"),
+        ],
     )
 
     def clean(self):
