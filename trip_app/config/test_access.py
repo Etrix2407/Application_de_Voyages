@@ -11,6 +11,7 @@ from django.urls import URLResolver, get_resolver, reverse
 from accounts.tests.factories import create_admin, create_agent, create_client
 from catalog.tests.factories import create_activity, create_country, create_destination
 from orders.tests.factories import create_order
+from reviews.tests.factories import create_review, create_trip_done
 
 PUBLIC, LOGGED_IN, CLIENT, STAFF, ADMIN = "public", "connecté", "client", "personnel", "administrateur"
 
@@ -45,6 +46,10 @@ ACCESS = {
     "my_orders": CLIENT,
     "my_order_detail": CLIENT,
     "cancel_my_order": CLIENT,
+    "my_reviews": CLIENT,
+    "create_review": CLIENT,
+    "edit_review": CLIENT,
+    "remove_review": CLIENT,
     "manage_orders": STAFF,
     "manage_order_detail": STAFF,
     "manage_confirm_order": STAFF,
@@ -102,6 +107,8 @@ class AccessMatrixTests(TestCase):
         cls.activity = create_activity(country, destination=cls.destination)
         cls.country = country
         cls.order = create_order(cls.client_user, cls.destination)
+        cls.trip_to_review = create_trip_done(cls.client_user, cls.destination)
+        cls.review = create_review(create_trip_done(cls.client_user, cls.destination))
 
     def url_kwargs(self, name):
         member = self.other_agent.pk
@@ -136,6 +143,9 @@ class AccessMatrixTests(TestCase):
             "manage_order_detail": {"pk": self.order.pk},
             "manage_confirm_order": {"pk": self.order.pk},
             "manage_cancel_order": {"pk": self.order.pk},
+            "create_review": {"order_pk": self.trip_to_review.pk},
+            "edit_review": {"pk": self.review.pk},
+            "remove_review": {"pk": self.review.pk},
         }.get(name, {})
 
     def test_every_route_declares_its_access(self):

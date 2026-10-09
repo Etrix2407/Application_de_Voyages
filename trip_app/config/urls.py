@@ -15,6 +15,7 @@ urlpatterns = [
     path("comptes/", include("accounts.urls")),
     path("catalogue/", include("catalog.urls")),
     path("demandes/", include("orders.urls")),
+    path("avis/", include("reviews.urls")),
 ]
 
 # En développement uniquement : Django sert lui-même les photos envoyées.
