@@ -8,9 +8,13 @@ from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# Les tests ne dépendent jamais des réglages locaux : même résultat sur toutes les machines.
+TESTING = "test" in sys.argv[1:2]
+
 # Réglages locaux et secrets : fichier .env à la racine du dépôt (modèle : .env.example).
 # Il n'est jamais commité ; les vraies variables d'environnement restent prioritaires.
-load_dotenv(BASE_DIR.parent / ".env")
+if not TESTING:
+    load_dotenv(BASE_DIR.parent / ".env")
 
 # Nom affiché sur le site (titres, en-tête, pied de page).
 SITE_NAME = "Horizons Lointains"
@@ -100,7 +104,7 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 # Pendant les tests uniquement : hachage rapide pour accélérer la suite (jamais en production).
-if "test" in sys.argv[1:2]:
+if TESTING:
     PASSWORD_HASHERS = ["django.contrib.auth.hashers.MD5PasswordHasher"]
 
 
@@ -142,7 +146,7 @@ EMAIL_USE_TLS = os.environ.get("DJANGO_EMAIL_USE_TLS", "1") == "1"
 
 
 # Sécurité en production (site servi en HTTPS).
-if not DEBUG:
+if not DEBUG and not TESTING:
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
     SECURE_SSL_REDIRECT = os.environ.get("DJANGO_SECURE_SSL_REDIRECT", "1") == "1"

@@ -17,6 +17,7 @@ OFFICE_IP = "203.0.113.10"
 OTHER_IP = "198.51.100.20"
 
 
+@override_settings(NUM_PROXIES=0)
 class ClientIpTests(SimpleTestCase):
     def request(self, **meta):
         return RequestFactory().get("/", REMOTE_ADDR=OFFICE_IP, **meta)
