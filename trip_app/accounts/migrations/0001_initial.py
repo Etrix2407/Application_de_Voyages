@@ -26,7 +26,7 @@ class Migration(migrations.Migration):
                 ('last_name', models.CharField(max_length=100, verbose_name='nom')),
                 ('first_name', models.CharField(max_length=100, verbose_name='prénom')),
                 ('role', models.CharField(choices=[('client', 'Client'), ('agent', 'Agent'), ('administrator', 'Administrateur')], default='client', max_length=20, verbose_name='rôle')),
-                ('phone', models.CharField(blank=True, max_length=20, validators=[accounts.validators.validate_belgian_phone], verbose_name='téléphone')),
+                ('phone', models.CharField(blank=True, max_length=20, validators=[accounts.validators.validate_phone], verbose_name='téléphone')),
                 ('birth_date', models.DateField(blank=True, null=True, verbose_name='date de naissance')),
                 ('employee_number', models.CharField(blank=True, editable=False, max_length=20, null=True, unique=True, verbose_name="numéro d'employé")),
                 ('is_active', models.BooleanField(default=True, verbose_name='actif')),

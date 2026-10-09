@@ -127,7 +127,7 @@ class SignUpTests(TestCase):
         cases = {
             "sans consentement": {"consent": ""},
             "sans date de naissance": {"birth_date": ""},
-            "téléphone étranger": {"phone": "+33 6 12 34 56 78"},
+            "téléphone invalide": {"phone": "12345"},
         }
         for reason, fields in cases.items():
             with self.subTest(reason=reason):
