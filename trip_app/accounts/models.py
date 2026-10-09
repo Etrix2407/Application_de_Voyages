@@ -1,6 +1,6 @@
 """Modèle utilisateur : un compte par adresse e-mail, avec un rôle."""
 
-from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
+from django.contrib.auth.models import AbstractBaseUser, BaseUserManager
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import timezone
@@ -41,14 +41,15 @@ class UserManager(BaseUserManager):
         return user
 
     def create_superuser(self, email: str, password: str | None = None, **fields):
+        """Appelée par `manage.py createsuperuser` : crée un compte administrateur."""
         fields.setdefault("role", Role.ADMINISTRATOR)
-        fields.setdefault("is_superuser", True)
         if fields["role"] != Role.ADMINISTRATOR:
             raise ValueError("Un superutilisateur doit avoir le rôle administrateur.")
         return self.create_user(email, password, **fields)
 
 
-class User(AbstractBaseUser, PermissionsMixin):
+# Les droits dépendent uniquement du rôle (voir decorators.py) : pas de permissions Django.
+class User(AbstractBaseUser):
     email = models.EmailField("adresse e-mail", unique=True)
     last_name = models.CharField("nom", max_length=100)
     first_name = models.CharField("prénom", max_length=100)
@@ -119,7 +120,9 @@ class User(AbstractBaseUser, PermissionsMixin):
             )
 
     def save(self, *args, **kwargs) -> None:
+        # Normalisé ici aussi : create_user() et les commandes n'appellent pas clean().
         self.email = normalize_email_address(self.email)
+        self.phone = normalize_phone(self.phone)
         if self.is_staff_member and not self.employee_number:
             self.employee_number = self._next_employee_number()
         super().save(*args, **kwargs)
@@ -132,5 +135,5 @@ class User(AbstractBaseUser, PermissionsMixin):
             .values_list("employee_number", flat=True)
             .first()
         )
-        next_url = int(last.removeprefix(EMPLOYEE_NUMBER_PREFIX)) + 1 if last else 1
-        return f"{EMPLOYEE_NUMBER_PREFIX}{next_url:04d}"
+        next_number = int(last.removeprefix(EMPLOYEE_NUMBER_PREFIX)) + 1 if last else 1
+        return f"{EMPLOYEE_NUMBER_PREFIX}{next_number:04d}"

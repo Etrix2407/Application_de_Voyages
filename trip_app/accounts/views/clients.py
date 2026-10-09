@@ -50,8 +50,11 @@ def edit_client(request, pk):
 @require_POST
 def send_client_link(request, pk):
     client = _get_client(pk)
-    send_password_link(
+    sent = send_password_link(
         request, client, "Changement de votre mot de passe", "accounts/emails/client_password.txt"
     )
-    messages.success(request, f"Un lien pour choisir un nouveau mot de passe a été envoyé à {client.email}.")
+    if sent:
+        messages.success(request, f"Un lien pour choisir un nouveau mot de passe a été envoyé à {client.email}.")
+    else:
+        messages.error(request, "Le lien n'a pas pu être envoyé (problème de messagerie). Réessayez plus tard.")
     return redirect("edit_client", pk=client.pk)

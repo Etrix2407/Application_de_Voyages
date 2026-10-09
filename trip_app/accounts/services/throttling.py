@@ -2,12 +2,14 @@
 
 from django.core.cache import cache
 
+from accounts.models import normalize_email_address
+
 MAX_FAILURES = 5
 LOCKOUT_SECONDS = 15 * 60
 
 
 def _key(email: str) -> str:
-    return f"login-failures:{email.strip().lower()}"
+    return f"login-failures:{normalize_email_address(email)}"
 
 
 def is_locked(email: str) -> bool:

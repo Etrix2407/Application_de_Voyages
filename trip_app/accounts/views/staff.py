@@ -11,6 +11,12 @@ from accounts.models import STAFF_ROLES, User
 from accounts.services.staff_rules import check_not_self, send_activation_link
 
 
+LINK_NOT_SENT = (
+    "Le lien n'a pas pu être envoyé (problème de messagerie). "
+    "Réessayez plus tard avec « Envoyer un lien de mot de passe »."
+)
+
+
 def _get_staff_member(pk: int) -> User:
     """Seuls les comptes du personnel sont gérés ici, jamais ceux des clients."""
     return get_object_or_404(User, pk=pk, role__in=STAFF_ROLES)
@@ -27,12 +33,11 @@ def create_agent(request):
     form = AgentCreationForm(request.POST or None)
     if request.method == "POST" and form.is_valid():
         agent = form.save()
-        send_activation_link(request, agent)
-        messages.success(
-            request,
-            f"Le compte de {agent.get_full_name()} ({agent.employee_number}) a été créé. "
-            "Un e-mail lui a été envoyé pour choisir son mot de passe.",
-        )
+        created = f"Le compte de {agent.get_full_name()} ({agent.employee_number}) a été créé."
+        if send_activation_link(request, agent):
+            messages.success(request, f"{created} Un e-mail lui a été envoyé pour choisir son mot de passe.")
+        else:
+            messages.warning(request, f"{created} {LINK_NOT_SENT}")
         return redirect("staff_list")
     return render(request, "accounts/staff/create.html", {"form": form})
 
@@ -68,8 +73,12 @@ def set_staff_active(request, pk, active: bool):
 @require_POST
 def resend_link(request, pk):
     member = _get_staff_member(pk)
-    send_activation_link(request, member)
-    messages.success(request, f"Un nouveau lien a été envoyé à {member.email}.")
+    if not member.is_active:
+        messages.error(request, "Ce compte est désactivé : réactivez-le avant d'envoyer un lien.")
+    elif send_activation_link(request, member):
+        messages.success(request, f"Un nouveau lien a été envoyé à {member.email}.")
+    else:
+        messages.error(request, LINK_NOT_SENT)
     return redirect("staff_list")
 
 

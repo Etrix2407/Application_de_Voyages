@@ -151,12 +151,3 @@ class StaffMemberForm(forms.ModelForm):
         if role != self.instance.role:
             check_not_self(self.instance, self.actor)
         return role
-
-    def save(self, commit: bool = True) -> User:
-        member = super().save(commit=False)
-        if member.role == Role.AGENT:
-            # Un agent rétrogradé perd aussi le statut de superutilisateur.
-            member.is_superuser = False
-        if commit:
-            member.save()
-        return member

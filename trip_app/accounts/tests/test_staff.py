@@ -1,4 +1,5 @@
 import re
+from unittest import mock
 
 from django.contrib.auth import get_user_model
 from django.core import mail
@@ -124,13 +125,13 @@ class StaffMemberEditTests(TestCase):
         self.agent.refresh_from_db()
         self.assertEqual(self.agent.role, Role.AGENT)
 
-    def test_demoting_superuser_removes_status(self):
+    def test_demoted_administrator_loses_staff_management(self):
         other_admin = create_admin(email="admin2@example.com")
 
         self.edit(other_admin, role=Role.AGENT)
 
-        other_admin.refresh_from_db()
-        self.assertFalse(other_admin.is_superuser)
+        self.client.force_login(other_admin)
+        self.assertEqual(self.client.get(reverse("staff_list")).status_code, 403)
 
     def test_client_role_forbidden(self):
         response = self.edit(self.agent, role=Role.CLIENT)
@@ -211,3 +212,39 @@ class StaffMemberDeletionTests(TestCase):
 
         self.assertContains(response, "votre propre compte")
         self.assertTrue(User.objects.filter(pk=self.admin.pk).exists())
+
+
+@mock.patch("accounts.services.emails.send_mail", side_effect=OSError("serveur SMTP injoignable"))
+class EmailFailureTests(TestCase):
+    def setUp(self):
+        self.client.force_login(create_admin())
+
+    def test_agent_created_with_clear_message_when_email_fails(self, _send_mail):
+        response = self.client.post(
+            reverse("create_agent"),
+            {"first_name": "Luc", "last_name": "Martin", "email": "luc@example.com"},
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(User.objects.filter(email="luc@example.com").exists())
+        self.assertContains(response, "n&#x27;a pas pu être envoyé")
+
+    def test_resend_link_failure_is_reported(self, _send_mail):
+        agent = create_agent()
+
+        response = self.client.post(reverse("resend_staff_link", args=[agent.pk]), follow=True)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "n&#x27;a pas pu être envoyé")
+
+
+class InactiveMemberLinkTests(TestCase):
+    def test_no_password_link_for_inactive_member(self):
+        self.client.force_login(create_admin())
+        agent = create_agent(is_active=False)
+
+        response = self.client.post(reverse("resend_staff_link", args=[agent.pk]), follow=True)
+
+        self.assertEqual(len(mail.outbox), 0)
+        self.assertContains(response, "désactivé")

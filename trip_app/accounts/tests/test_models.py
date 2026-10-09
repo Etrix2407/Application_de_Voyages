@@ -151,3 +151,11 @@ class PasswordStrengthTests(TestCase):
 
         with self.assertRaises(ValidationError):
             validate_password("marie.dupont2024", user=client)
+
+
+class NormalizationOnSaveTests(TestCase):
+    def test_phone_normalized_even_without_full_clean(self):
+        client = create_client(phone="0470 12 34 56")
+
+        client.refresh_from_db()
+        self.assertEqual(client.phone, "0470123456")

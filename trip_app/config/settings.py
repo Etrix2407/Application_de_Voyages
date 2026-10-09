@@ -6,6 +6,9 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# Nom affiché sur le site (titres, en-tête, pied de page).
+SITE_NAME = "Horizons Lointains"
+
 # Mode debug activé par défaut en développement ; mettre DJANGO_DEBUG=0 en production.
 DEBUG = os.environ.get("DJANGO_DEBUG", "1") == "1"
 
@@ -53,6 +56,7 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "config.context_processors.site",
             ],
         },
     },

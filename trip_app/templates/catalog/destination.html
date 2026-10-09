@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}{{ destination.name }} — Application de voyage{% endblock %}
+{% block title %}{{ destination.name }}{% endblock %}
 
 {% block content %}
     <p><a href="{% url 'country_detail' destination.country.pk %}">← {{ destination.country.name }}</a></p>
