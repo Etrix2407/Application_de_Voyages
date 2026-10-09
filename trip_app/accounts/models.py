@@ -119,7 +119,9 @@ class User(AbstractBaseUser, PermissionsMixin):
             )
 
     def save(self, *args, **kwargs) -> None:
+        # Normalisé ici aussi : create_user() et les commandes n'appellent pas clean().
         self.email = normalize_email_address(self.email)
+        self.phone = normalize_phone(self.phone)
         if self.is_staff_member and not self.employee_number:
             self.employee_number = self._next_employee_number()
         super().save(*args, **kwargs)
@@ -132,5 +134,5 @@ class User(AbstractBaseUser, PermissionsMixin):
             .values_list("employee_number", flat=True)
             .first()
         )
-        next_url = int(last.removeprefix(EMPLOYEE_NUMBER_PREFIX)) + 1 if last else 1
-        return f"{EMPLOYEE_NUMBER_PREFIX}{next_url:04d}"
+        next_number = int(last.removeprefix(EMPLOYEE_NUMBER_PREFIX)) + 1 if last else 1
+        return f"{EMPLOYEE_NUMBER_PREFIX}{next_number:04d}"
