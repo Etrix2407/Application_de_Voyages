@@ -45,6 +45,19 @@ La commande refuse de s'exécuter en production (`DJANGO_DEBUG=0`). Elle peut ê
 
 En développement, aucun e-mail n'est réellement envoyé : il s'affiche dans le terminal où tourne `runserver`. C'est le cas des liens « mot de passe oublié » et des liens d'activation des agents. Copiez le lien affiché dans le navigateur.
 
+### Tester l'envoi réel des e-mails sur son PC
+
+Pour recevoir vraiment les e-mails (confirmation d'inscription, liens de mot de passe) avec une boîte Outlook / Hotmail :
+
+```powershell
+cd trip_app
+powershell -ExecutionPolicy Bypass -File scriptsun_with_smtp.ps1
+```
+
+Le script demande l'adresse et le mot de passe **à chaque lancement** (rien n'est enregistré), propose un e-mail de test, puis lance le site. Pour une autre messagerie : `-SmtpHost <serveur> -SmtpPort <port>`.
+
+Si le compte a la validation en deux étapes, utilisez un **mot de passe d'application** créé dans les paramètres de sécurité du compte Microsoft. Si Outlook refuse la connexion malgré un mot de passe correct, le compte n'accepte plus l'envoi par mot de passe : passez par un service d'envoi (voir « Mise en production »).
+
 ## Guide d'utilisation
 
 ### Premier démarrage (administrateur)
