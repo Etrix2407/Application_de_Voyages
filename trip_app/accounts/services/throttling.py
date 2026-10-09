@@ -59,8 +59,10 @@ def get_client_ip(request) -> str:
 # Par adresse e-mail.
 login_failures = Limiter("login-failures", max_attempts=5, window_seconds=15 * 60)
 password_reset_requests = Limiter("password-reset", max_attempts=3, window_seconds=60 * 60)
+confirmation_emails = Limiter("sign-up-emails", max_attempts=3, window_seconds=60 * 60)
 
 # Par adresse IP : seuils larges, car un bureau ou un wifi partage souvent une même IP.
 login_failures_by_ip = Limiter("login-failures-ip", max_attempts=20, window_seconds=15 * 60)
 sign_ups_by_ip = Limiter("sign-ups-ip", max_attempts=5, window_seconds=60 * 60)
 password_reset_requests_by_ip = Limiter("password-reset-ip", max_attempts=10, window_seconds=60 * 60)
+confirmation_requests_by_ip = Limiter("confirmation-resend-ip", max_attempts=10, window_seconds=60 * 60)

@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+
+{% block title %}Vérifiez votre boîte e-mail{% endblock %}
+
+{% block content %}
+    <h1>Vérifiez votre boîte e-mail</h1>
+    <p>Nous venons de vous envoyer un e-mail. Ouvrez le lien qu'il contient pour confirmer votre adresse et choisir votre mot de passe.</p>
+    <p>Le lien est valable 24 heures. Pensez à regarder dans vos courriers indésirables.</p>
+    <p>Rien reçu après quelques minutes ? <a href="{% url 'resend_confirmation' %}">Renvoyer l'e-mail de confirmation</a></p>
+{% endblock %}

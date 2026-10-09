@@ -1,0 +1,11 @@
+Bonjour {{ user.first_name }},
+
+Quelqu'un vient de demander la création d'un compte avec votre adresse e-mail. Un compte existe déjà pour cette adresse : aucun nouveau compte n'a été créé.
+
+Si c'est vous, connectez-vous :
+{{ login_link }}
+
+Mot de passe oublié ? Choisissez-en un nouveau :
+{{ password_reset_link }}
+
+Si vous n'êtes pas à l'origine de cette demande, ignorez simplement cet e-mail.

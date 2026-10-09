@@ -102,7 +102,7 @@ class SignUpIpLimitTests(TestCase):
 
         response = self.sign_up(99)
 
-        self.assertContains(response, "Trop de comptes")
+        self.assertContains(response, "Trop d&#x27;inscriptions")
         self.assertEqual(User.objects.count(), sign_ups_by_ip.max_attempts)
 
     def test_other_ip_can_still_sign_up(self):

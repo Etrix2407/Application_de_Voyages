@@ -1,0 +1,7 @@
+Bonjour {{ user.first_name }},
+
+Merci pour votre inscription. Pour confirmer votre adresse e-mail et choisir votre mot de passe, ouvrez ce lien (valable 24 heures) :
+
+{{ confirmation_link }}
+
+Si vous n'êtes pas à l'origine de cette inscription, ignorez cet e-mail : aucun compte ne sera activé et les informations saisies seront effacées sous 7 jours.

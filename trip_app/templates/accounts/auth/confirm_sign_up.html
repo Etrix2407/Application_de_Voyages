@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+
+{% block title %}Choisir votre mot de passe{% endblock %}
+
+{% block content %}
+    <h1>Bienvenue {{ user.first_name }}</h1>
+    <p>Votre adresse est confirmée. Choisissez maintenant votre mot de passe pour activer votre compte.</p>
+
+    <form method="post" novalidate>
+        {% csrf_token %}
+        {{ form }}
+        <button type="submit">Activer mon compte</button>
+    </form>
+{% endblock %}

@@ -17,6 +17,9 @@ ACCESS = {
     "home": PUBLIC,
     "privacy": PUBLIC,
     "sign_up": PUBLIC,
+    "sign_up_done": PUBLIC,
+    "confirm_sign_up": PUBLIC,
+    "resend_confirmation": PUBLIC,
     "login": PUBLIC,
     "logout": PUBLIC,
     "password_reset": PUBLIC,
@@ -113,6 +116,7 @@ class AccessMatrixTests(TestCase):
             "manage_edit_activity": {"pk": self.activity.pk},
             "manage_delete_activity": {"pk": self.activity.pk},
             "password_reset_confirm": {"uidb64": "MQ", "token": "jeton-invalide"},
+            "confirm_sign_up": {"token": "jeton-invalide"},
         }.get(name, {})
 
     def test_every_route_declares_its_access(self):

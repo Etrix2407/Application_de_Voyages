@@ -6,6 +6,9 @@ from .views import auth, clients, profile, staff
 
 urlpatterns = [
     path("inscription/", auth.sign_up, name="sign_up"),
+    path("inscription/envoyee/", auth.sign_up_done, name="sign_up_done"),
+    path("inscription/confirmer/<str:token>/", auth.confirm_sign_up, name="confirm_sign_up"),
+    path("inscription/renvoyer-lien/", auth.resend_confirmation, name="resend_confirmation"),
     path("connexion/", auth.AccountLoginView.as_view(), name="login"),
     path("deconnexion/", auth_views.LogoutView.as_view(), name="logout"),
     path("profil/", profile.profile, name="profile"),

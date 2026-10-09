@@ -87,7 +87,7 @@ Formats à respecter :
 
 ### Utiliser l'application (client)
 
-1. **Créer un compte** : remplissez le formulaire et acceptez la politique de confidentialité. Le téléphone est facultatif ; s'il est rempli, il doit être un numéro belge.
+1. **Créer un compte** : remplissez le formulaire (sans mot de passe) et acceptez la politique de confidentialité. Un e-mail contient un lien, valable 24 heures, pour confirmer l'adresse et **choisir le mot de passe** ; le compte est alors activé. Rien reçu ? « Renvoyer l'e-mail de confirmation » depuis la page de connexion. Le téléphone est facultatif ; s'il est rempli, il doit être un numéro belge.
 2. **Nos pays** : la liste des pays par continent est visible par tous. Le détail des pays, destinations et activités demande d'être connecté.
 3. **Rechercher** : recherche par mot-clé (sans tenir compte des accents) et filtres. Un filtre ne s'applique qu'au type de résultat qu'il concerne :
 
@@ -122,7 +122,8 @@ Limites par adresse IP, contre les robots : 20 échecs de connexion par 15 minut
 - Mots de passe hachés (jamais stockés en clair) : au moins 12 caractères, avec au moins une lettre et un chiffre. Les mots de passe trop courants ou trop proches du nom ou de l'e-mail sont refusés.
 - Un nom de pays est unique, sans tenir compte des majuscules ni des accents (« Perou » = « Pérou »).
 - Un client ne voit jamais les données d'un autre client ni celles du personnel. Les agents ne voient pas les favoris des clients.
-- RGPD : consentement enregistré à l'inscription, page [politique de confidentialité](trip_app/templates/confidentialite.html), suppression réelle du compte par le client.
+- RGPD : consentement enregistré à l'inscription, page [politique de confidentialité](trip_app/templates/privacy.html), suppression réelle du compte par le client.
+- L'inscription ne révèle jamais si une adresse est déjà cliente : la page est identique et la propriétaire de l'adresse est prévenue par e-mail. Le mot de passe est choisi après confirmation, ce qui empêche de « réserver » le compte de quelqu'un d'autre.
 
 > **À compléter avant la mise en ligne :** les mentions marquées « [À COMPLÉTER] » dans la politique de confidentialité (responsable du traitement, contact, durée de conservation).
 
@@ -162,6 +163,7 @@ python manage.py collectstatic
 
 Points d'attention :
 
+- Planifiez chaque jour `python manage.py purge_unconfirmed` (tâche planifiée Windows ou cron) : elle efface les inscriptions non confirmées depuis plus de 7 jours (RGPD).
 - **Ne committez jamais** la clé secrète ni les identifiants SMTP.
 - Les limites (5 échecs de connexion, 3 liens « mot de passe oublié » par heure) utilisent le cache Django, en mémoire par défaut. Avec plusieurs processus serveur, configurez un cache partagé.
 - SQLite suffit pour le volume prévu (environ 1 000 clients).

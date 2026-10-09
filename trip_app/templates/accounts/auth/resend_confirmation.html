@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+
+{% block title %}Renvoyer l'e-mail de confirmation{% endblock %}
+
+{% block content %}
+    <h1>Renvoyer l'e-mail de confirmation</h1>
+    <p>Indiquez l'adresse utilisée lors de votre inscription.</p>
+
+    <form method="post" novalidate>
+        {% csrf_token %}
+        {{ form }}
+        <button type="submit">Renvoyer le lien</button>
+    </form>
+{% endblock %}
