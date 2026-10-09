@@ -125,13 +125,13 @@ class StaffMemberEditTests(TestCase):
         self.agent.refresh_from_db()
         self.assertEqual(self.agent.role, Role.AGENT)
 
-    def test_demoting_superuser_removes_status(self):
+    def test_demoted_administrator_loses_staff_management(self):
         other_admin = create_admin(email="admin2@example.com")
 
         self.edit(other_admin, role=Role.AGENT)
 
-        other_admin.refresh_from_db()
-        self.assertFalse(other_admin.is_superuser)
+        self.client.force_login(other_admin)
+        self.assertEqual(self.client.get(reverse("staff_list")).status_code, 403)
 
     def test_client_role_forbidden(self):
         response = self.edit(self.agent, role=Role.CLIENT)

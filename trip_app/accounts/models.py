@@ -1,6 +1,6 @@
 """Modèle utilisateur : un compte par adresse e-mail, avec un rôle."""
 
-from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
+from django.contrib.auth.models import AbstractBaseUser, BaseUserManager
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import timezone
@@ -41,14 +41,15 @@ class UserManager(BaseUserManager):
         return user
 
     def create_superuser(self, email: str, password: str | None = None, **fields):
+        """Appelée par `manage.py createsuperuser` : crée un compte administrateur."""
         fields.setdefault("role", Role.ADMINISTRATOR)
-        fields.setdefault("is_superuser", True)
         if fields["role"] != Role.ADMINISTRATOR:
             raise ValueError("Un superutilisateur doit avoir le rôle administrateur.")
         return self.create_user(email, password, **fields)
 
 
-class User(AbstractBaseUser, PermissionsMixin):
+# Les droits dépendent uniquement du rôle (voir decorators.py) : pas de permissions Django.
+class User(AbstractBaseUser):
     email = models.EmailField("adresse e-mail", unique=True)
     last_name = models.CharField("nom", max_length=100)
     first_name = models.CharField("prénom", max_length=100)
