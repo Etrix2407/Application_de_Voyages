@@ -27,6 +27,10 @@
         <ul class="actions">
             {% if can_confirm %}
                 <li>
+                    <p>
+                        Prix aux tarifs actuels : <strong>{{ price_if_confirmed }} €</strong>
+                        (estimation à la demande : {{ order.estimated_price }} €). C'est ce prix qui sera enregistré.
+                    </p>
                     <form method="post" action="{% url 'manage_confirm_order' order.pk %}">
                         {% csrf_token %}
                         <button type="submit">Confirmer la demande (client rappelé)</button>
