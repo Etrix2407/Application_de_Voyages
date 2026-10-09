@@ -17,7 +17,7 @@ Application web (Python 3, Django 5.2) pour une agence de voyage. Elle gère les
 Prérequis : Python 3.10 ou plus récent.
 
 ```bash
-pip install -r trip_app/requirements.txt
+pip install -r requirements.txt
 copy .env.example .env               # puis remplissez .env (voir ci-dessous)
 cd trip_app
 python manage.py migrate
