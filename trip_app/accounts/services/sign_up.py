@@ -5,6 +5,8 @@ Le parcours ne révèle jamais si une adresse est déjà inscrite :
 - adresse déjà utilisée : aucun compte créé, la propriétaire est prévenue par e-mail.
 Le mot de passe est choisi après le clic sur le lien : seule la personne qui reçoit
 les e-mails de l'adresse peut l'activer (pas de « pré-détournement » de compte).
+Une nouvelle tentative remplace les données en attente et rend les anciens liens
+inutilisables ; la page d'activation affiche les données qui seront enregistrées.
 """
 
 from datetime import timedelta
@@ -25,7 +27,10 @@ _PERSONAL_FIELDS = ("first_name", "last_name", "phone", "birth_date")
 
 def make_confirmation_token(user: User) -> str:
     # L'adresse fait partie du jeton : un lien ne vaut que pour l'adresse qui l'a reçu.
-    return signing.dumps({"id": user.pk, "email": user.email}, salt=_TOKEN_SALT)
+    # La date d'inscription aussi : un lien ne vaut que pour les données envoyées avec lui.
+    return signing.dumps(
+        {"id": user.pk, "email": user.email, "joined": user.date_joined.isoformat()}, salt=_TOKEN_SALT
+    )
 
 
 def user_from_token(token: str) -> User | None:
@@ -34,7 +39,10 @@ def user_from_token(token: str) -> User | None:
         data = signing.loads(token, salt=_TOKEN_SALT, max_age=CONFIRMATION_MAX_AGE)
     except signing.BadSignature:  # comprend les liens expirés
         return None
-    return User.objects.filter(pk=data.get("id"), email=data.get("email"), role=Role.CLIENT).first()
+    user = User.objects.filter(pk=data.get("id"), email=data.get("email"), role=Role.CLIENT).first()
+    if user is None or user.date_joined.isoformat() != data.get("joined"):
+        return None
+    return user
 
 
 def request_sign_up(request, form) -> None:

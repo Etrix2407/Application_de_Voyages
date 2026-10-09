@@ -4,7 +4,22 @@
 
 {% block content %}
     <h1>Bienvenue {{ user.first_name }}</h1>
-    <p>Votre adresse est confirmée. Choisissez maintenant votre mot de passe pour activer votre compte.</p>
+    <p>Votre adresse est confirmée. Vérifiez vos informations, puis choisissez votre mot de passe pour activer votre compte.</p>
+
+    <dl>
+        <dt>Nom</dt>
+        <dd>{{ user.get_full_name }}</dd>
+        <dt>Adresse e-mail</dt>
+        <dd>{{ user.email }}</dd>
+        <dt>Téléphone</dt>
+        <dd>{{ user.phone|default:"Non renseigné" }}</dd>
+        <dt>Date de naissance</dt>
+        <dd>{{ user.birth_date|date:"j F Y" }}</dd>
+    </dl>
+    <p>
+        Ces informations ne sont pas les vôtres ? N'activez pas ce compte :
+        <a href="{% url 'sign_up' %}">recommencez l'inscription</a> avec vos propres informations.
+    </p>
 
     <form method="post" novalidate>
         {% csrf_token %}
