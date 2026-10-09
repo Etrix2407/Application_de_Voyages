@@ -171,7 +171,8 @@ Réglez ces variables dans le `.env` du serveur, ou directement comme variables 
 | `DJANGO_DEFAULT_FROM_EMAIL` | Expéditeur des e-mails | `ne-pas-repondre@localhost` |
 | `DJANGO_SECURE_SSL_REDIRECT` | `1` pour rediriger HTTP vers HTTPS | `1` |
 | `DJANGO_HSTS_SECONDS` | Durée HSTS en secondes (ex. `31536000`), à activer une fois le HTTPS validé | `0` |
-| `DJANGO_NUM_PROXIES` | Nombre de serveurs intermédiaires (proxy) de confiance devant le site, pour retrouver l'IP réelle des visiteurs. Laisser `0` si le site est en accès direct : sinon une IP pourrait être falsifiée | `0` |
+| `DJANGO_HSTS_INCLUDE_SUBDOMAINS` | `1` pour appliquer HSTS aux sous-domaines (seulement s'ils sont tous en HTTPS) | `0` |
+| `DJANGO_NUM_PROXIES` | Nombre de serveurs intermédiaires (proxy) de confiance devant le site, pour retrouver l'IP réelle des visiteurs. Laisser `0` si le site est en accès direct : sinon une IP pourrait être falsifiée. Avec un proxy, celui-ci doit aussi transmettre `X-Forwarded-Proto` (origine HTTPS) en remplaçant toujours l'en-tête reçu | `0` |
 
 Avec `DJANGO_DEBUG=0`, les cookies de session et CSRF ne sont envoyés qu'en HTTPS. Vérifiez la configuration avec :
 
@@ -186,7 +187,9 @@ Points d'attention :
 - **Ne committez jamais** la clé secrète ni les identifiants SMTP.
 - Les limites anti-abus (5 échecs de connexion, 3 liens « mot de passe oublié » par heure, 5 essais quand le mot de passe est redemandé, etc.) sont stockées dans le dossier `trip_app/cache/` (créé automatiquement, jamais commité) : elles sont partagées par tous les processus du serveur et conservées au redémarrage. Ce dossier doit être accessible en écriture par le serveur. Les adresses IPv6 sont comptées par réseau /64.
 - SQLite suffit pour le volume prévu (environ 1 000 clients).
-- Les photos envoyées sont stockées dans `trip_app/media/` (hors git). En développement, Django les sert lui-même ; en production, configurez le serveur web pour servir ce dossier à l'adresse `/media/`, et sauvegardez-le avec la base.
+- Les photos envoyées sont stockées dans `trip_app/media/` (hors git). En développement, Django les sert lui-même ; en production, configurez le serveur web pour servir ce dossier à l'adresse `/media/`, et sauvegardez-le avec la base. Ajoutez sur `/media/` l'en-tête `X-Content-Type-Options: nosniff` et interdisez toute exécution de script dans ce dossier.
+- Recommandé : faire envoyer par le serveur web l'en-tête `Content-Security-Policy: default-src 'self'` (le site n'utilise ni script ni style externe).
+- Durée de connexion : **8 heures pour le personnel** (poste partagé à l'agence), 2 semaines pour les clients.
 
 ## Structure du code
 
