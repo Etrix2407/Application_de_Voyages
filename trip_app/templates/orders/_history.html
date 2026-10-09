@@ -14,7 +14,8 @@
                     <tr>
                         <td>{{ change.changed_at|date:"j F Y à H:i" }}</td>
                         <td>{{ change.get_status_display }}</td>
-                        <td>{{ change.author_name }}</td>
+                        {# Nom de l'agent réservé au personnel ; le client voit « Agence ». #}
+                        <td>{% if show_staff_names %}{{ change.author_name }}{% else %}{{ change.author_for_client }}{% endif %}</td>
                         <td>{{ change.reason|default:"—" }}</td>
                     </tr>
                 {% endfor %}

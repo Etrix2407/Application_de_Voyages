@@ -33,6 +33,7 @@ def order_detail(request, pk):
         "order": order,
         "activities": order.activities.select_related("activity"),
         "history": order.history.all(),
+        "show_staff_names": True,
         "can_confirm": order.status == Status.PENDING,
         "can_cancel": order.status in (Status.PENDING, Status.CONFIRMED),
     }

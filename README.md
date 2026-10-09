@@ -97,7 +97,7 @@ Formats à respecter :
 1. Menu **Demandes de voyage** : toutes les demandes, les plus récentes d'abord (tri inversable), par pages de 25.
 2. Filtres : état, pays, destination, client (nom, prénom ou e-mail, sans tenir compte des accents) et période de départ.
 3. Le détail d'une demande affiche le téléphone et l'e-mail du client (cliquables pour appeler ou écrire), les voyageurs, les activités aux prix figés, les remarques et l'historique.
-4. Après avoir rappelé le client : **Confirmer la demande**. **Annuler la demande** est possible tant qu'elle est en attente ou confirmée, avec un **motif obligatoire** (visible par le client). Chaque action est notée dans l'historique avec la date et votre nom.
+4. Après avoir rappelé le client : **Confirmer la demande**. **Annuler la demande** est possible tant qu'elle est en attente ou confirmée, avec un **motif obligatoire** (visible par le client). Chaque action est notée dans l'historique avec la date et votre nom (le client, lui, voit « Agence »).
 
 ### Utiliser l'application (client)
 
@@ -113,7 +113,7 @@ Formats à respecter :
    | Catégorie, difficulté, âge du voyageur | Activités |
 
 4. **Demande de voyage** : sur la page d'une destination, « Faire une demande de voyage ». Choisissez les dates (départ au moins 7 jours plus tard et dans les deux ans, séjour de 90 jours au maximum), le nombre d'adultes et d'enfants (10 voyageurs au plus), les activités du pays et vos remarques (2 000 caractères au plus). 10 demandes au maximum par 24 heures. Une page de vérification affiche le **prix estimé** (estimation, non contractuel ; enfants à 50 %) avant l'envoi. Un conseiller vous rappelle sous 48 heures.
-   **Mes demandes** (menu) : liste de vos demandes (destination, dates, état, prix estimé), détail avec l'historique. Tant qu'une demande est « En attente », vous pouvez l'annuler (motif facultatif) ; une demande confirmée s'annule en appelant l'agence.
+   **Mes demandes** (menu) : liste de vos demandes (destination, dates, état, prix estimé), détail avec l'historique (les actions du personnel y apparaissent sous le nom « Agence »). Tant qu'une demande est « En attente », vous pouvez l'annuler (motif facultatif) ; une demande confirmée s'annule en appelant l'agence.
 5. **Favoris** : le bouton « Ajouter à mes favoris » se trouve sur la page d'une destination ou d'une activité. Retrouvez-les dans **Mes favoris**. Un favori devenu indisponible y reste signalé et peut être retiré.
 6. **Mon profil** : modifier ses informations, changer son mot de passe, **changer son adresse e-mail** (mot de passe demandé, puis lien de confirmation envoyé à la nouvelle adresse ; l'ancienne est prévenue) ou **supprimer son compte**. La suppression est définitive et efface aussi les favoris.
 
