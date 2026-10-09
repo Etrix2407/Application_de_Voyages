@@ -1,6 +1,6 @@
 # Application_de_Voyages
 
-Application web (Python 3, Django 5.2) pour une agence de voyage. Elle gère les comptes des clients et du personnel, et propose un catalogue de pays, destinations et activités. Le cahier des charges est résumé dans [Recap.md](Recap.md) (v1 : comptes et catalogue) [Recap_2.md](Recap_2.md) (v2 : demandes de voyage) et [Recap_3.md](Recap_3.md) (v3 : avis clients). Les énoncés ne sont jamais modifiés : les décisions prises ensuite avec la cliente sont décrites dans ce README.
+Application web (Python 3, Django 5.2) pour une agence de voyage. Elle gère les comptes des clients et du personnel, et propose un catalogue de pays, destinations et activités. Le cahier des charges est résumé dans [Recap.md](Recap.md) (v1 : comptes et catalogue), [Recap_2.md](Recap_2.md) (v2 : demandes de voyage), [Recap_3.md](Recap_3.md) (v3 : avis clients) et [Recap_4.md](Recap_4.md) (v4 : promotions, en cours de développement). Les énoncés ne sont jamais modifiés : les décisions prises ensuite avec la cliente sont décrites dans ce README.
 
 ## Sommaire
 
@@ -8,6 +8,7 @@ Application web (Python 3, Django 5.2) pour une agence de voyage. Elle gère les
 - [Guide d'utilisation](#guide-dutilisation)
 - [Fonctionnalités par rôle](#fonctionnalités-par-rôle)
 - [Règles de gestion appliquées](#règles-de-gestion-appliquées)
+- [Promotions (v4) : décisions validées](#promotions-v4--décisions-validées)
 - [Tests](#tests)
 - [Mise en production](#mise-en-production)
 - [Structure du code](#structure-du-code)
@@ -155,6 +156,34 @@ Limites par adresse IP, contre les robots : 20 échecs de connexion par 15 minut
 - RGPD : consentement enregistré à l'inscription, page [politique de confidentialité](trip_app/templates/privacy.html), suppression réelle du compte par le client.
 - RGPD, demandes de voyage : à la suppression d'un compte client, ses demandes sont conservées **anonymisées** pour les statistiques (plus de lien vers le client ; remarques et motifs effacés). Ses demandes encore « En attente » sont **annulées automatiquement** (motif « Compte client supprimé ») : le personnel n'a plus personne à rappeler ; les demandes confirmées restent confirmées, marquées « Client supprimé ». Automatique quel que soit le chemin de suppression (`orders/signals.py`).
 - L'inscription ne révèle jamais si une adresse est déjà cliente : la page est identique et la propriétaire de l'adresse est prévenue par e-mail. Le mot de passe est choisi après confirmation, ce qui empêche de « réserver » le compte de quelqu'un d'autre.
+
+## Promotions (v4) : décisions validées
+
+En cours de développement. Le [Recap_4.md](Recap_4.md) décrit les promotions ; voici les réponses de la cliente à ses questions ouvertes et aux cas qu'il ne couvrait pas. La « commande » du Recap est la **demande de voyage** de l'application.
+
+- **Calcul** :
+  - la remise s'applique **après** le demi-tarif enfant ;
+  - un montant fixe est **plafonné** à son assiette (-100 € « sur les activités » pour 60 € d'activités = 60 € de remise) ;
+  - une promotion qui donnerait 0 € (ex. « sur les activités » sans activité, « sur le séjour » pour une destination sur devis) est **non applicable** et n'est pas comptée comme utilisée.
+- **Confirmation** : quand l'agent recalcule le prix aux tarifs du jour, la promotion figée dans la demande est **ré-appliquée** (un pourcentage reste un pourcentage, un montant fixe reste le même montant).
+- **Meilleure promotion** :
+  - en cas d'égalité, la promotion **créée le plus récemment** l'emporte ;
+  - si une promotion automatique bat le code saisi, le client lit « Une offre plus avantageuse s'applique déjà : -150 € » et son code **n'est pas consommé**.
+- **Messages du code promo**, en plus des cinq du Recap :
+  - « Ce code ne s'applique pas à ces dates de départ » (départ hors de la période autorisée) ;
+  - un code dont la promotion n'a pas encore commencé donne « Code invalide », pour ne pas révéler les offres à venir.
+- **Sécurité** : 10 codes faux par heure au plus pour un client, contre les essais au hasard.
+- **Envoi de la demande** : si la remise change entre la page de vérification et l'envoi (promotion expirée, dernière utilisation prise), la demande n'est pas envoyée et le client revoit le récapitulatif avec le nouveau prix.
+- **Promotion déjà utilisée** : seuls le **nom**, la **description** et la **date de fin** restent modifiables ; pour changer le reste, on crée une nouvelle promotion.
+- **Dates** :
+  - la date de fin peut être avancée, mais **pas avant aujourd'hui** ; pour arrêter une promotion tout de suite, on la désactive ;
+  - la période de départ a ses deux dates remplies ensemble, la fin étant postérieure ou égale au début.
+- **Portée** :
+  - pas de ciblage par catégorie d'activités ;
+  - un pays ou une destination visé par une promotion **ne peut pas être supprimé** : on le désactive.
+- **Auteur** : le nom de l'administrateur reste affiché dans la promotion et son historique, même si son compte est supprimé.
+- **Statistiques** : les demandes annulées sont **exclues de tous les chiffres** et listées à part.
+- **Page « Nos offres du moment »** : retenue. Elle listera les promotions automatiques en cours, jamais les codes.
 
 > **Avant la mise en ligne :** dans la politique de confidentialité, remplacez l'adresse e-mail **fictive** `vie-privee@horizons-lointains.example` par la vraie adresse de contact et ajoutez l'adresse postale de l'agence (rappel en commentaire dans `trip_app/templates/privacy.html`).
 
