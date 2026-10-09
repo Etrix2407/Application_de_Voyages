@@ -5,9 +5,9 @@ from django.contrib.auth.forms import AuthenticationForm, BaseUserCreationForm
 from django.core.exceptions import ValidationError
 from django.utils import timezone
 
-from . import throttling
-from .staff import check_not_self
 from .models import STAFF_ROLES, Role, User
+from .services import throttling
+from .services.staff_rules import check_not_self
 
 
 CLIENT_FIELDS = ("first_name", "last_name", "email", "phone", "birth_date")

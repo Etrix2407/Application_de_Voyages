@@ -10,9 +10,8 @@ from decimal import Decimal
 
 from django.db.models import Q
 
-from config.text import normalize
-
-from .models import Activity, Destination, Country
+from catalog.models import Activity, Country, Destination
+from common.text import normalize
 
 
 @dataclass(frozen=True)

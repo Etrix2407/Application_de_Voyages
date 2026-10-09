@@ -1,78 +1,14 @@
-"""Vues des comptes : inscription, connexion, profil, personnel."""
+"""Gestion du personnel par l'administrateur."""
 
 from django.contrib import messages
-from django.contrib.auth import login, logout
-from django.contrib.auth.decorators import login_required
-from django.contrib.auth.views import LoginView, PasswordChangeView
-from django.contrib.messages.views import SuccessMessageMixin
 from django.core.exceptions import ValidationError
 from django.shortcuts import get_object_or_404, redirect, render
-from django.urls import reverse_lazy
 from django.views.decorators.http import require_POST
 
-from .decorators import administrator_required, client_required
-from .forms import (
-    AgentCreationForm,
-    LoginForm,
-    SignUpForm,
-    StaffMemberForm,
-    ClientProfileForm,
-    AccountDeletionForm,
-)
-from .models import STAFF_ROLES, User
-from .staff import send_activation_link, check_not_self
-
-
-def sign_up(request):
-    if request.user.is_authenticated:
-        return redirect("home")
-
-    form = SignUpForm(request.POST or None)
-    if request.method == "POST" and form.is_valid():
-        user = form.save()
-        login(request, user)
-        messages.success(request, f"Bienvenue {user.first_name}, votre compte a été créé.")
-        return redirect("home")
-    return render(request, "accounts/sign_up.html", {"form": form})
-
-
-class AccountLoginView(LoginView):
-    template_name = "accounts/login.html"
-    authentication_form = LoginForm
-    redirect_authenticated_user = True
-
-
-@login_required
-def profile(request):
-    return render(request, "accounts/profile.html")
-
-
-@client_required
-def edit_profile(request):
-    form = ClientProfileForm(request.POST or None, instance=request.user)
-    if request.method == "POST" and form.is_valid():
-        form.save()
-        messages.success(request, "Vos informations ont été enregistrées.")
-        return redirect("profile")
-    return render(request, "accounts/edit_profile.html", {"form": form})
-
-
-class AccountPasswordChangeView(SuccessMessageMixin, PasswordChangeView):
-    template_name = "accounts/change_password.html"
-    success_url = reverse_lazy("profile")
-    success_message = "Votre mot de passe a été modifié."
-
-
-@client_required
-def delete_account(request):
-    form = AccountDeletionForm(request.user, request.POST or None)
-    if request.method == "POST" and form.is_valid():
-        user = request.user
-        logout(request)
-        user.delete()
-        messages.success(request, "Votre compte et vos données ont été supprimés.")
-        return redirect("home")
-    return render(request, "accounts/delete_account.html", {"form": form})
+from accounts.decorators import administrator_required
+from accounts.forms import AgentCreationForm, StaffMemberForm
+from accounts.models import STAFF_ROLES, User
+from accounts.services.staff_rules import check_not_self, send_activation_link
 
 
 def _get_staff_member(pk: int) -> User:

@@ -169,10 +169,24 @@ Le code (identifiants, fichiers, routes internes) est en anglais ; l'interface, 
 
 ```
 trip_app/
-├── config/            # paramètres, routes, outils partagés (text.py)
-├── accounts/          # utilisateurs, inscription, connexion, profil, personnel, clients, RGPD
-├── catalog/           # pays, destinations, activités, recherche, favoris, gestion
-│   └── management/commands/load_demo.py
-├── templates/         # gabarits HTML (base.html, pages d'erreur, accounts/, catalog/)
-└── static/css/        # feuille de style (texte lisible, adaptée au mobile)
+├── config/                 # paramètres et routes du projet
+├── common/                 # outils partagés entre applications (normalisation du texte)
+├── accounts/               # comptes : utilisateurs, rôles, RGPD
+│   ├── views/              # auth, profile, staff, clients (une responsabilité par module)
+│   ├── services/           # règles métier : e-mails de lien, règles du personnel, limitation des connexions
+│   ├── models.py · forms.py · validators.py · decorators.py · urls.py
+│   └── tests/
+├── catalog/                # catalogue : pays, destinations, activités, favoris
+│   ├── views/              # browse, search, favorites, manage
+│   ├── services/           # recherche et filtres
+│   ├── management/commands/load_demo.py
+│   ├── models.py · forms.py · validators.py · urls.py
+│   └── tests/
+├── templates/
+│   ├── base.html · home.html · privacy.html · 403/404/500.html
+│   ├── accounts/           # auth/ · profile/ · staff/ · clients/ · emails/
+│   └── catalog/            # pages publiques, fragments _*.html, manage/
+└── static/css/             # feuille de style (texte lisible, adaptée au mobile)
 ```
+
+Règle de rangement : les **vues** ne font que recevoir la requête et afficher la page ; la logique réutilisable va dans **services/** ; un outil utilisé par plusieurs applications va dans **common/**.

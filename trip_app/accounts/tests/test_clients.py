@@ -6,7 +6,7 @@ from django.test import TestCase
 from django.urls import reverse
 
 from accounts.models import Role
-from accounts.views_clients import CLIENTS_PER_PAGE
+from accounts.views.clients import CLIENTS_PER_PAGE
 
 from .factories import PASSWORD, create_admin, create_agent, create_client
 

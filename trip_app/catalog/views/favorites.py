@@ -8,8 +8,7 @@ from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
 
 from accounts.decorators import client_required
-
-from .models import Activity, Destination, FavoriteActivity, FavoriteDestination
+from catalog.models import Activity, Destination, FavoriteActivity, FavoriteDestination
 
 # Type d'élément (dans l'URL) -> (modèle, modèle de favori, nom du champ, page de détail).
 ITEM_TYPES = {

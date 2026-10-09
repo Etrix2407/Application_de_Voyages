@@ -3,10 +3,8 @@
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, render
 
-from .forms import SearchForm
-from .models import Activity, Continent, Destination, Country
-from .search import search
-from .views_favorites import is_favorite
+from catalog.models import Activity, Continent, Country, Destination
+from catalog.views.favorites import is_favorite
 
 
 def country_list(request):
@@ -51,12 +49,3 @@ def activity_detail(request, pk):
     )
     context = {"activity": activity, "is_favorite": is_favorite(request.user, activity)}
     return render(request, "catalog/activity.html", context)
-
-
-@login_required
-def search_page(request):
-    form = SearchForm(request.GET or None)
-    results = None
-    if form.is_valid() and not form.criteria().is_empty():
-        results = search(form.criteria())
-    return render(request, "catalog/search.html", {"form": form, "results": results})

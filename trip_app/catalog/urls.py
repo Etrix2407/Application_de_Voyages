@@ -1,23 +1,22 @@
 from django.urls import path
 
-from . import views, views_favorites
-from . import views_manage as manage
+from .views import browse, favorites, manage, search
 
 urlpatterns = [
-    path("", views.country_list, name="country_list"),
-    path("recherche/", views.search_page, name="search"),
-    path("pays/<int:pk>/", views.country_detail, name="country_detail"),
-    path("destinations/<int:pk>/", views.destination_detail, name="destination_detail"),
-    path("activites/<int:pk>/", views.activity_detail, name="activity_detail"),
-    path("favoris/", views_favorites.favorite_list, name="favorite_list"),
+    path("", browse.country_list, name="country_list"),
+    path("recherche/", search.search_page, name="search"),
+    path("pays/<int:pk>/", browse.country_detail, name="country_detail"),
+    path("destinations/<int:pk>/", browse.destination_detail, name="destination_detail"),
+    path("activites/<int:pk>/", browse.activity_detail, name="activity_detail"),
+    path("favoris/", favorites.favorite_list, name="favorite_list"),
     path(
         "favoris/<str:item_type>/<int:pk>/ajouter/",
-        views_favorites.add_favorite,
+        favorites.add_favorite,
         name="add_favorite",
     ),
     path(
         "favoris/<str:item_type>/<int:pk>/retirer/",
-        views_favorites.remove_favorite,
+        favorites.remove_favorite,
         name="remove_favorite",
     ),
     path("gestion/", manage.country_list, name="manage_country_list"),

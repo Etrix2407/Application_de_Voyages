@@ -3,7 +3,7 @@
 from django import forms
 
 from .models import Activity, Category, Continent, Destination, Difficulty, Month, Country
-from .search import Criteria
+from .services.search import Criteria
 
 
 class CountryForm(forms.ModelForm):

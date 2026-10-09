@@ -5,12 +5,11 @@ from django.core.paginator import Paginator
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
-from config.text import normalize
-
-from .decorators import staff_required
-from .emails import send_password_link
-from .forms import ClientCorrectionForm
-from .models import Role, User
+from accounts.decorators import staff_required
+from accounts.forms import ClientCorrectionForm
+from accounts.models import Role, User
+from accounts.services.emails import send_password_link
+from common.text import normalize
 
 CLIENTS_PER_PAGE = 25
 
@@ -52,7 +51,7 @@ def edit_client(request, pk):
 def send_client_link(request, pk):
     client = _get_client(pk)
     send_password_link(
-        request, client, "Changement de votre mot de passe", "accounts/client_password_email.txt"
+        request, client, "Changement de votre mot de passe", "accounts/emails/client_password.txt"
     )
     messages.success(request, f"Un lien pour choisir un nouveau mot de passe a été envoyé à {client.email}.")
     return redirect("edit_client", pk=client.pk)

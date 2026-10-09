@@ -7,7 +7,7 @@ from django.core.cache import cache
 from django.test import TestCase
 from django.urls import reverse
 
-from accounts import throttling
+from accounts.services import throttling
 from accounts.models import Role
 
 from .factories import PASSWORD, create_client
