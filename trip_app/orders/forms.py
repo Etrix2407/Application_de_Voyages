@@ -5,8 +5,9 @@ from datetime import timedelta
 from django import forms
 from django.utils import timezone
 
-from catalog.models import Activity, Destination
-from orders.models import MIN_DAYS_BEFORE_DEPARTURE, Order
+from catalog.models import Activity, Country, Destination
+from orders.models import MIN_DAYS_BEFORE_DEPARTURE, Order, Status
+from orders.services.filtering import NEWEST_FIRST, OLDEST_FIRST
 
 
 class ActivityChoiceField(forms.ModelMultipleChoiceField):
@@ -60,3 +61,39 @@ class ClientCancelForm(forms.Form):
         widget=forms.Textarea(attrs={"rows": 3}),
         help_text="Nous aide à mieux vous servir, mais vous pouvez le laisser vide.",
     )
+
+
+class StaffOrderFilterForm(forms.Form):
+    """Filtres de la liste des demandes (personnel). Tous facultatifs."""
+
+    status = forms.ChoiceField(label="État", required=False, choices=[("", "Tous les états"), *Status.choices])
+    country = forms.ModelChoiceField(
+        label="Pays", required=False, queryset=Country.objects.all(), empty_label="Tous les pays"
+    )
+    destination = forms.ModelChoiceField(
+        label="Destination",
+        required=False,
+        queryset=Destination.objects.select_related("country").order_by("country__name", "name", "pk"),
+        empty_label="Toutes les destinations",
+    )
+    client = forms.CharField(
+        label="Client", required=False, max_length=100, help_text="Nom, prénom ou e-mail."
+    )
+    departure_from = forms.DateField(
+        label="Départ à partir du", required=False, widget=forms.DateInput(attrs={"type": "date"})
+    )
+    departure_to = forms.DateField(
+        label="Départ jusqu'au", required=False, widget=forms.DateInput(attrs={"type": "date"})
+    )
+    sort = forms.ChoiceField(
+        label="Tri",
+        required=False,
+        choices=[(NEWEST_FIRST, "Demandes les plus récentes d'abord"), (OLDEST_FIRST, "Demandes les plus anciennes d'abord")],
+    )
+
+    def clean(self):
+        data = super().clean()
+        start, end = data.get("departure_from"), data.get("departure_to")
+        if start and end and end < start:
+            raise forms.ValidationError("La fin de la période doit être après son début.")
+        return data
