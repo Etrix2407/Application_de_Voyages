@@ -108,7 +108,7 @@ Formats à respecter :
 ### Utiliser l'application (client)
 
 1. **Créer un compte** : remplissez le formulaire (sans mot de passe) et acceptez la politique de confidentialité. Un e-mail contient un lien, valable 24 heures, pour confirmer l'adresse et **choisir le mot de passe** ; le compte est alors activé. Rien reçu ? « Renvoyer l'e-mail de confirmation » depuis la page de connexion. Le téléphone est facultatif ; s'il est rempli, il doit être un numéro belge (0470 12 34 56) ou international avec l'indicatif du pays (+33 6 12 34 56 78).
-2. **Nos pays** : le catalogue (pays, destinations, activités) et la recherche sont visibles par tous, même sans compte. Il faut être connecté pour enregistrer des favoris et faire une demande de voyage.
+2. **Nos pays** : le catalogue (pays, destinations, activités) et la recherche sont visibles par tous, même sans compte. Il faut être connecté pour enregistrer des favoris et faire une demande de voyage. Le menu **Destinations** liste toutes les destinations avec leur **note moyenne** (« ★ 4,6 sur 5 (23 avis) » ou « Pas encore d'avis »), également affichée sur la fiche pays, dans la recherche et les favoris. La fiche d'une destination montre ses **avis vérifiés** (badge « ✓ Voyage vérifié — séjour de mars 2026 »), triables (plus récents ou meilleures notes) et filtrables par nombre d'étoiles, 10 par page.
 3. **Rechercher** : recherche par mot-clé (sans tenir compte des accents) et filtres. Un filtre ne s'applique qu'au type de résultat qu'il concerne :
 
    | Filtre | S'applique à |
@@ -228,7 +228,8 @@ trip_app/
 │   └── tests/
 ├── reviews/                # avis clients (v3) : modèle, avis vérifiés, lien avec les demandes
 │   ├── views/              # client (donner, modifier, supprimer), manage (modération)
-│   ├── services/           # eligibility, writing (client), moderation (personnel), order_events
+│   ├── services/           # eligibility, writing (client), moderation (personnel), ratings (notes publiques),
+│   │                       # order_events
 │   ├── models.py · forms.py · signals.py · urls.py · context_processors.py (compteur du menu)
 │   └── tests/
 ├── templates/

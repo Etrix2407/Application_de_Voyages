@@ -367,6 +367,31 @@ td {
     border-radius: 4px;
 }
 
+.reviews {
+    list-style: none;
+    padding: 0;
+}
+
+.review {
+    margin-bottom: 1.5rem;
+    padding: 1rem;
+    border: 2px solid var(--color-border);
+    border-radius: 6px;
+}
+
+.review h3 {
+    margin-top: 0;
+}
+
+.verified {
+    font-weight: bold;
+    color: var(--color-success);
+}
+
+.review-meta {
+    color: #444444;
+}
+
 .stars {
     color: #8a4b00;
     letter-spacing: 0.1em;

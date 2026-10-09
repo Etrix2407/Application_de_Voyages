@@ -1,0 +1,32 @@
+<h2>Avis des voyageurs</h2>
+<p>{% include "reviews/_summary.html" with summary=destination.rating_summary %}</p>
+<p>Seuls les clients partis avec l'agence peuvent donner leur avis : chaque avis correspond à un voyage vérifié.</p>
+
+{% if destination.rating_summary.has_reviews %}
+    <form method="get" class="filters">
+        {{ review_filters }}
+        <button type="submit">Afficher</button>
+    </form>
+
+    {% if reviews_page %}
+        <ul class="reviews">
+            {% for review in reviews_page %}
+                {% include "reviews/_public_review.html" %}
+            {% endfor %}
+        </ul>
+        {% if reviews_page.paginator.num_pages > 1 %}
+            <nav aria-label="Pages des avis">
+                <ul class="actions">
+                    {% if reviews_page.has_previous %}
+                        <li><a class="button" href="?{{ review_query }}&amp;page={{ reviews_page.previous_page_number }}#avis">← Avis précédents</a></li>
+                    {% endif %}
+                    {% if reviews_page.has_next %}
+                        <li><a class="button" href="?{{ review_query }}&amp;page={{ reviews_page.next_page_number }}#avis">Avis suivants →</a></li>
+                    {% endif %}
+                </ul>
+            </nav>
+        {% endif %}
+    {% else %}
+        <p>Aucun avis ne correspond à ce filtre.</p>
+    {% endif %}
+{% endif %}

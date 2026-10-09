@@ -1,9 +1,16 @@
 """Consultation du catalogue, ouverte à tous : seuls les éléments visibles (actifs) sont montrés."""
 
+from urllib.parse import urlencode
+
+from django.core.paginator import Paginator
 from django.shortcuts import get_object_or_404, render
 
 from catalog.models import Activity, Continent, Country, Destination
 from catalog.services.favorites import is_favorite
+from reviews.forms import PublicReviewFilterForm
+from reviews.services.ratings import attach_ratings, destination_reviews
+
+REVIEWS_PER_PAGE = 10
 
 
 def country_list(request):
@@ -22,7 +29,7 @@ def country_detail(request, pk):
     context = {
         "country": country,
         "time_offsets": country.time_offsets(),
-        "destinations": Destination.objects.visible().filter(country=country),
+        "destinations": attach_ratings(Destination.objects.visible().filter(country=country)),
         "activities": Activity.objects.visible().filter(country=country),
     }
     return render(request, "catalog/country.html", context)
@@ -32,12 +39,26 @@ def destination_detail(request, pk):
     destination = get_object_or_404(
         Destination.objects.visible().select_related("country"), pk=pk
     )
+    attach_ratings([destination])
+    filters = PublicReviewFilterForm(request.GET or None)
+    criteria = filters.cleaned_data if filters.is_valid() else {}
+    reviews = destination_reviews(destination, criteria.get("tri") or "", criteria.get("etoiles"))
     context = {
         "destination": destination,
         "activities": Activity.objects.visible().filter(destination=destination),
         "is_favorite": is_favorite(request.user, destination),
+        "review_filters": filters,
+        "reviews_page": Paginator(reviews, REVIEWS_PER_PAGE).get_page(request.GET.get("page")),
+        # Le tri et le filtre sont conservés d'une page d'avis à l'autre.
+        "review_query": urlencode({key: value for key, value in request.GET.items() if key != "page"}),
     }
     return render(request, "catalog/destination.html", context)
+
+
+def destination_list(request):
+    """Toutes les destinations proposées, avec leur note moyenne."""
+    destinations = Destination.objects.visible().select_related("country").order_by("country__name", "name", "pk")
+    return render(request, "catalog/destination_list.html", {"destinations": attach_ratings(destinations)})
 
 
 def activity_detail(request, pk):

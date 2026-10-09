@@ -5,6 +5,7 @@ from .views import browse, favorites, manage, search
 urlpatterns = [
     path("", browse.country_list, name="country_list"),
     path("recherche/", search.search_page, name="search"),
+    path("destinations/", browse.destination_list, name="destination_list"),
     path("pays/<int:pk>/", browse.country_detail, name="country_detail"),
     path("destinations/<int:pk>/", browse.destination_detail, name="destination_detail"),
     path("activites/<int:pk>/", browse.activity_detail, name="activity_detail"),
