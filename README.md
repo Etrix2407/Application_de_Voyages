@@ -253,6 +253,10 @@ trip_app/
 │   ├── management/commands/load_demo.py
 │   ├── models.py · forms.py · validators.py · urls.py
 │   └── tests/
+├── promotions/             # promotions (v4) : modèle, règles, historique
+│   ├── services/           # discounts (calcul de la remise, meilleure offre), history
+│   ├── models.py
+│   └── tests/
 ├── orders/                 # demandes de voyage (v2) : modèles, prix estimé, historique
 │   ├── views/              # client (faire, suivre, annuler), manage (personnel)
 │   ├── services/           # pricing, placing (création), status (changements d'état),
@@ -276,4 +280,4 @@ trip_app/
 
 Règle de rangement : les **vues** ne font que recevoir la requête et afficher la page ; la logique réutilisable va dans **services/** ; un outil utilisé par plusieurs applications va dans **common/**.
 
-Dépendances entre applications : les **modèles et services** suivent l'ordre `accounts ← catalog ← orders ← reviews` (une application ne dépend que de celles qui la précèdent ; les réactions en sens inverse passent par des signaux, par exemple l'anonymisation RGPD ou le retrait d'un avis quand un voyage est annulé). Les **vues et gabarits** peuvent assembler plusieurs applications (par exemple la note moyenne affichée dans le catalogue).
+Dépendances entre applications : les **modèles et services** suivent l'ordre `accounts ← catalog ← promotions ← orders ← reviews` (une application ne dépend que de celles qui la précèdent ; les réactions en sens inverse passent par des signaux, par exemple l'anonymisation RGPD ou le retrait d'un avis quand un voyage est annulé). Les **vues et gabarits** peuvent assembler plusieurs applications (par exemple la note moyenne affichée dans le catalogue).
