@@ -9,7 +9,7 @@ from decimal import ROUND_HALF_UP, Decimal
 
 from django.db.models import Avg, Count
 
-from reviews.models import Review
+from reviews.models import MAX_RATING, Review
 
 # Tri des avis d'une destination : clé dans l'URL -> ordre.
 NEWEST_FIRST = "recents"
@@ -55,6 +55,16 @@ def destination_reviews(destination, order: str = NEWEST_FIRST, stars: int | Non
     if stars:
         reviews = reviews.filter(rating=stars)
     return reviews.order_by(*REVIEW_ORDERS.get(order, REVIEW_ORDERS[NEWEST_FIRST]))
+
+
+def latest_top_reviews(limit: int = 5):
+    """Derniers avis publics à 5 étoiles (page d'accueil), du plus récemment publié au plus ancien."""
+    return (
+        Review.objects.public()
+        .filter(rating=MAX_RATING)
+        .select_related("order__client", "order__destination")
+        .order_by("-published_at", "-pk")[:limit]
+    )
 
 
 def _one_decimal(value) -> Decimal:

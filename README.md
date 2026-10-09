@@ -110,7 +110,7 @@ Formats à respecter :
 ### Utiliser l'application (client)
 
 1. **Créer un compte** : remplissez le formulaire (sans mot de passe) et acceptez la politique de confidentialité. Un e-mail contient un lien, valable 24 heures, pour confirmer l'adresse et **choisir le mot de passe** ; le compte est alors activé. Rien reçu ? « Renvoyer l'e-mail de confirmation » depuis la page de connexion. Le téléphone est facultatif ; s'il est rempli, il doit être un numéro belge (0470 12 34 56) ou international avec l'indicatif du pays (+33 6 12 34 56 78).
-2. **Nos pays** : le catalogue (pays, destinations, activités) et la recherche sont visibles par tous, même sans compte. Il faut être connecté pour enregistrer des favoris et faire une demande de voyage. Le menu **Destinations** liste toutes les destinations avec leur **note moyenne** (« ★ 4,6 sur 5 (23 avis) » ou « Pas encore d'avis »), également affichée sur la fiche pays, dans la recherche et les favoris. La fiche d'une destination montre ses **avis vérifiés** (badge « ✓ Voyage vérifié — séjour de mars 2026 »), triables (plus récents ou meilleures notes) et filtrables par nombre d'étoiles, 10 par page.
+2. **Nos pays** : le catalogue (pays, destinations, activités) et la recherche sont visibles par tous, même sans compte. Il faut être connecté pour enregistrer des favoris et faire une demande de voyage. Le menu **Destinations** liste toutes les destinations avec leur **note moyenne** (« ★ 4,6 sur 5 (23 avis) » ou « Pas encore d'avis »), également affichée sur la fiche pays, dans la recherche et les favoris. La page d'**accueil** présente les 5 derniers avis publiés à 5 étoiles. La fiche d'une destination montre ses **avis vérifiés** (badge « ✓ Voyage vérifié — séjour de mars 2026 »), triables (plus récents ou meilleures notes) et filtrables par nombre d'étoiles, 10 par page.
 3. **Rechercher** : recherche par mot-clé (sans tenir compte des accents) et filtres. Un filtre ne s'applique qu'au type de résultat qu'il concerne :
 
    | Filtre | S'applique à |
@@ -209,7 +209,7 @@ Le code (identifiants, fichiers, routes internes) est en anglais ; l'interface, 
 
 ```
 trip_app/
-├── config/                 # paramètres et routes du projet ; tests transversaux (droits d'accès, nombre de requêtes)
+├── config/                 # paramètres, routes et page d'accueil (views.py) du projet ; tests transversaux (droits d'accès, nombre de requêtes)
 ├── common/                 # outils partagés entre applications (normalisation du texte)
 ├── accounts/               # comptes : utilisateurs, rôles, RGPD
 │   ├── views/              # auth, profile, staff, clients (une responsabilité par module)
