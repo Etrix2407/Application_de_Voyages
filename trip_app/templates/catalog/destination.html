@@ -9,6 +9,12 @@
     {% include "catalog/_favorite_button.html" with item_type="destination" item=destination %}
     {% if user.is_client %}
         <p><a class="button" href="{% url 'create_order' destination.pk %}">Faire une demande de voyage</a></p>
+    {% elif not user.is_authenticated %}
+        <p class="message">
+            <a href="{% url 'login' %}?next={% url 'create_order' destination.pk %}">Connectez-vous</a>
+            ou <a href="{% url 'sign_up' %}">créez un compte</a>
+            pour faire une demande de voyage.
+        </p>
     {% endif %}
     {% if destination.photo %}
         <img class="photo" src="{{ destination.photo.url }}" alt="Photo : {{ destination.name }}">

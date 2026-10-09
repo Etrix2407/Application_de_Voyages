@@ -15,8 +15,8 @@
             <ul class="menu">
                 <li><a href="{% url 'home' %}">Accueil</a></li>
                 <li><a href="{% url 'country_list' %}">Nos pays</a></li>
+                <li><a href="{% url 'search' %}">Rechercher</a></li>
                 {% if user.is_authenticated %}
-                    <li><a href="{% url 'search' %}">Rechercher</a></li>
                     {% if user.is_client %}
                         <li><a href="{% url 'my_orders' %}">Mes demandes</a></li>
                         <li><a href="{% url 'favorite_list' %}">Mes favoris</a></li>

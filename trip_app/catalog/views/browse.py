@@ -1,6 +1,5 @@
-"""Consultation du catalogue : seuls les éléments visibles (actifs) sont montrés."""
+"""Consultation du catalogue, ouverte à tous : seuls les éléments visibles (actifs) sont montrés."""
 
-from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, render
 
 from catalog.models import Activity, Continent, Country, Destination
@@ -18,7 +17,6 @@ def country_list(request):
     return render(request, "catalog/country_list.html", context)
 
 
-@login_required
 def country_detail(request, pk):
     country = get_object_or_404(Country.objects.visible(), pk=pk)
     context = {
@@ -30,7 +28,6 @@ def country_detail(request, pk):
     return render(request, "catalog/country.html", context)
 
 
-@login_required
 def destination_detail(request, pk):
     destination = get_object_or_404(
         Destination.objects.visible().select_related("country"), pk=pk
@@ -43,7 +40,6 @@ def destination_detail(request, pk):
     return render(request, "catalog/destination.html", context)
 
 
-@login_required
 def activity_detail(request, pk):
     activity = get_object_or_404(
         Activity.objects.visible().select_related("country", "destination"), pk=pk

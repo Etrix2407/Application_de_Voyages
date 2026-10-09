@@ -102,7 +102,7 @@ Formats à respecter :
 ### Utiliser l'application (client)
 
 1. **Créer un compte** : remplissez le formulaire (sans mot de passe) et acceptez la politique de confidentialité. Un e-mail contient un lien, valable 24 heures, pour confirmer l'adresse et **choisir le mot de passe** ; le compte est alors activé. Rien reçu ? « Renvoyer l'e-mail de confirmation » depuis la page de connexion. Le téléphone est facultatif ; s'il est rempli, il doit être un numéro belge (0470 12 34 56) ou international avec l'indicatif du pays (+33 6 12 34 56 78).
-2. **Nos pays** : la liste des pays par continent est visible par tous. Le détail des pays, destinations et activités demande d'être connecté.
+2. **Nos pays** : le catalogue (pays, destinations, activités) et la recherche sont visibles par tous, même sans compte. Il faut être connecté pour enregistrer des favoris et faire une demande de voyage.
 3. **Rechercher** : recherche par mot-clé (sans tenir compte des accents) et filtres. Un filtre ne s'applique qu'au type de résultat qu'il concerne :
 
    | Filtre | S'applique à |
@@ -127,7 +127,7 @@ Limites par adresse IP, contre les robots : 20 échecs de connexion par 15 minut
 
 | Rôle | Fonctionnalités |
 |---|---|
-| Visiteur | Liste des pays par continent ; inscription ; connexion |
+| Visiteur | Catalogue complet (pays, destinations, activités) ; recherche et filtres ; inscription ; connexion |
 | Client | Détail des pays, destinations et activités ; recherche et filtres ; favoris ; demandes de voyage (faire une demande, suivre et annuler ses demandes en attente) ; profil (modifier, changer le mot de passe ou l'adresse e-mail, supprimer le compte) |
 | Agent | Consultation et recherche ; gestion du catalogue ; liste des clients, correction de leurs informations (sauf e-mail et mot de passe), envoi d'un lien de mot de passe ; traitement des demandes de voyage (filtrer, confirmer, annuler avec motif) ; profil (consultation, changement du mot de passe) |
 | Administrateur | Droits de l'agent + gestion du personnel |
