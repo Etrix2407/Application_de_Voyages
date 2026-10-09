@@ -1,6 +1,12 @@
 {
   "version": 1,
   "skills": {
+    "code-review": {
+      "source": "bfollington/terma",
+      "sourceType": "github",
+      "skillPath": "plugins/terma/skills/code-review/SKILL.md",
+      "computedHash": "ed624a49be002f34cf76745a6f063e5ee913fb165b04027c0a4f64c629e5a021"
+    },
     "django-expert": {
       "source": "vintasoftware/django-ai-plugins",
       "sourceType": "github",
