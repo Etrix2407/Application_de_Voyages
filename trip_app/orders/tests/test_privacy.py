@@ -25,7 +25,11 @@ class AccountDeletionAnonymizesOrdersTests(TestCase):
             estimated_price=Decimal("1900.00"),
         )
         StatusChange.objects.create(
-            order=self.order, status=Status.PENDING, author=self.marie, author_name=StatusChange.CLIENT_AUTHOR
+            order=self.order,
+            status=Status.PENDING,
+            author=self.marie,
+            author_name=StatusChange.CLIENT_AUTHOR,
+            by_client=True,
         )
         confirm_by_staff(self.order, self.agent)
         cancel_by_staff(self.order, self.agent, "Mme Dupont hospitalisée, voyage reporté.")

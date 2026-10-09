@@ -49,15 +49,10 @@ def pending_email_change(token: str) -> tuple[User, str] | None:
     return user, data["new"]
 
 
-def apply_email_change(token: str) -> User | None:
-    """Applique le changement si le lien est valide ; sinon None."""
-    pending = pending_email_change(token)
-    if pending is None:
-        return None
-    user, new_email = pending
+def apply_email_change(user: User, new_email: str) -> None:
+    """Applique un changement obtenu par pending_email_change (lien déjà vérifié)."""
     user.email = new_email
     user.save(update_fields=["email"])
-    return user
 
 
 def _notify_current_address(user: User) -> None:

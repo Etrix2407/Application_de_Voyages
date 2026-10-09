@@ -95,6 +95,6 @@ def _create_order(client, destination: Destination, data: dict, submission_token
         line.full_clean()
     OrderActivity.objects.bulk_create(lines)
     StatusChange.objects.create(
-        order=order, status=Status.PENDING, author=client, author_name=StatusChange.CLIENT_AUTHOR
+        order=order, status=Status.PENDING, author=client, author_name=StatusChange.CLIENT_AUTHOR, by_client=True
     )
     return order

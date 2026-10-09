@@ -73,10 +73,9 @@ def confirm_email_change(request, token):
     pending = pending_email_change(token)
     if pending is None:
         return render(request, "accounts/profile/email_change_invalid.html")
+    user, new_email = pending
     if request.method != "POST":
-        return render(request, "accounts/profile/confirm_email_change.html", {"new_email": pending[1]})
-    user = apply_email_change(token)
-    if user is None:
-        return render(request, "accounts/profile/email_change_invalid.html")
-    messages.success(request, f"Votre adresse e-mail est maintenant {user.email}.")
+        return render(request, "accounts/profile/confirm_email_change.html", {"new_email": new_email})
+    apply_email_change(user, new_email)
+    messages.success(request, f"Votre adresse e-mail est maintenant {new_email}.")
     return redirect("profile" if request.user.is_authenticated else "login")

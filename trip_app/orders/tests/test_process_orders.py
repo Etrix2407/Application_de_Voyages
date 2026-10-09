@@ -3,7 +3,7 @@ from django.urls import reverse
 
 from accounts.tests.factories import create_admin, create_agent, create_client
 from catalog.tests.factories import create_country, create_destination
-from orders.models import Order, Status
+from orders.models import Order, Status, StatusChange
 from orders.services.status import TransitionNotAllowed, cancel_by_client, cancel_by_staff, confirm_by_staff
 
 from .factories import create_order
@@ -35,7 +35,9 @@ class StaffProcessingTests(TestCase):
         self.assertContains(response, "est confirmée")
         self.assertEqual(self.refreshed_status(), Status.CONFIRMED)
         change = self.order.history.get()
-        self.assertEqual((change.status, change.author, change.author_name), (Status.CONFIRMED, self.agent, "Luc Martin"))
+        self.assertEqual(
+            (change.status, change.author, change.author_name), (Status.CONFIRMED, self.agent, "Luc Martin")
+        )
 
     def test_administrator_can_confirm_too(self):
         self.client.force_login(create_admin())
@@ -116,6 +118,14 @@ class StaffProcessingTests(TestCase):
         self.assertContains(response, "Destination fermée cette saison.")
         self.assertContains(response, "Agence")
         self.assertNotContains(response, "Luc Martin")
+
+    def test_client_or_agency_decided_by_who_acted_not_by_name(self):
+        # Un agent qui s'appellerait « Client » reste affiché « Agence » au client.
+        agent_named_client = StatusChange(author_name="Client", by_client=False)
+        client_change = StatusChange(author_name="Client", by_client=True)
+
+        self.assertEqual(agent_named_client.author_for_client, "Agence")
+        self.assertEqual(client_change.author_for_client, "Client")
 
     def test_staff_sees_agent_name_in_history(self):
         cancel_by_staff(self.order, self.agent, "Destination fermée cette saison.")

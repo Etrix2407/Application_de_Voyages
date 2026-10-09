@@ -85,7 +85,9 @@ def resend_confirmation(request, email: str) -> None:
         send_confirmation(request, user)
 
 
-def confirm(user: User) -> None:
+def confirm(user: User, password: str) -> None:
+    """Active le compte avec le mot de passe choisi (déjà validé par le formulaire)."""
+    user.set_password(password)
     user.is_active = True
     user.email_confirmed_at = timezone.now()
     user.save(update_fields=["is_active", "email_confirmed_at", "password"])

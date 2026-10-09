@@ -10,7 +10,7 @@ from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
-from accounts.services.sign_up import UNCONFIRMED_RETENTION, purge_unconfirmed
+from accounts.services.sign_up import UNCONFIRMED_RETENTION, confirm, purge_unconfirmed
 from accounts.services.throttling import confirmation_emails, login_failures, password_reset_requests
 from accounts.models import Role
 
@@ -170,6 +170,18 @@ class SignUpTests(TestCase):
         self.client.force_login(create_client())
 
         self.assertRedirects(self.client.get(self.url), reverse("home"))
+
+
+class ConfirmServiceTests(TestCase):
+    def test_confirm_sets_password_and_activates(self):
+        user = User.objects.create_user("marie@example.com", role=Role.CLIENT, is_active=False)
+
+        confirm(user, "soleil-plage-42")
+
+        user.refresh_from_db()
+        self.assertTrue(user.is_active)
+        self.assertIsNotNone(user.email_confirmed_at)
+        self.assertTrue(user.check_password("soleil-plage-42"))
 
 
 class ConfirmationLinkTests(TestCase):

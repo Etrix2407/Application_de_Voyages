@@ -3,6 +3,7 @@
 import uuid
 
 from django.contrib import messages
+from django.core.exceptions import ValidationError
 from django.shortcuts import get_object_or_404, redirect, render
 
 from accounts.decorators import client_required
@@ -52,6 +53,11 @@ def create_order(request, destination_pk):
         return redirect("my_order_detail", pk=duplicate.order.pk)
     except DailyLimitReached:
         return _daily_limit_refusal(request)
+    except ValidationError as error:
+        # Ex. activité désactivée entre la vérification et l'envoi : rien n'a été enregistré.
+        for message in error.messages:
+            form.add_error(None, message)
+        return render(request, "orders/create.html", {"form": form, "destination": destination})
     messages.success(request, "Votre demande a bien été enregistrée, un conseiller vous rappellera sous 48 heures.")
     return redirect("my_order_detail", pk=order.pk)
 
