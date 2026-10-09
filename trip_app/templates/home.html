@@ -13,16 +13,7 @@
             <p>Les derniers avis à 5 étoiles de nos voyageurs, tous vérifiés.</p>
             <ul class="reviews">
                 {% for review in top_reviews %}
-                    <li class="review">
-                        <h3>{{ review.title }}</h3>
-                        <p>{% include "reviews/_rating.html" %}</p>
-                        <p class="verified">✓ Voyage vérifié — séjour de {{ review.order.departure_date|date:"F Y" }}</p>
-                        {% if review.comment %}<p>{{ review.comment|truncatechars:200|linebreaksbr }}</p>{% endif %}
-                        <p class="review-meta">
-                            {{ review.author_name }} —
-                            <a href="{% url 'destination_detail' review.order.destination_id %}#avis">{{ review.order.destination.name }}</a>
-                        </p>
-                    </li>
+                    {% include "reviews/_public_review.html" with short=True show_destination=True %}
                 {% endfor %}
             </ul>
         </section>
