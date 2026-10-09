@@ -18,10 +18,10 @@ def sign_up(request):
         login(request, user)
         messages.success(request, f"Bienvenue {user.first_name}, votre compte a été créé.")
         return redirect("home")
-    return render(request, "accounts/sign_up.html", {"form": form})
+    return render(request, "accounts/auth/sign_up.html", {"form": form})
 
 
 class AccountLoginView(LoginView):
-    template_name = "accounts/login.html"
+    template_name = "accounts/auth/login.html"
     authentication_form = LoginForm
     redirect_authenticated_user = True

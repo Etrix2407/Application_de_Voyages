@@ -22,5 +22,5 @@ def check_not_self(target: User, actor: User) -> None:
 def send_activation_link(request, agent: User) -> None:
     """Envoie à l'agent un lien pour choisir son mot de passe."""
     send_password_link(
-        request, agent, "Activation de votre compte", "accounts/agent_activation_email.txt"
+        request, agent, "Activation de votre compte", "accounts/emails/agent_activation.txt"
     )
