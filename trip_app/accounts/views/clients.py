@@ -8,8 +8,8 @@ from django.views.decorators.http import require_POST
 from accounts.decorators import staff_required
 from accounts.forms import ClientCorrectionForm
 from accounts.models import Role, User
+from accounts.services.client_search import client_matches, search_words
 from accounts.services.emails import send_password_link
-from common.text import normalize
 
 CLIENTS_PER_PAGE = 25
 
@@ -23,14 +23,10 @@ def _get_client(pk: int) -> User:
 def client_list(request):
     query = request.GET.get("q", "").strip()
     clients = User.objects.filter(role=Role.CLIENT).order_by("last_name", "first_name", "pk")
-    words = normalize(query).split()
+    words = search_words(query)
     if words:
-        # Filtre en Python : SQLite ne sait pas ignorer les accents (~1 000 clients).
-        clients = [
-            client
-            for client in clients
-            if all(keyword in normalize(f"{client.last_name} {client.first_name} {client.email}") for keyword in words)
-        ]
+        # Filtre en Python (~1 000 clients) : voir client_matches.
+        clients = [client for client in clients if client_matches(client, words)]
     page = Paginator(clients, CLIENTS_PER_PAGE).get_page(request.GET.get("page"))
     return render(request, "accounts/clients/list.html", {"page": page, "query": query})
 

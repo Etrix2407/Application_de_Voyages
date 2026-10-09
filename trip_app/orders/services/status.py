@@ -12,20 +12,38 @@ from django.db import transaction
 from orders.models import Order, Status, StatusChange
 
 
+# États de départ permis pour chaque action : seule source de ces règles (services et pages).
+CLIENT_CANCELLABLE = frozenset({Status.PENDING})
+CONFIRMABLE = frozenset({Status.PENDING})
+STAFF_CANCELLABLE = frozenset({Status.PENDING, Status.CONFIRMED})
+
+
 class TransitionNotAllowed(Exception):
     """Le changement d'état demandé n'est pas permis dans l'état actuel."""
 
 
+def client_can_cancel(order: Order) -> bool:
+    return order.status in CLIENT_CANCELLABLE
+
+
+def staff_can_confirm(order: Order) -> bool:
+    return order.status in CONFIRMABLE
+
+
+def staff_can_cancel(order: Order) -> bool:
+    return order.status in STAFF_CANCELLABLE
+
+
 def cancel_by_client(order: Order, reason: str = "") -> None:
     _change_status(
-        order, {Status.PENDING}, Status.CANCELLED, order.client, StatusChange.CLIENT_AUTHOR, reason,
+        order, CLIENT_CANCELLABLE, Status.CANCELLED, order.client, StatusChange.CLIENT_AUTHOR, reason,
         "Seule une demande en attente peut être annulée par le client.",
     )
 
 
 def confirm_by_staff(order: Order, staff_member) -> None:
     _change_status(
-        order, {Status.PENDING}, Status.CONFIRMED, staff_member, staff_member.get_full_name(), "",
+        order, CONFIRMABLE, Status.CONFIRMED, staff_member, staff_member.get_full_name(), "",
         "Seule une demande en attente peut être confirmée.",
     )
 
@@ -34,7 +52,7 @@ def cancel_by_staff(order: Order, staff_member, reason: str) -> None:
     if not reason.strip():
         raise ValueError("Le motif est obligatoire quand le personnel annule une demande.")
     _change_status(
-        order, {Status.PENDING, Status.CONFIRMED}, Status.CANCELLED, staff_member, staff_member.get_full_name(),
+        order, STAFF_CANCELLABLE, Status.CANCELLED, staff_member, staff_member.get_full_name(),
         reason, "Cette demande est déjà annulée.",
     )
 
