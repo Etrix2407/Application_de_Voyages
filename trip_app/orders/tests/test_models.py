@@ -8,7 +8,17 @@ from django.urls import reverse
 from accounts.tests.factories import create_agent, create_client
 from catalog.models import Activity, Destination
 from catalog.tests.factories import create_activity, create_country, create_destination
-from orders.models import MAX_TRAVELLERS, MIN_DAYS_BEFORE_DEPARTURE, Order, OrderActivity, Status, StatusChange
+from orders.models import (
+    MAX_DAYS_BEFORE_DEPARTURE,
+    MAX_REMARKS_LENGTH,
+    MAX_STAY_DAYS,
+    MAX_TRAVELLERS,
+    MIN_DAYS_BEFORE_DEPARTURE,
+    Order,
+    OrderActivity,
+    Status,
+    StatusChange,
+)
 from orders.services.pricing import estimate_price
 
 from .factories import create_order, departure_in
@@ -63,6 +73,23 @@ class OrderValidationTests(TestCase):
     def test_departure_at_least_seven_days_ahead(self):
         self.assert_invalid(self.new_order(departure_date=departure_in(MIN_DAYS_BEFORE_DEPARTURE - 1)), "departure_date")
         self.new_order(departure_date=departure_in(MIN_DAYS_BEFORE_DEPARTURE)).full_clean()
+
+    def test_departure_within_two_years(self):
+        self.new_order(departure_date=departure_in(MAX_DAYS_BEFORE_DEPARTURE)).full_clean()
+        too_late = departure_in(MAX_DAYS_BEFORE_DEPARTURE + 1)
+        self.assert_invalid(self.new_order(departure_date=too_late), "departure_date")
+
+    def test_stay_at_most_ninety_days(self):
+        departure = departure_in()
+        self.new_order(departure_date=departure, return_date=departure + timedelta(days=MAX_STAY_DAYS)).full_clean()
+        self.assert_invalid(
+            self.new_order(departure_date=departure, return_date=departure + timedelta(days=MAX_STAY_DAYS + 1)),
+            "return_date",
+        )
+
+    def test_remarks_length_limited(self):
+        self.new_order(remarks="a" * MAX_REMARKS_LENGTH).full_clean()
+        self.assert_invalid(self.new_order(remarks="a" * (MAX_REMARKS_LENGTH + 1)), "remarks")
 
     def test_at_least_one_adult(self):
         self.assert_invalid(self.new_order(adults=0, children=2), "adults")

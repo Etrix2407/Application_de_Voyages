@@ -9,7 +9,8 @@ OLDEST_FIRST = "ancien"
 
 def filter_orders(criteria: dict):
     """Renvoie les demandes correspondant aux critères (formulaire validé), triées par date de demande."""
-    orders = Order.objects.select_related("client", "destination__country")
+    # Remarques non affichées dans la liste : inutile de charger jusqu'à 2 000 caractères par ligne.
+    orders = Order.objects.select_related("client", "destination__country").defer("remarks")
     if criteria.get("status"):
         orders = orders.filter(status=criteria["status"])
     if criteria.get("country"):

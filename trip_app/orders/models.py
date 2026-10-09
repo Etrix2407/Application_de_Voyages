@@ -8,20 +8,29 @@ from datetime import timedelta
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
-from django.core.validators import MinValueValidator
+from django.core.validators import MaxLengthValidator, MinValueValidator
 from django.db import models
 from django.utils import timezone
 
 from catalog.models import Activity, Destination
 
 MIN_DAYS_BEFORE_DEPARTURE = 7
+MAX_DAYS_BEFORE_DEPARTURE = 2 * 365
+MAX_STAY_DAYS = 90
 MAX_TRAVELLERS = 10
+MAX_REMARKS_LENGTH = 2000
 
 
 class Status(models.TextChoices):
     PENDING = "pending", "En attente"
     CONFIRMED = "confirmed", "Confirmée"
     CANCELLED = "cancelled", "Annulée"
+
+
+def departure_window():
+    """Premier et dernier jour de départ possibles pour une nouvelle demande."""
+    today = timezone.localdate()
+    return today + timedelta(days=MIN_DAYS_BEFORE_DEPARTURE), today + timedelta(days=MAX_DAYS_BEFORE_DEPARTURE)
 
 
 def _price_field(verbose_name: str, **options) -> models.DecimalField:
@@ -46,7 +55,10 @@ class Order(models.Model):
     return_date = models.DateField("date de retour")
     adults = models.PositiveSmallIntegerField("adultes", validators=[MinValueValidator(1)])
     children = models.PositiveSmallIntegerField("enfants", default=0)
-    remarks = models.TextField("remarques", blank=True)
+    # max_length limite le formulaire ; le validateur limite aussi full_clean() (TextField ne le fait pas).
+    remarks = models.TextField(
+        "remarques", blank=True, max_length=MAX_REMARKS_LENGTH, validators=[MaxLengthValidator(MAX_REMARKS_LENGTH)]
+    )
     # Prix figés au moment de la demande. Prix de destination vide = « sur devis ».
     destination_price = _price_field("prix indicatif de la destination", null=True, blank=True)
     estimated_price = _price_field("prix estimé")
@@ -78,6 +90,8 @@ class Order(models.Model):
         errors = {}
         if self.departure_date and self.return_date and self.return_date <= self.departure_date:
             errors["return_date"] = "La date de retour doit être après la date de départ."
+        elif self.departure_date and self.return_date and (self.return_date - self.departure_date).days > MAX_STAY_DAYS:
+            errors["return_date"] = f"Un séjour dure au maximum {MAX_STAY_DAYS} jours."
         if self.adults is not None and self.adults < 1:
             errors["adults"] = "Il faut au moins un adulte."
         if (self.adults or 0) + (self.children or 0) > MAX_TRAVELLERS:
@@ -85,11 +99,13 @@ class Order(models.Model):
         # Règles de création : une demande existante reste valable si le temps passe
         # ou si la destination est désactivée ensuite.
         if self._state.adding:
-            earliest = timezone.localdate() + timedelta(days=MIN_DAYS_BEFORE_DEPARTURE)
+            earliest, latest = departure_window()
             if self.departure_date and self.departure_date < earliest:
                 errors["departure_date"] = (
                     f"Le départ doit être au moins {MIN_DAYS_BEFORE_DEPARTURE} jours après la demande."
                 )
+            elif self.departure_date and self.departure_date > latest:
+                errors["departure_date"] = "Le départ doit avoir lieu dans les deux ans."
             if self.destination_id and not Destination.objects.visible().filter(pk=self.destination_id).exists():
                 errors["destination"] = "Cette destination n'est plus proposée."
         if errors:

@@ -4,11 +4,21 @@ from datetime import timedelta
 from decimal import Decimal
 
 from django.test import TestCase
+from django.utils import timezone
 from django.urls import reverse
 
 from accounts.tests.factories import create_agent, create_client
 from catalog.tests.factories import create_activity, create_country, create_destination
-from orders.models import MIN_DAYS_BEFORE_DEPARTURE, Order, Status, StatusChange
+from orders.models import (
+    MAX_DAYS_BEFORE_DEPARTURE,
+    MAX_REMARKS_LENGTH,
+    MAX_STAY_DAYS,
+    MIN_DAYS_BEFORE_DEPARTURE,
+    Order,
+    Status,
+    StatusChange,
+)
+from orders.services.placing import MAX_ORDERS_PER_DAY, DailyLimitReached, place_order
 
 from .factories import create_order, departure_in, review_tokens, submit_order
 
@@ -102,6 +112,12 @@ class CreateOrderTests(TestCase):
             "retour avant départ": {"return_date": departure_in(1).isoformat()},
             "aucun adulte": {"adults": "0"},
             "trop de voyageurs": {"adults": "6", "children": "5"},
+            "départ dans plus de deux ans": {
+                "departure_date": departure_in(MAX_DAYS_BEFORE_DEPARTURE + 1).isoformat(),
+                "return_date": departure_in(MAX_DAYS_BEFORE_DEPARTURE + 5).isoformat(),
+            },
+            "séjour trop long": {"return_date": (departure_in() + timedelta(days=MAX_STAY_DAYS + 1)).isoformat()},
+            "remarques trop longues": {"remarks": "a" * (MAX_REMARKS_LENGTH + 1)},
             "activité d'un autre pays": {"activities": [create_activity(create_country("Pérou")).pk]},
         }
         for reason, fields in cases.items():
@@ -110,6 +126,13 @@ class CreateOrderTests(TestCase):
 
                 self.assertTemplateUsed(response, "orders/create.html")
                 self.assertFalse(Order.objects.exists())
+
+    def test_form_shows_limits_to_the_browser(self):
+        response = self.client.get(self.url)
+
+        self.assertContains(response, f'max="{departure_in(MAX_DAYS_BEFORE_DEPARTURE).isoformat()}"')
+        self.assertContains(response, f'maxlength="{MAX_REMARKS_LENGTH}"')
+        self.assertContains(response, "dans les deux ans")
 
     def test_inactive_destination_cannot_be_ordered(self):
         self.destination.active = False
@@ -221,3 +244,60 @@ class SubmissionSafetyTests(TestCase):
 
         self.assertContains(response, "plus proposée")
         self.assertFalse(Order.objects.exists())
+
+
+class DailyLimitTests(TestCase):
+    def setUp(self):
+        self.client_user = create_client()
+        self.client.force_login(self.client_user)
+        self.destination = create_destination(create_country(), "Kyoto")
+        self.url = reverse("create_order", args=[self.destination.pk])
+
+    def send_orders(self, count, client=None):
+        for _ in range(count):
+            create_order(client or self.client_user, self.destination)
+
+    def test_form_refused_once_limit_reached(self):
+        self.send_orders(MAX_ORDERS_PER_DAY)
+
+        response = self.client.get(self.url, follow=True)
+
+        self.assertRedirects(response, reverse("my_orders"))
+        self.assertContains(response, "appelez l&#x27;agence")
+
+    def test_last_allowed_order_still_accepted(self):
+        self.send_orders(MAX_ORDERS_PER_DAY - 1)
+
+        self.assertEqual(self.client.get(self.url).status_code, 200)
+
+    def test_cancelled_orders_count_too(self):
+        self.send_orders(MAX_ORDERS_PER_DAY)
+        Order.objects.update(status=Status.CANCELLED)
+
+        self.assertRedirects(self.client.get(self.url), reverse("my_orders"))
+
+    def test_orders_older_than_a_day_not_counted(self):
+        self.send_orders(MAX_ORDERS_PER_DAY)
+        Order.objects.update(created_at=timezone.now() - timedelta(days=1, minutes=1))
+
+        self.assertEqual(self.client.get(self.url).status_code, 200)
+
+    def test_other_clients_not_affected(self):
+        self.send_orders(MAX_ORDERS_PER_DAY, client=create_client(email="paul@example.com"))
+
+        self.assertEqual(self.client.get(self.url).status_code, 200)
+
+    def test_service_refuses_too(self):
+        self.send_orders(MAX_ORDERS_PER_DAY)
+        data = {
+            "departure_date": departure_in(),
+            "return_date": departure_in() + timedelta(days=7),
+            "adults": 1,
+            "children": 0,
+            "remarks": "",
+            "activities": [],
+        }
+
+        with self.assertRaises(DailyLimitReached):
+            place_order(self.client_user, self.destination, data)
+        self.assertEqual(Order.objects.count(), MAX_ORDERS_PER_DAY)
