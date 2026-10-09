@@ -38,6 +38,7 @@ ACCESS = {
     "country_detail": PUBLIC,
     "destination_detail": PUBLIC,
     "activity_detail": PUBLIC,
+    "offers": PUBLIC,
     "edit_profile": CLIENT,
     "change_email": CLIENT,
     "delete_account": CLIENT,
