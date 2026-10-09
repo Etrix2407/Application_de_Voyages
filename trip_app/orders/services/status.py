@@ -5,6 +5,7 @@
 | cancel_by_client      | En attente                | le client                 | facultatif  |
 | confirm_by_staff      | En attente                | agent ou administrateur   | —           |
 | cancel_by_staff       | En attente ou Confirmée   | agent ou administrateur   | obligatoire |
+| cancel_after_account_deletion | En attente        | automatique (« Client »)  | fixé        |
 """
 
 from django.db import transaction
@@ -54,6 +55,18 @@ def cancel_by_staff(order: Order, staff_member, reason: str) -> None:
     _change_status(
         order, STAFF_CANCELLABLE, Status.CANCELLED, staff_member, staff_member.get_full_name(),
         reason, "Cette demande est déjà annulée.",
+    )
+
+
+# Motif visible par le personnel : plus personne à rappeler pour cette demande.
+ACCOUNT_DELETED_REASON = "Compte client supprimé : demande annulée automatiquement."
+
+
+def cancel_after_account_deletion(order: Order) -> None:
+    """Le client supprime son compte : sa demande en attente n'a plus à être traitée."""
+    _change_status(
+        order, CLIENT_CANCELLABLE, Status.CANCELLED, None, StatusChange.CLIENT_AUTHOR, ACCOUNT_DELETED_REASON,
+        "Seule une demande en attente est annulée à la suppression du compte.", by_client=True,
     )
 
 

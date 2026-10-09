@@ -6,7 +6,7 @@ from django.urls import reverse
 from accounts.tests.factories import PASSWORD, create_agent, create_client
 from catalog.tests.factories import create_activity, create_country, create_destination
 from orders.models import Order, Status, StatusChange
-from orders.services.status import cancel_by_staff, confirm_by_staff
+from orders.services.status import ACCOUNT_DELETED_REASON, cancel_by_staff, confirm_by_staff
 
 from .factories import create_order
 
@@ -103,3 +103,41 @@ class AccountDeletionAnonymizesOrdersTests(TestCase):
         self.client.force_login(self.marie)
 
         self.assertContains(self.client.get(reverse("delete_account")), "de façon anonyme")
+
+
+class PendingOrdersOfDeletedAccountTests(TestCase):
+    """Plus personne à rappeler : les demandes en attente sont annulées, le personnel le voit."""
+
+    def setUp(self):
+        self.marie = create_client()
+        destination = create_destination(create_country(), "Kyoto")
+        self.pending = create_order(self.marie, destination, remarks="Merci de m'appeler le soir.")
+        self.confirmed = create_order(self.marie, destination)
+        confirm_by_staff(self.confirmed, create_agent())
+
+    def test_pending_order_cancelled_with_explanation(self):
+        self.marie.delete()
+
+        self.pending.refresh_from_db()
+        self.assertEqual(self.pending.status, Status.CANCELLED)
+        self.assertEqual(self.pending.remarks, "")
+        change = self.pending.history.get()
+        self.assertEqual(change.status, Status.CANCELLED)
+        self.assertEqual(change.reason, ACCOUNT_DELETED_REASON)
+        self.assertTrue(change.by_client)
+        self.assertIsNone(change.author)
+
+    def test_confirmed_order_kept_for_the_agency(self):
+        self.marie.delete()
+
+        self.confirmed.refresh_from_db()
+        self.assertEqual(self.confirmed.status, Status.CONFIRMED)
+
+    def test_staff_sees_why_and_cannot_confirm(self):
+        self.marie.delete()
+        self.client.force_login(create_agent(email="autre.agent@example.com"))
+
+        response = self.client.get(reverse("manage_order_detail", args=[self.pending.pk]))
+
+        self.assertContains(response, "Compte client supprimé")
+        self.assertNotContains(response, reverse("manage_confirm_order", args=[self.pending.pk]))
