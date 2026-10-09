@@ -52,7 +52,8 @@ class AlreadySubmitted(Exception):
 def place_order(client, destination: Destination, data: dict, submission_token=None) -> Order:
     """Enregistre la demande « En attente » avec ses prix figés et son historique.
 
-    `data` provient d'un formulaire validé (dates, voyageurs, activités, remarques).
+    `data` provient d'un formulaire validé (dates, voyageurs, activités, remarques) ; les règles
+    du modèle sont tout de même revérifiées ici et lèvent ValidationError (rien n'est enregistré).
     Un `submission_token` déjà utilisé lève AlreadySubmitted : la base garantit l'unicité,
     même si deux envois arrivent au même instant. Au-delà de MAX_ORDERS_PER_DAY demandes
     en 24 heures, lève DailyLimitReached.
@@ -71,7 +72,7 @@ def place_order(client, destination: Destination, data: dict, submission_token=N
 @transaction.atomic
 def _create_order(client, destination: Destination, data: dict, submission_token) -> Order:
     activities = list(data["activities"])
-    order = Order.objects.create(
+    order = Order(
         submission_token=submission_token,
         client=client,
         destination=destination,
@@ -83,9 +84,17 @@ def _create_order(client, destination: Destination, data: dict, submission_token
         destination_price=destination.price_from,
         estimated_price=estimate_for(destination, activities, data["adults"], data["children"]),
     )
-    OrderActivity.objects.bulk_create(
+    # L'unicité du jeton est laissée à la base : elle seule tranche entre deux envois simultanés.
+    order.full_clean(validate_unique=False)
+    order.save()
+    lines = [
         OrderActivity(order=order, activity=activity, unit_price=activity.price_per_person)
         for activity in activities
+    ]
+    for line in lines:
+        line.full_clean()
+    OrderActivity.objects.bulk_create(lines)
+    StatusChange.objects.create(
+        order=order, status=Status.PENDING, author=client, author_name=StatusChange.CLIENT_AUTHOR
     )
-    StatusChange.objects.create(order=order, status=Status.PENDING, author=client, author_name=StatusChange.CLIENT_AUTHOR)
     return order

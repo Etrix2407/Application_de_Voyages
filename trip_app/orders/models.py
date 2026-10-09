@@ -131,6 +131,10 @@ class OrderActivity(models.Model):
         super().clean()
         if self.activity_id and self.order_id and self.activity.country_id != self.order.destination.country_id:
             raise ValidationError({"activity": "L'activité doit se trouver dans le pays de la destination."})
+        # Règle de création : une activité désactivée ensuite reste dans les demandes existantes.
+        is_new_line = self._state.adding and self.activity_id
+        if is_new_line and not Activity.objects.visible().filter(pk=self.activity_id).exists():
+            raise ValidationError({"activity": "Cette activité n'est plus proposée."})
 
 
 class StatusChange(models.Model):

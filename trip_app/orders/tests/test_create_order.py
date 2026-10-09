@@ -3,6 +3,7 @@ import re
 from datetime import timedelta
 from decimal import Decimal
 
+from django.core.exceptions import ValidationError
 from django.test import TestCase
 from django.utils import timezone
 from django.urls import reverse
@@ -108,7 +109,10 @@ class CreateOrderTests(TestCase):
     def test_invalid_requests_rejected(self):
         too_soon = departure_in(MIN_DAYS_BEFORE_DEPARTURE - 1)
         cases = {
-            "départ trop proche": {"departure_date": too_soon.isoformat(), "return_date": (too_soon + timedelta(days=5)).isoformat()},
+            "départ trop proche": {
+                "departure_date": too_soon.isoformat(),
+                "return_date": (too_soon + timedelta(days=5)).isoformat(),
+            },
             "retour avant départ": {"return_date": departure_in(1).isoformat()},
             "aucun adulte": {"adults": "0"},
             "trop de voyageurs": {"adults": "6", "children": "5"},
@@ -301,3 +305,47 @@ class DailyLimitTests(TestCase):
         with self.assertRaises(DailyLimitReached):
             place_order(self.client_user, self.destination, data)
         self.assertEqual(Order.objects.count(), MAX_ORDERS_PER_DAY)
+
+
+class PlaceOrderServiceValidationTests(TestCase):
+    """Le service revérifie les règles, même sans passer par le formulaire."""
+
+    def setUp(self):
+        self.marie = create_client()
+        self.country = create_country()
+        self.destination = create_destination(self.country, "Kyoto")
+
+    def data(self, **fields):
+        data = {
+            "departure_date": departure_in(),
+            "return_date": departure_in() + timedelta(days=7),
+            "adults": 2,
+            "children": 0,
+            "remarks": "",
+            "activities": [],
+        }
+        data.update(fields)
+        return data
+
+    def assert_refused(self, data):
+        with self.assertRaises(ValidationError):
+            place_order(self.marie, self.destination, data)
+        self.assertFalse(Order.objects.exists())
+        self.assertFalse(StatusChange.objects.exists())
+
+    def test_valid_order_placed(self):
+        order = place_order(self.marie, self.destination, self.data(activities=[create_activity(self.country)]))
+
+        self.assertEqual(order.activities.count(), 1)
+
+    def test_departure_too_soon_refused(self):
+        self.assert_refused(self.data(departure_date=departure_in(1), return_date=departure_in(5)))
+
+    def test_too_many_travellers_refused(self):
+        self.assert_refused(self.data(adults=6, children=5))
+
+    def test_activity_of_another_country_refused(self):
+        self.assert_refused(self.data(activities=[create_activity(create_country("Pérou"))]))
+
+    def test_inactive_activity_refused(self):
+        self.assert_refused(self.data(activities=[create_activity(self.country, active=False)]))

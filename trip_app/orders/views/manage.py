@@ -7,9 +7,15 @@ from django.views.decorators.http import require_POST
 
 from accounts.decorators import staff_required
 from orders.forms import StaffCancelForm, StaffOrderFilterForm
-from orders.models import Order, Status
+from orders.models import Order
 from orders.services.filtering import filter_orders
-from orders.services.status import TransitionNotAllowed, cancel_by_staff, confirm_by_staff
+from orders.services.status import (
+    TransitionNotAllowed,
+    cancel_by_staff,
+    confirm_by_staff,
+    staff_can_cancel,
+    staff_can_confirm,
+)
 
 ORDERS_PER_PAGE = 25
 
@@ -34,8 +40,8 @@ def order_detail(request, pk):
         "activities": order.activities.select_related("activity"),
         "history": order.history.all(),
         "show_staff_names": True,
-        "can_confirm": order.status == Status.PENDING,
-        "can_cancel": order.status in (Status.PENDING, Status.CONFIRMED),
+        "can_confirm": staff_can_confirm(order),
+        "can_cancel": staff_can_cancel(order),
     }
     return render(request, "orders/manage/detail.html", context)
 

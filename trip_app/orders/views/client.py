@@ -17,7 +17,7 @@ from orders.services.placing import (
     find_pending_duplicates,
     place_order,
 )
-from orders.services.status import TransitionNotAllowed, cancel_by_client
+from orders.services.status import TransitionNotAllowed, cancel_by_client, client_can_cancel
 
 
 @client_required
@@ -106,7 +106,7 @@ def my_order_detail(request, pk):
         "order": order,
         "activities": order.activities.select_related("activity"),
         "history": order.history.all(),
-        "can_cancel": order.status == Status.PENDING,
+        "can_cancel": client_can_cancel(order),
         "is_confirmed": order.status == Status.CONFIRMED,
     }
     return render(request, "orders/my_order_detail.html", context)
@@ -115,7 +115,7 @@ def my_order_detail(request, pk):
 @client_required
 def cancel_my_order(request, pk):
     order = _own_order(request, pk)
-    if order.status != Status.PENDING:
+    if not client_can_cancel(order):
         messages.error(request, "Cette demande ne peut plus être annulée en ligne : appelez l'agence.")
         return redirect("my_order_detail", pk=order.pk)
 

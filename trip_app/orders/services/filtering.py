@@ -1,6 +1,6 @@
 """Filtrage et tri des demandes de voyage pour le personnel."""
 
-from common.text import normalize
+from accounts.services.client_search import client_matches, search_words
 from orders.models import Order
 
 NEWEST_FIRST = "recent"
@@ -27,13 +27,8 @@ def filter_orders(criteria: dict):
     else:
         orders = orders.order_by("-created_at", "-pk")
 
-    words = normalize(criteria.get("client") or "").split()
+    words = search_words(criteria.get("client"))
     if words:
-        # Filtre en Python : SQLite ne sait pas ignorer les accents.
-        orders = [order for order in orders if order.client and _matches(order.client, words)]
+        # Filtre en Python : voir client_matches. Une demande anonymisée n'a plus de client.
+        orders = [order for order in orders if order.client and client_matches(order.client, words)]
     return orders
-
-
-def _matches(client, words: list[str]) -> bool:
-    text = normalize(f"{client.last_name} {client.first_name} {client.email}")
-    return all(word in text for word in words)
