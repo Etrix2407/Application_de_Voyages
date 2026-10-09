@@ -1,13 +1,13 @@
     <dl class="details">
         <dt>Destination</dt>
-        <dd>{{ order.destination.name }} ({{ order.destination.country.name }})</dd>
+        <dd>{{ order.destination_name }} ({{ order.country_name }})</dd>
         <dt>Dates</dt>
         <dd>Du {{ order.departure_date|date:"j F Y" }} au {{ order.return_date|date:"j F Y" }}</dd>
         <dt>Voyageurs</dt>
         <dd>{{ order.adults }} adulte{{ order.adults|pluralize }}, {{ order.children }} enfant{{ order.children|pluralize }}</dd>
         <dt>Activités</dt>
         <dd>
-            {% for line in activities %}{{ line.activity.name }} ({{ line.unit_price }} € par personne){% if not forloop.last %}, {% endif %}{% empty %}Aucune{% endfor %}
+            {% for line in activities %}{{ line.activity_name }} ({{ line.unit_price }} € par personne){% if not forloop.last %}, {% endif %}{% empty %}Aucune{% endfor %}
         </dd>
         <dt>Remarques</dt>
         <dd>{{ order.remarks|default:"Aucune"|linebreaksbr }}</dd>

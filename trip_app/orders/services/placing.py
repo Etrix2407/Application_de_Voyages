@@ -76,6 +76,8 @@ def _create_order(client, destination: Destination, data: dict, submission_token
         submission_token=submission_token,
         client=client,
         destination=destination,
+        destination_name=destination.name,
+        country_name=destination.country.name,
         departure_date=data["departure_date"],
         return_date=data["return_date"],
         adults=data["adults"],
@@ -88,7 +90,7 @@ def _create_order(client, destination: Destination, data: dict, submission_token
     order.full_clean(validate_unique=False)
     order.save()
     lines = [
-        OrderActivity(order=order, activity=activity, unit_price=activity.price_per_person)
+        OrderActivity(order=order, activity=activity, activity_name=activity.name, unit_price=activity.price_per_person)
         for activity in activities
     ]
     for line in lines:

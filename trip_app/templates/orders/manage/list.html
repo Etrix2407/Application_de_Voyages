@@ -34,7 +34,7 @@
                             <td><a href="{% url 'manage_order_detail' order.pk %}">{{ order.pk }}</a></td>
                             <td>{{ order.created_at|date:"j F Y" }}</td>
                             <td>{% if order.client %}{{ order.client.last_name }} {{ order.client.first_name }}{% else %}Client supprimé{% endif %}</td>
-                            <td>{{ order.destination.name }} ({{ order.destination.country.name }})</td>
+                            <td>{{ order.destination_name }} ({{ order.country_name }})</td>
                             <td>{{ order.departure_date|date:"j F Y" }}</td>
                             <td><span class="status status-{{ order.status }}">{{ order.get_status_display }}</span></td>
                             <td>{{ order.estimated_price }} €{% if order.is_quote_required %} + sur devis{% endif %}</td>
