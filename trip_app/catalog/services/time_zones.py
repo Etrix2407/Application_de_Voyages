@@ -11,6 +11,8 @@ from decimal import Decimal
 from functools import lru_cache
 from zoneinfo import ZoneInfo, available_timezones
 
+from common.text import normalize
+
 BELGIUM = ZoneInfo("Europe/Brussels")
 
 # Régions de la base IANA, en français. Les autres noms (« Etc/GMT+3 », alias…) ne sont pas proposés.
@@ -56,6 +58,22 @@ def time_zone_choices() -> list[tuple[str, str]]:
 
 def is_known_time_zone(name: str) -> bool:
     return any(name == choice for choice, _ in time_zone_choices())
+
+
+def time_zone_from_input(text: str) -> str | None:
+    """Fuseau désigné par la saisie de l'agent, ou None s'il est introuvable ou ambigu.
+
+    Accepte le libellé proposé (« Asie — Tokyo »), le nom technique (« Asia/Tokyo ») ou
+    une ville seule (« tokyo »), sans tenir compte des majuscules ni des accents.
+    """
+    wanted = normalize(text)
+    if not wanted:
+        return None
+    for name, label in time_zone_choices():
+        if wanted in (normalize(label), normalize(name)):
+            return name
+    same_city = [name for name, label in time_zone_choices() if normalize(label.split(" — ", 1)[1]) == wanted]
+    return same_city[0] if len(same_city) == 1 else None
 
 
 def offset_from_belgium(zone_name: str, moment: datetime) -> Decimal:

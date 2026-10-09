@@ -103,3 +103,54 @@ class CountryTimeZoneTests(TestCase):
         self.client.post(reverse("manage_create_country"), {**data, "time_zone": "America/Lima"})
 
         self.assertEqual(Country.objects.get().time_zone, "America/Lima")
+
+
+class TimeZoneSearchTests(TestCase):
+    """Champ avec suggestions : l'agent tape une ville au lieu de parcourir 488 fuseaux."""
+
+    def setUp(self):
+        self.client.force_login(create_agent())
+        self.url = reverse("manage_create_country")
+        self.data = {
+            "name": "Japon",
+            "continent": "asia",
+            "main_language": "japonais",
+            "currency": "yen",
+            "description": "Archipel.",
+            "visa": "not_required",
+            "active": "on",
+        }
+
+    def create_with(self, typed):
+        Country.objects.all().delete()
+        self.client.post(self.url, {**self.data, "time_zone": typed})
+        return Country.objects.values_list("time_zone", flat=True).first()
+
+    def test_form_offers_suggestions(self):
+        response = self.client.get(self.url)
+
+        self.assertContains(response, 'list="time-zone-suggestions"')
+        self.assertContains(response, '<option value="Asie — Tokyo">', html=False)
+
+    def test_accepted_inputs(self):
+        for typed in ["Asie — Tokyo", "Asia/Tokyo", "tokyo", "  TOKYO  "]:
+            with self.subTest(typed=typed):
+                self.assertEqual(self.create_with(typed), "Asia/Tokyo")
+
+    def test_accents_ignored(self):
+        self.assertEqual(self.create_with("sao paulo"), "America/Sao_Paulo")
+
+    def test_unknown_or_ambiguous_refused_with_help(self):
+        for typed in ["Atlantide", "Etc/GMT+3", "istanbul"]:
+            with self.subTest(typed=typed):
+                response = self.client.post(self.url, {**self.data, "time_zone": typed})
+
+                self.assertContains(response, "Fuseau introuvable")
+                self.assertFalse(Country.objects.exists())
+
+    def test_edit_form_shows_readable_label(self):
+        country = create_country("Japon", time_zone="Asia/Tokyo")
+
+        response = self.client.get(reverse("manage_edit_country", args=[country.pk]))
+
+        self.assertContains(response, 'value="Asie — Tokyo"', html=False)

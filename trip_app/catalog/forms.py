@@ -1,28 +1,39 @@
 """Formulaires du catalogue : gestion (personnel) et recherche."""
 
 from django import forms
+from django.utils.html import format_html, format_html_join
 
 from .models import Activity, Category, Continent, Destination, Difficulty, Month, Country
 from .services.photos import without_metadata
-from .services.time_zones import time_zone_choices
+from .services.time_zones import time_zone_choices, time_zone_from_input, time_zone_label
 from .services.search import Criteria
 from .validators import PHOTO_FORMATS
 
 
-def _time_zone_choices():
-    return [("", "— Choisir la ville de référence —"), *time_zone_choices()]
+class TimeZoneInput(forms.TextInput):
+    """Champ texte : en tapant « tok », le navigateur propose « Asie — Tokyo » (balise datalist)."""
+
+    LIST_ID = "time-zone-suggestions"
+
+    def __init__(self):
+        super().__init__(attrs={"list": self.LIST_ID, "autocomplete": "off"})
+
+    def render(self, name, value, attrs=None, renderer=None):
+        suggestions = format_html_join("", '<option value="{}">', ((label,) for _, label in time_zone_choices()))
+        field = super().render(name, value, attrs, renderer)
+        return format_html('{}<datalist id="{}">{}</datalist>', field, self.LIST_ID, suggestions)
 
 
 class CountryForm(forms.ModelForm):
-    time_zone = forms.ChoiceField(
+    time_zone = forms.CharField(
         label="Fuseau horaire principal",
-        choices=_time_zone_choices,
+        widget=TimeZoneInput(),
         help_text=(
-            "Choisissez la ville de référence du pays (pour un pays à plusieurs fuseaux, celle de la "
-            "destination principale). Le décalage avec la Belgique est calculé automatiquement, "
-            "changements d'heure compris."
+            "Tapez la ville de référence du pays et choisissez-la dans les suggestions, par exemple "
+            "« Tokyo » ou « Lima » (pour un pays à plusieurs fuseaux, celle de la destination principale). "
+            "Le décalage avec la Belgique est calculé automatiquement, changements d'heure compris."
         ),
-        error_messages={"required": "Choisissez le fuseau horaire du pays."},
+        error_messages={"required": "Indiquez le fuseau horaire du pays."},
     )
 
     class Meta:
@@ -38,6 +49,21 @@ class CountryForm(forms.ModelForm):
             "active",
         )
         help_texts = {"active": "Décochez pour masquer ce pays et tout son contenu aux clients."}
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # En modification, le champ affiche le libellé lisible plutôt que le nom technique.
+        if self.instance.time_zone:
+            self.initial["time_zone"] = time_zone_label(self.instance.time_zone)
+
+    def clean_time_zone(self) -> str:
+        name = time_zone_from_input(self.cleaned_data["time_zone"])
+        if name is None:
+            raise forms.ValidationError(
+                "Fuseau introuvable : tapez le nom d'une ville et choisissez-la dans les suggestions.",
+                code="unknown_time_zone",
+            )
+        return name
 
 
 class _CountryContentForm(forms.ModelForm):
