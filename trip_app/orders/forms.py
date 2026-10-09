@@ -97,3 +97,13 @@ class StaffOrderFilterForm(forms.Form):
         if start and end and end < start:
             raise forms.ValidationError("La fin de la période doit être après son début.")
         return data
+
+
+class StaffCancelForm(forms.Form):
+    reason = forms.CharField(
+        label="Motif de l'annulation",
+        max_length=1000,
+        widget=forms.Textarea(attrs={"rows": 3}),
+        help_text="Obligatoire. Il apparaîtra dans l'historique de la demande, visible par le client.",
+        error_messages={"required": "Le motif est obligatoire."},
+    )

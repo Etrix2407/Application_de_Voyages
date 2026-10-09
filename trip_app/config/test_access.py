@@ -45,6 +45,8 @@ ACCESS = {
     "cancel_my_order": CLIENT,
     "manage_orders": STAFF,
     "manage_order_detail": STAFF,
+    "manage_confirm_order": STAFF,
+    "manage_cancel_order": STAFF,
     "client_list": STAFF,
     "edit_client": STAFF,
     "send_client_link": STAFF,
@@ -129,6 +131,8 @@ class AccessMatrixTests(TestCase):
             "my_order_detail": {"pk": self.order.pk},
             "cancel_my_order": {"pk": self.order.pk},
             "manage_order_detail": {"pk": self.order.pk},
+            "manage_confirm_order": {"pk": self.order.pk},
+            "manage_cancel_order": {"pk": self.order.pk},
         }.get(name, {})
 
     def test_every_route_declares_its_access(self):
