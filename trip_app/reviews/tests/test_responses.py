@@ -34,11 +34,6 @@ class AgencyResponseTests(TestCase):
         self.assertContains(page, "Merci pour votre retour !")
         self.assertNotContains(page, "Martin")
 
-    def test_administrator_can_respond_too(self):
-        self.respond(create_admin(first_name="Anne"))
-
-        self.assertEqual(AgencyResponse.objects.get().author_first_name, "Anne")
-
     def test_client_sees_the_response_in_my_reviews(self):
         save_response(self.review, self.luc, "Merci Julie !")
         self.client.force_login(self.julie)

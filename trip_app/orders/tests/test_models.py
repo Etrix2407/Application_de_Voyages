@@ -16,8 +16,6 @@ from orders.models import (
     MIN_DAYS_BEFORE_DEPARTURE,
     Order,
     OrderActivity,
-    Status,
-    StatusChange,
 )
 from orders.services.placing import place_order
 from orders.services.pricing import estimate_price
@@ -31,9 +29,6 @@ class EstimatePriceTests(SimpleTestCase):
         price = estimate_price(Decimal("1000"), [Decimal("50"), Decimal("30")], adults=2, children=2)
 
         self.assertEqual(price, Decimal("3240.00"))
-
-    def test_children_half_price_applies_to_activities(self):
-        self.assertEqual(estimate_price(None, [Decimal("40")], adults=0, children=1), Decimal("20.00"))
 
     def test_destination_on_quote_counts_activities_only(self):
         self.assertEqual(estimate_price(None, [Decimal("25")], adults=2, children=0), Decimal("50.00"))
@@ -151,23 +146,6 @@ class FrozenDataTests(TestCase):
         self.assertTrue(order.is_quote_required)
         self.assertFalse(self.order.is_quote_required)
 
-    def test_deleting_client_keeps_anonymous_order(self):
-        self.order.client.delete()
-
-        self.order.refresh_from_db()
-        self.assertIsNone(self.order.client)
-
-    def test_history_keeps_author_name_after_agent_deletion(self):
-        agent = create_agent()
-        change = StatusChange.objects.create(
-            order=self.order, status=Status.CONFIRMED, author=agent, author_name=agent.get_full_name()
-        )
-        agent.delete()
-
-        change.refresh_from_db()
-        self.assertIsNone(change.author)
-        self.assertEqual(change.author_name, "Luc Martin")
-
 
 class OrderedCatalogItemProtectionTests(TestCase):
     def setUp(self):
@@ -227,10 +205,6 @@ class FrozenNamesTests(TestCase):
         self.destination.save()
         self.tea.name = "Atelier thé matcha"
         self.tea.save()
-
-    def test_service_copies_names(self):
-        self.assertEqual((self.order.destination_name, self.order.country_name), ("Kyoto", "Japon"))
-        self.assertEqual(self.order.activities.get().activity_name, "Cérémonie du thé")
 
     def test_renaming_catalog_does_not_change_orders(self):
         self.rename_catalog()

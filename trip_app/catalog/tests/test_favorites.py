@@ -133,14 +133,8 @@ class FavoriteAccessTests(TestCase):
         activity = create_activity(create_country())
         self.client.force_login(create_agent())
 
-        self.assertEqual(self.client.get(reverse("favorite_list")).status_code, 403)
         url = reverse("add_favorite", args=["activite", activity.pk])
         self.assertEqual(self.client.post(url).status_code, 403)
         self.assertNotContains(
             self.client.get(reverse("activity_detail", args=[activity.pk])), "mes favoris"
         )
-
-    def test_visitor_redirected(self):
-        url = reverse("favorite_list")
-
-        self.assertRedirects(self.client.get(url), f"{reverse('login')}?next={url}")

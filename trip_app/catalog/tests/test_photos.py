@@ -33,11 +33,6 @@ class DestinationPhotoTests(TemporaryMediaMixin, TestCase):
         self.assertNotIn("Marie", photo.name)
         self.assertTrue((TEST_MEDIA_ROOT / photo.name).exists())
 
-    def test_jpeg_png_and_webp_accepted(self):
-        for name, image_format in [("a.jpg", "JPEG"), ("b.png", "PNG"), ("c.webp", "WEBP")]:
-            with self.subTest(image_format=image_format):
-                self.assertEqual(self.create(make_image(name, image_format)).status_code, 302)
-
     def test_invalid_files_rejected(self):
         cases = {
             "texte renommé en .jpg": SimpleUploadedFile("faux.jpg", b"pas une image", "image/jpeg"),

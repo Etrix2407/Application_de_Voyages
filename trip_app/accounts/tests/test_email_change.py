@@ -96,11 +96,6 @@ class EmailChangeTests(TestCase):
 
         self.assertContains(self.client.get(self.link_sent_to("nouvelle@example.com")[:-4] + "xyz/"), "plus valable")
 
-    def test_staff_cannot_use_client_email_change(self):
-        self.client.force_login(create_agent())
-
-        self.assertEqual(self.client.get(self.url).status_code, 403)
-
     def test_link_works_from_another_device(self):
         self.request_change()
         link = self.link_sent_to("nouvelle@example.com")

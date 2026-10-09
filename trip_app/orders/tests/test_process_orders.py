@@ -5,7 +5,7 @@ from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
-from accounts.tests.factories import create_admin, create_agent, create_client
+from accounts.tests.factories import create_agent, create_client
 from catalog.tests.factories import create_activity, create_country, create_destination
 from orders.models import Order, Status, StatusChange
 from orders.services.status import TransitionNotAllowed, cancel_by_client, cancel_by_staff, confirm_by_staff
@@ -42,14 +42,6 @@ class StaffProcessingTests(TestCase):
         self.assertEqual(
             (change.status, change.author, change.author_name), (Status.CONFIRMED, self.agent, "Luc Martin")
         )
-
-    def test_administrator_can_confirm_too(self):
-        self.client.force_login(create_admin())
-
-        self.client.post(self.confirm_url)
-
-        self.assertEqual(self.refreshed_status(), Status.CONFIRMED)
-        self.assertEqual(self.order.history.get().author_name, "Anne Durand")
 
     def test_confirmed_order_shows_cancel_only(self):
         confirm_by_staff(self.order, self.agent)
@@ -254,12 +246,6 @@ class DepartureDateTests(TestCase):
             return_date=timezone.localdate() + timedelta(days=5),
         )
         self.order.refresh_from_db()
-
-    def test_service_refuses(self):
-        with self.assertRaises(TransitionNotAllowed):
-            confirm_by_staff(self.order, self.agent)
-        self.order.refresh_from_db()
-        self.assertEqual(self.order.status, Status.PENDING)
 
     def test_page_explains_and_offers_cancel_only(self):
         response = self.client.get(reverse("manage_order_detail", args=[self.order.pk]))

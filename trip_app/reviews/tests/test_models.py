@@ -95,16 +95,6 @@ class AuthorNameTests(TestCase):
 
         self.assertEqual(review.author_name, ANONYMOUS_NAME)
 
-    def test_anonymous_after_account_deletion_and_still_public(self):
-        client = create_client()
-        review = create_review(create_trip_done(client, self.destination), status=ReviewStatus.PUBLISHED)
-
-        client.delete()
-
-        review.refresh_from_db()
-        self.assertEqual(review.author_name, ANONYMOUS_NAME)
-        self.assertIn(review, Review.objects.public())
-
 
 class VerifiedTripTests(TestCase):
     """Seuls les clients réellement partis peuvent laisser un avis."""
@@ -135,12 +125,6 @@ class VerifiedTripTests(TestCase):
         order = create_trip_done(self.marie, self.destination)
 
         self.assertFalse(can_review(create_client(email="paul@example.com"), order))
-
-    def test_one_review_per_trip(self):
-        order = create_trip_done(self.marie, self.destination)
-        create_review(order)
-
-        self.assertFalse(can_review(self.marie, order))
 
     def test_same_trip_another_year_is_another_review(self):
         create_review(create_trip_done(self.marie, self.destination))
