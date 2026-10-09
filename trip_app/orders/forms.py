@@ -3,10 +3,9 @@
 from datetime import timedelta
 
 from django import forms
-from django.utils import timezone
 
 from catalog.models import Activity, Country, Destination
-from orders.models import MIN_DAYS_BEFORE_DEPARTURE, Order, Status
+from orders.models import MAX_REMARKS_LENGTH, MAX_STAY_DAYS, MIN_DAYS_BEFORE_DEPARTURE, Order, Status, departure_window
 from orders.services.filtering import NEWEST_FIRST, OLDEST_FIRST
 
 
@@ -37,9 +36,12 @@ class OrderForm(forms.ModelForm):
             "remarks": forms.Textarea(attrs={"rows": 4}),
         }
         help_texts = {
-            "departure_date": f"Au moins {MIN_DAYS_BEFORE_DEPARTURE} jours après aujourd'hui.",
+            "departure_date": f"Au moins {MIN_DAYS_BEFORE_DEPARTURE} jours après aujourd'hui, et dans les deux ans.",
+            "return_date": f"Séjour de {MAX_STAY_DAYS} jours au maximum.",
             "children": "Au total, 10 voyageurs maximum.",
-            "remarks": "Facultatif : vos souhaits, questions, contraintes…",
+            "remarks": (
+                f"Facultatif : vos souhaits, questions, contraintes… ({MAX_REMARKS_LENGTH} caractères au maximum)."
+            ),
         }
 
     def __init__(self, *args, client, destination: Destination, **kwargs):
@@ -48,9 +50,11 @@ class OrderForm(forms.ModelForm):
         self.instance.client = client
         self.instance.destination = destination
         self.fields["activities"].queryset = Activity.objects.visible().filter(country=destination.country)
-        earliest = timezone.localdate() + timedelta(days=MIN_DAYS_BEFORE_DEPARTURE)
-        self.fields["departure_date"].widget.attrs["min"] = earliest.isoformat()
-        self.fields["return_date"].widget.attrs["min"] = (earliest + timedelta(days=1)).isoformat()
+        earliest, latest = departure_window()
+        self.fields["departure_date"].widget.attrs.update(min=earliest.isoformat(), max=latest.isoformat())
+        self.fields["return_date"].widget.attrs.update(
+            min=(earliest + timedelta(days=1)).isoformat(), max=(latest + timedelta(days=MAX_STAY_DAYS)).isoformat()
+        )
 
 
 class ClientCancelForm(forms.Form):

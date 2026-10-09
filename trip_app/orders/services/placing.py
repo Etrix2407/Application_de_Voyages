@@ -1,12 +1,17 @@
 """Création d'une demande de voyage par un client."""
 
+from datetime import timedelta
 from decimal import Decimal
 
 from django.db import IntegrityError, transaction
+from django.utils import timezone
 
 from catalog.models import Destination
 from orders.models import Order, OrderActivity, Status, StatusChange
 from orders.services.pricing import estimate_price
+
+# Garde-fou contre les envois en masse : largement au-dessus d'un usage normal.
+MAX_ORDERS_PER_DAY = 10
 
 
 def estimate_for(destination: Destination, activities, adults: int, children: int) -> Decimal:
@@ -26,6 +31,16 @@ def find_pending_duplicates(client, destination: Destination, departure_date, re
     )
 
 
+def daily_limit_reached(client) -> bool:
+    """Le client a déjà envoyé MAX_ORDERS_PER_DAY demandes ces dernières 24 heures (annulées comprises)."""
+    since = timezone.now() - timedelta(days=1)
+    return Order.objects.filter(client=client, created_at__gte=since).count() >= MAX_ORDERS_PER_DAY
+
+
+class DailyLimitReached(Exception):
+    """Trop de demandes envoyées ces dernières 24 heures."""
+
+
 class AlreadySubmitted(Exception):
     """La même page de vérification a déjà été envoyée (double clic)."""
 
@@ -39,8 +54,11 @@ def place_order(client, destination: Destination, data: dict, submission_token=N
 
     `data` provient d'un formulaire validé (dates, voyageurs, activités, remarques).
     Un `submission_token` déjà utilisé lève AlreadySubmitted : la base garantit l'unicité,
-    même si deux envois arrivent au même instant.
+    même si deux envois arrivent au même instant. Au-delà de MAX_ORDERS_PER_DAY demandes
+    en 24 heures, lève DailyLimitReached.
     """
+    if daily_limit_reached(client):
+        raise DailyLimitReached
     try:
         return _create_order(client, destination, data, submission_token)
     except IntegrityError:

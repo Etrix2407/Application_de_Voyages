@@ -9,7 +9,14 @@ from accounts.decorators import client_required
 from catalog.models import Destination
 from orders.forms import ClientCancelForm, OrderForm
 from orders.models import Order, Status
-from orders.services.placing import AlreadySubmitted, estimate_for, find_pending_duplicates, place_order
+from orders.services.placing import (
+    AlreadySubmitted,
+    DailyLimitReached,
+    daily_limit_reached,
+    estimate_for,
+    find_pending_duplicates,
+    place_order,
+)
 from orders.services.status import TransitionNotAllowed, cancel_by_client
 
 
@@ -21,6 +28,8 @@ def create_order(request, destination_pk):
         # Ex. destination désactivée pendant que le client remplissait sa demande.
         messages.error(request, "Cette destination n'est plus proposée : aucune demande n'a été envoyée.")
         return redirect("country_list")
+    if daily_limit_reached(request.user):
+        return _daily_limit_refusal(request)
 
     form = OrderForm(request.POST or None, client=request.user, destination=destination)
     if request.method != "POST" or "edit" in request.POST or not form.is_valid():
@@ -41,8 +50,19 @@ def create_order(request, destination_pk):
     except AlreadySubmitted as duplicate:
         messages.info(request, "Cette demande avait déjà été envoyée.")
         return redirect("my_order_detail", pk=duplicate.order.pk)
+    except DailyLimitReached:
+        return _daily_limit_refusal(request)
     messages.success(request, "Votre demande a bien été enregistrée, un conseiller vous rappellera sous 48 heures.")
     return redirect("my_order_detail", pk=order.pk)
+
+
+def _daily_limit_refusal(request):
+    messages.error(
+        request,
+        "Vous avez déjà envoyé beaucoup de demandes aujourd'hui. "
+        "Réessayez demain, ou appelez l'agence : un conseiller vous aidera volontiers.",
+    )
+    return redirect("my_orders")
 
 
 def _review(request, form, destination, price, price_changed=False):
@@ -75,7 +95,7 @@ def _own_order(request, pk) -> Order:
 
 @client_required
 def my_orders(request):
-    orders = Order.objects.filter(client=request.user).select_related("destination__country")
+    orders = Order.objects.filter(client=request.user).select_related("destination__country").defer("remarks")
     return render(request, "orders/my_orders.html", {"orders": orders})
 
 
