@@ -1,0 +1,23 @@
+    <div class="table-scroll">
+        <table>
+            <caption>Changements d'état de la demande</caption>
+            <thead>
+                <tr>
+                    <th scope="col">Date</th>
+                    <th scope="col">État</th>
+                    <th scope="col">Par</th>
+                    <th scope="col">Motif</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for change in history %}
+                    <tr>
+                        <td>{{ change.changed_at|date:"j F Y à H:i" }}</td>
+                        <td>{{ change.get_status_display }}</td>
+                        <td>{{ change.author_name }}</td>
+                        <td>{{ change.reason|default:"—" }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>

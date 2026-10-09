@@ -92,6 +92,12 @@ Formats à respecter :
 2. **Corriger** permet de modifier le prénom, le nom, le téléphone et la date de naissance. L'e-mail et le mot de passe restent gérés par le client.
 3. **Envoyer un lien de mot de passe** : le client reçoit un lien valable 1 heure pour choisir un nouveau mot de passe. L'agent ne voit jamais le mot de passe.
 
+### Traiter les demandes de voyage (agent ou administrateur)
+
+1. Menu **Demandes de voyage** : toutes les demandes, les plus récentes d'abord (tri inversable), par pages de 25.
+2. Filtres : état, pays, destination, client (nom, prénom ou e-mail, sans tenir compte des accents) et période de départ.
+3. Le détail d'une demande affiche le téléphone et l'e-mail du client (cliquables pour appeler ou écrire), les voyageurs, les activités aux prix figés, les remarques et l'historique.
+
 ### Utiliser l'application (client)
 
 1. **Créer un compte** : remplissez le formulaire (sans mot de passe) et acceptez la politique de confidentialité. Un e-mail contient un lien, valable 24 heures, pour confirmer l'adresse et **choisir le mot de passe** ; le compte est alors activé. Rien reçu ? « Renvoyer l'e-mail de confirmation » depuis la page de connexion. Le téléphone est facultatif ; s'il est rempli, il doit être un numéro belge (0470 12 34 56) ou international avec l'indicatif du pays (+33 6 12 34 56 78).

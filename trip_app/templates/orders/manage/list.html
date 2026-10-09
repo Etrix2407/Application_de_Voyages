@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block title %}Demandes de voyage — Gestion{% endblock %}
+
+{% block content %}
+    <h1>Demandes de voyage</h1>
+
+    <form method="get" class="search-form" role="search">
+        {{ form }}
+        <button type="submit">Filtrer</button>
+        <a class="button button-secondary" href="{% url 'manage_orders' %}">Effacer les filtres</a>
+    </form>
+
+    <p class="result-count" role="status">{{ page.paginator.count }} demande{{ page.paginator.count|pluralize }}</p>
+
+    {% if page.object_list %}
+        <div class="table-scroll">
+            <table>
+                <caption>Demandes de voyage{% if page.paginator.num_pages > 1 %}, page {{ page.number }} sur {{ page.paginator.num_pages }}{% endif %}</caption>
+                <thead>
+                    <tr>
+                        <th scope="col">N°</th>
+                        <th scope="col">Demandée le</th>
+                        <th scope="col">Client</th>
+                        <th scope="col">Destination</th>
+                        <th scope="col">Départ</th>
+                        <th scope="col">État</th>
+                        <th scope="col">Prix estimé</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for order in page.object_list %}
+                        <tr>
+                            <td><a href="{% url 'manage_order_detail' order.pk %}">{{ order.pk }}</a></td>
+                            <td>{{ order.created_at|date:"j F Y" }}</td>
+                            <td>{% if order.client %}{{ order.client.last_name }} {{ order.client.first_name }}{% else %}Client supprimé{% endif %}</td>
+                            <td>{{ order.destination.name }} ({{ order.destination.country.name }})</td>
+                            <td>{{ order.departure_date|date:"j F Y" }}</td>
+                            <td><span class="status status-{{ order.status }}">{{ order.get_status_display }}</span></td>
+                            <td>{{ order.estimated_price }} €{% if order.is_quote_required %} + sur devis{% endif %}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if page.paginator.num_pages > 1 %}
+            <nav aria-label="Pages de la liste des demandes">
+                <ul class="actions">
+                    {% if page.has_previous %}
+                        <li><a class="button" href="?{{ query }}&amp;page={{ page.previous_page_number }}">← Page précédente</a></li>
+                    {% endif %}
+                    {% if page.has_next %}
+                        <li><a class="button" href="?{{ query }}&amp;page={{ page.next_page_number }}">Page suivante →</a></li>
+                    {% endif %}
+                </ul>
+            </nav>
+        {% endif %}
+    {% else %}
+        <p>Aucune demande ne correspond à ces critères.</p>
+    {% endif %}
+{% endblock %}

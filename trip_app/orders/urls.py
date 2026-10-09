@@ -1,10 +1,12 @@
 from django.urls import path
 
-from . import views
+from .views import client, manage
 
 urlpatterns = [
-    path("", views.my_orders, name="my_orders"),
-    path("nouvelle/<int:destination_pk>/", views.create_order, name="create_order"),
-    path("<int:pk>/", views.my_order_detail, name="my_order_detail"),
-    path("<int:pk>/annuler/", views.cancel_my_order, name="cancel_my_order"),
+    path("", client.my_orders, name="my_orders"),
+    path("nouvelle/<int:destination_pk>/", client.create_order, name="create_order"),
+    path("<int:pk>/", client.my_order_detail, name="my_order_detail"),
+    path("<int:pk>/annuler/", client.cancel_my_order, name="cancel_my_order"),
+    path("gestion/", manage.order_list, name="manage_orders"),
+    path("gestion/<int:pk>/", manage.order_detail, name="manage_order_detail"),
 ]

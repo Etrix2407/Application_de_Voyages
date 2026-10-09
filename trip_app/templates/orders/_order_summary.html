@@ -1,0 +1,21 @@
+    <dl class="details">
+        <dt>Destination</dt>
+        <dd>{{ order.destination.name }} ({{ order.destination.country.name }})</dd>
+        <dt>Dates</dt>
+        <dd>Du {{ order.departure_date|date:"j F Y" }} au {{ order.return_date|date:"j F Y" }}</dd>
+        <dt>Voyageurs</dt>
+        <dd>{{ order.adults }} adulte{{ order.adults|pluralize }}, {{ order.children }} enfant{{ order.children|pluralize }}</dd>
+        <dt>Activités</dt>
+        <dd>
+            {% for line in activities %}{{ line.activity.name }} ({{ line.unit_price }} € par personne){% if not forloop.last %}, {% endif %}{% empty %}Aucune{% endfor %}
+        </dd>
+        <dt>Remarques</dt>
+        <dd>{{ order.remarks|default:"Aucune"|linebreaksbr }}</dd>
+        <dt>Prix estimé</dt>
+        <dd>
+            <strong>{{ order.estimated_price }} €</strong> — estimation, non contractuel, calculée le {{ order.created_at|date:"j F Y" }}.
+            {% if order.is_quote_required %}<br>Le prix de la destination est donné sur devis par votre conseiller.{% endif %}
+        </dd>
+        <dt>Demande faite le</dt>
+        <dd>{{ order.created_at|date:"j F Y à H:i" }}</dd>
+    </dl>

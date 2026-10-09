@@ -24,7 +24,7 @@ def _get_staff_member(pk: int) -> User:
 
 @administrator_required
 def staff_list(request):
-    members = User.objects.filter(role__in=STAFF_ROLES).order_by("last_name", "first_name")
+    members = User.objects.filter(role__in=STAFF_ROLES).order_by("last_name", "first_name", "pk")
     return render(request, "accounts/staff/list.html", {"members": members})
 
 

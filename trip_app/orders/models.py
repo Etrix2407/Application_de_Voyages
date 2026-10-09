@@ -56,7 +56,8 @@ class Order(models.Model):
     class Meta:
         verbose_name = "demande de voyage"
         verbose_name_plural = "demandes de voyage"
-        ordering = ["-created_at"]
+        # Le numéro départage les demandes créées au même instant (horloge peu précise).
+        ordering = ["-created_at", "-pk"]
 
     def __str__(self) -> str:
         return f"Demande n° {self.pk} — {self.destination}"

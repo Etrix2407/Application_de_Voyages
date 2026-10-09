@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block title %}Demande n° {{ order.pk }} — Gestion{% endblock %}
+
+{% block content %}
+    <p><a href="{% url 'manage_orders' %}">← Toutes les demandes</a></p>
+
+    <h1>Demande n° {{ order.pk }} : {{ order.destination.name }}</h1>
+    <p>État : <span class="status status-{{ order.status }}">{{ order.get_status_display }}</span></p>
+
+    <h2>Client</h2>
+    {% if order.client %}
+        <dl class="details">
+            <dt>Nom</dt>
+            <dd>{{ order.client.first_name }} {{ order.client.last_name }}</dd>
+            <dt>Téléphone</dt>
+            <dd>{% if order.client.phone %}<a href="tel:{{ order.client.phone }}">{{ order.client.phone }}</a>{% else %}Non renseigné{% endif %}</dd>
+            <dt>Adresse e-mail</dt>
+            <dd><a href="mailto:{{ order.client.email }}">{{ order.client.email }}</a></dd>
+        </dl>
+    {% else %}
+        <p>Le client a supprimé son compte : cette demande est anonymisée.</p>
+    {% endif %}
+
+    <h2>Demande</h2>
+    {% include "orders/_order_summary.html" %}
+
+    <h2>Historique</h2>
+    {% include "orders/_history.html" %}
+{% endblock %}
