@@ -122,6 +122,19 @@ if PASSWORD_PEPPER:
 if TESTING:
     PASSWORD_HASHERS = ["django.contrib.auth.hashers.MD5PasswordHasher"]
 
+# Cache des limites anti-abus : fichiers sur disque, partagés par tous les processus du
+# serveur et conservés au redémarrage. Grande capacité : impossible de faire « oublier »
+# un compteur en remplissant le cache. Les tests gardent un cache en mémoire, isolé.
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.filebased.FileBasedCache",
+        "LOCATION": BASE_DIR / "cache",
+        "OPTIONS": {"MAX_ENTRIES": 100_000},
+    }
+}
+if TESTING:
+    CACHES = {"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"}}
+
 
 LANGUAGE_CODE = "fr-be"
 TIME_ZONE = "Europe/Brussels"

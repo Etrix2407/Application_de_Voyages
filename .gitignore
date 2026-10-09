@@ -7,4 +7,5 @@ venv/
 db.sqlite3
 trip_app/staticfiles/
 trip_app/media/
+trip_app/cache/
 trip_app/_test_media/
