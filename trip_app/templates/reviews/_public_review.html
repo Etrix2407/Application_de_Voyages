@@ -1,8 +1,12 @@
+{# Options : short (commentaire raccourci), show_destination (lien vers la destination, pour l'accueil). #}
 <li class="review">
     <h3>{{ review.title }}</h3>
     <p>{% include "reviews/_rating.html" %}</p>
     <p class="verified">✓ Voyage vérifié — séjour de {{ review.order.departure_date|date:"F Y" }}</p>
-    {% if review.comment %}<p>{{ review.comment|linebreaksbr }}</p>{% endif %}
-    <p class="review-meta">{{ review.author_name }} — publié le {{ review.published_at|date:"j F Y" }}</p>
+    {% if review.comment %}<p>{% if short %}{{ review.comment|truncatechars:200|linebreaksbr }}{% else %}{{ review.comment|linebreaksbr }}{% endif %}</p>{% endif %}
+    <p class="review-meta">
+        {{ review.author_name }} — publié le {{ review.published_at|date:"j F Y" }}
+        {% if show_destination %}— <a href="{% url 'destination_detail' review.order.destination_id %}#avis">{{ review.order.destination.name }}</a>{% endif %}
+    </p>
     {% if review.response %}{% include "reviews/_response.html" with response=review.response %}{% endif %}
 </li>

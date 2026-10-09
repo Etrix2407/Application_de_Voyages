@@ -4,9 +4,10 @@ from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
-from accounts.tests.factories import create_client
+from accounts.tests.factories import create_agent, create_client
 from catalog.tests.factories import create_country, create_destination
 from reviews.models import ReviewStatus
+from reviews.services.responses import save_response
 
 from .factories import create_review, create_trip_done
 
@@ -65,3 +66,12 @@ class HomeTopReviewsTests(TestCase):
         self.assertContains(response, "✓ Voyage vérifié")
         self.assertContains(response, "Julie D.")
         self.assertContains(response, reverse("destination_detail", args=[self.destination.pk]) + "#avis")
+
+    def test_publication_date_and_agency_response_shown(self):
+        review = self.review("Inoubliable")
+        save_response(review, create_agent(first_name="Luc"), "Merci pour votre confiance !")
+
+        response = self.client.get(reverse("home"))
+
+        self.assertContains(response, "publié le")
+        self.assertContains(response, "Merci pour votre confiance !")

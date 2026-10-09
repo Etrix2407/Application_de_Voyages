@@ -62,7 +62,7 @@ def latest_top_reviews(limit: int = 5):
     return (
         Review.objects.public()
         .filter(rating=MAX_RATING)
-        .select_related("order__client", "order__destination")
+        .select_related("order__client", "order__destination", "response")
         .order_by("-published_at", "-pk")[:limit]
     )
 
