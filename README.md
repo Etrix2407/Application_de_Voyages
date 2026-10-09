@@ -18,6 +18,7 @@ Prérequis : Python 3.10 ou plus récent.
 
 ```bash
 pip install -r trip_app/requirements.txt
+copy .env.example .env               # puis remplissez .env (voir ci-dessous)
 cd trip_app
 python manage.py migrate
 python manage.py createsuperuser   # compte administrateur (la gérante)
@@ -25,6 +26,12 @@ python manage.py runserver
 ```
 
 Ouvrez ensuite http://127.0.0.1:8000/ et connectez-vous avec le compte administrateur.
+
+### Le fichier `.env` (réglages et secrets)
+
+Les réglages se trouvent dans le fichier **`.env`**, à la racine du dépôt, créé à partir du modèle [.env.example](.env.example) où chaque réglage est expliqué. Il contient des secrets : il **n'est jamais commité** (protégé par `.gitignore`) et ne doit pas être partagé. Au minimum, renseignez `DJANGO_SECRET_KEY` (commande de génération indiquée dans le modèle). Les variables d'environnement définies dans Windows ou sur le serveur restent prioritaires sur ce fichier.
+
+Pour **recevoir vraiment les e-mails** (Outlook / Hotmail) : dans `.env`, renseignez `DJANGO_EMAIL_HOST_USER`, `DJANGO_EMAIL_HOST_PASSWORD` (mot de passe d'application si la validation en deux étapes est activée) et `DJANGO_DEFAULT_FROM_EMAIL` (même adresse), puis passez `DJANGO_EMAIL_BACKEND` sur `django.core.mail.backends.smtp.EmailBackend`. Vérifiez avec `python manage.py sendtestemail votre@adresse`.
 
 ### Données de démonstration (facultatif)
 
@@ -138,7 +145,7 @@ Les tests utilisent un hachage de mot de passe rapide pour aller plus vite. L'ap
 
 ## Mise en production
 
-Réglez ces variables d'environnement :
+Réglez ces variables dans le `.env` du serveur, ou directement comme variables d'environnement chez l'hébergeur :
 
 | Variable | Rôle | Défaut |
 |---|---|---|
