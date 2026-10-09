@@ -1,7 +1,9 @@
+from datetime import timedelta
 from decimal import Decimal
 
 from django.test import TestCase
 from django.urls import reverse
+from django.utils import timezone
 
 from accounts.tests.factories import create_admin, create_agent, create_client
 from catalog.tests.factories import create_activity, create_country, create_destination
@@ -237,3 +239,46 @@ class PriceAtConfirmationTests(TestCase):
         self.assertContains(detail, "2320,00 €")
         self.assertContains(listing, "2320,00 €")
         self.assertNotContains(listing, "2100,00 €")
+
+
+class DepartureDateTests(TestCase):
+    """Décision de la cliente : une demande dont la date de départ est passée ne se confirme plus."""
+
+    def setUp(self):
+        self.agent = create_agent()
+        self.client.force_login(self.agent)
+        self.order = create_order(create_client(), create_destination(create_country()))
+        # La demande a été faite à temps, mais personne ne l'a traitée avant le départ.
+        Order.objects.filter(pk=self.order.pk).update(
+            departure_date=timezone.localdate() - timedelta(days=1),
+            return_date=timezone.localdate() + timedelta(days=5),
+        )
+        self.order.refresh_from_db()
+
+    def test_service_refuses(self):
+        with self.assertRaises(TransitionNotAllowed):
+            confirm_by_staff(self.order, self.agent)
+        self.order.refresh_from_db()
+        self.assertEqual(self.order.status, Status.PENDING)
+
+    def test_page_explains_and_offers_cancel_only(self):
+        response = self.client.get(reverse("manage_order_detail", args=[self.order.pk]))
+
+        self.assertContains(response, "La date de départ est passée")
+        self.assertNotContains(response, reverse("manage_confirm_order", args=[self.order.pk]))
+        self.assertContains(response, reverse("manage_cancel_order", args=[self.order.pk]))
+
+    def test_posting_confirm_shows_the_reason(self):
+        response = self.client.post(reverse("manage_confirm_order", args=[self.order.pk]), follow=True)
+
+        self.assertContains(response, "ne peut plus être confirmée")
+        self.order.refresh_from_db()
+        self.assertEqual(self.order.status, Status.PENDING)
+
+    def test_departure_today_can_still_be_confirmed(self):
+        Order.objects.filter(pk=self.order.pk).update(departure_date=timezone.localdate())
+        self.order.refresh_from_db()
+
+        confirm_by_staff(self.order, self.agent)
+
+        self.assertEqual(self.order.status, Status.CONFIRMED)

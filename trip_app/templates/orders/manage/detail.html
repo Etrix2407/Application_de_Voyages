@@ -24,6 +24,9 @@
 
     {% if can_confirm or can_cancel %}
         <h2>Traitement</h2>
+        {% if departure_passed %}
+            <p class="message">La date de départ est passée : cette demande ne peut plus être confirmée. Vous pouvez l'annuler.</p>
+        {% endif %}
         <ul class="actions">
             {% if can_confirm %}
                 <li>

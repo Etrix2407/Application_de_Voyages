@@ -97,7 +97,7 @@ Formats à respecter :
 1. Menu **Demandes de voyage** : toutes les demandes, les plus récentes d'abord (tri inversable), par pages de 25.
 2. Filtres : état, pays, destination, client (nom, prénom ou e-mail, sans tenir compte des accents) et période de départ.
 3. Le détail d'une demande affiche le téléphone et l'e-mail du client (cliquables pour appeler ou écrire), les voyageurs, les activités aux prix figés, les remarques et l'historique.
-4. Après avoir rappelé le client : **Confirmer la demande**. **Annuler la demande** est possible tant qu'elle est en attente ou confirmée, avec un **motif obligatoire** (visible par le client). Chaque action est notée dans l'historique avec la date et votre nom (le client, lui, voit « Agence »).
+4. Après avoir rappelé le client : **Confirmer la demande** (impossible une fois la date de départ passée : la demande ne peut alors plus qu'être annulée). **Annuler la demande** est possible tant qu'elle est en attente ou confirmée, avec un **motif obligatoire** (visible par le client). Chaque action est notée dans l'historique avec la date et votre nom (le client, lui, voit « Agence »).
 
 ### Utiliser l'application (client)
 
