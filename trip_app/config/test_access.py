@@ -10,6 +10,7 @@ from django.urls import URLResolver, get_resolver, reverse
 
 from accounts.tests.factories import create_admin, create_agent, create_client
 from catalog.tests.factories import create_activity, create_country, create_destination
+from orders.tests.factories import create_order
 
 PUBLIC, LOGGED_IN, CLIENT, STAFF, ADMIN = "public", "connecté", "client", "personnel", "administrateur"
 
@@ -39,6 +40,9 @@ ACCESS = {
     "add_favorite": CLIENT,
     "remove_favorite": CLIENT,
     "create_order": CLIENT,
+    "my_orders": CLIENT,
+    "my_order_detail": CLIENT,
+    "cancel_my_order": CLIENT,
     "client_list": STAFF,
     "edit_client": STAFF,
     "send_client_link": STAFF,
@@ -91,6 +95,7 @@ class AccessMatrixTests(TestCase):
         cls.destination = create_destination(country)
         cls.activity = create_activity(country, destination=cls.destination)
         cls.country = country
+        cls.order = create_order(cls.client_user, cls.destination)
 
     def url_kwargs(self, name):
         member = self.other_agent.pk
@@ -119,6 +124,8 @@ class AccessMatrixTests(TestCase):
             "password_reset_confirm": {"uidb64": "MQ", "token": "jeton-invalide"},
             "confirm_sign_up": {"token": "jeton-invalide"},
             "create_order": {"destination_pk": self.destination.pk},
+            "my_order_detail": {"pk": self.order.pk},
+            "cancel_my_order": {"pk": self.order.pk},
         }.get(name, {})
 
     def test_every_route_declares_its_access(self):
