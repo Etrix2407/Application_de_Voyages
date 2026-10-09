@@ -1,4 +1,4 @@
-"""Envoi d'un lien permettant à l'utilisateur de choisir lui-même son mot de passe."""
+"""Envoi des e-mails des comptes : liens de mot de passe et confirmation d'inscription."""
 
 import logging
 import smtplib
@@ -15,12 +15,23 @@ from accounts.models import User
 logger = logging.getLogger(__name__)
 
 
-def send_password_link(request, user: User, subject: str, template_name: str) -> bool:
-    """Envoie un lien valable 1 heure (PASSWORD_RESET_TIMEOUT) ; personne d'autre ne voit le mot de passe.
+def send_email(subject: str, template_name: str, context: dict, to: str) -> bool:
+    """Envoie un e-mail texte. Renvoie False si l'envoi a échoué.
 
-    Renvoie False si l'e-mail n'a pas pu partir : l'erreur est journalisée et l'appelant
-    prévient l'utilisateur, au lieu d'afficher une erreur 500.
+    L'erreur est journalisée avec sa cause ; l'appelant prévient l'utilisateur
+    au lieu d'afficher une erreur 500.
     """
+    body = render_to_string(template_name, context)
+    try:
+        send_mail(subject, body, None, [to])
+    except (OSError, smtplib.SMTPException):
+        logger.exception("Échec de l'envoi de l'e-mail « %s » à %s", subject, to)
+        return False
+    return True
+
+
+def send_password_link(request, user: User, subject: str, template_name: str) -> bool:
+    """Envoie un lien valable 1 heure (PASSWORD_RESET_TIMEOUT) ; personne d'autre ne voit le mot de passe."""
     link = request.build_absolute_uri(
         reverse(
             "password_reset_confirm",
@@ -30,10 +41,4 @@ def send_password_link(request, user: User, subject: str, template_name: str) ->
             },
         )
     )
-    body = render_to_string(template_name, {"user": user, "link": link})
-    try:
-        send_mail(subject, body, None, [user.email])
-    except (OSError, smtplib.SMTPException):
-        logger.exception("Échec de l'envoi du lien de mot de passe à %s", user.email)
-        return False
-    return True
+    return send_email(subject, template_name, {"user": user, "link": link}, user.email)

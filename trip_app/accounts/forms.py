@@ -1,9 +1,8 @@
 """Formulaires des comptes : inscription, connexion, profil, personnel."""
 
 from django import forms
-from django.contrib.auth.forms import AuthenticationForm, BaseUserCreationForm, PasswordResetForm
+from django.contrib.auth.forms import AuthenticationForm, PasswordResetForm
 from django.core.exceptions import ValidationError
-from django.utils import timezone
 
 from .models import STAFF_ROLES, Role, User
 from .services.throttling import (
@@ -25,7 +24,9 @@ CLIENT_WIDGETS = {
 CLIENT_HELP_TEXTS = {"phone": "Facultatif. Exemple : 0470 12 34 56."}
 
 
-class SignUpForm(BaseUserCreationForm):
+class SignUpForm(forms.ModelForm):
+    """Inscription sans mot de passe : il sera choisi après confirmation de l'adresse."""
+
     consent = forms.BooleanField(
         label="J'ai lu et j'accepte la politique de confidentialité.",
         error_messages={"required": "Vous devez accepter la politique de confidentialité."},
@@ -40,16 +41,19 @@ class SignUpForm(BaseUserCreationForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["birth_date"].required = True
-        self.fields["password1"].label = "Mot de passe"
-        self.fields["password2"].label = "Confirmation du mot de passe"
+        # Le rôle doit être connu avant la validation du modèle (règles propres aux clients).
+        self.instance.role = Role.CLIENT
 
-    def save(self, commit: bool = True) -> User:
-        user = super().save(commit=False)
-        user.role = Role.CLIENT
-        user.consent_date = timezone.now()
-        if commit:
-            user.save()
-        return user
+    def validate_unique(self) -> None:
+        # Volontairement vide : dire « adresse déjà utilisée » révélerait qui est client.
+        # Le service d'inscription gère ce cas sans le révéler.
+        pass
+
+
+class ResendConfirmationForm(forms.Form):
+    email = forms.EmailField(
+        label="Adresse e-mail", widget=forms.EmailInput(attrs={"autocomplete": "email"})
+    )
 
 
 class LoginForm(AuthenticationForm):
