@@ -17,6 +17,7 @@
                         <p class="unavailable">Cette destination n'est plus disponible.</p>
                     {% endif %}
                     <p>{{ destination.country.name }}</p>
+                    <p>{% include "reviews/_summary.html" with summary=destination.rating_summary %}</p>
                     {% include "catalog/_favorite_button.html" with item_type="destination" item=destination is_favorite=True %}
                 </li>
             {% endfor %}

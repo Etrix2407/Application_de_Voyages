@@ -2,6 +2,8 @@
 
 from django import forms
 
+from reviews.services.ratings import BEST_FIRST, NEWEST_FIRST
+
 from reviews.models import (
     MAX_COMMENT_LENGTH,
     MAX_RATING,
@@ -66,3 +68,20 @@ class RefusalForm(forms.Form):
         if data.get("reason") == RefusalReason.OTHER and not data.get("details", "").strip():
             self.add_error("details", "Précisez le motif quand vous choisissez « Autre ».")
         return data
+
+
+class PublicReviewFilterForm(forms.Form):
+    """Tri et filtre des avis d'une destination (fiche publique)."""
+
+    tri = forms.ChoiceField(
+        label="Trier",
+        required=False,
+        choices=[(NEWEST_FIRST, "Les plus récents d'abord"), (BEST_FIRST, "Les meilleures notes d'abord")],
+    )
+    etoiles = forms.TypedChoiceField(
+        label="Nombre d'étoiles",
+        required=False,
+        coerce=int,
+        empty_value=None,
+        choices=[("", "Toutes les notes"), *[(rating, label) for rating, label in RATING_CHOICES]],
+    )

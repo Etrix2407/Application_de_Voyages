@@ -6,6 +6,7 @@
     <p><a href="{% url 'country_detail' destination.country.pk %}">← {{ destination.country.name }}</a></p>
 
     <h1>{{ destination.name }}</h1>
+    <p>{% include "reviews/_summary.html" with summary=destination.rating_summary %} — <a href="#avis">lire les avis</a></p>
     {% include "catalog/_favorite_button.html" with item_type="destination" item=destination %}
     {% if user.is_client %}
         <p><a class="button" href="{% url 'create_order' destination.pk %}">Faire une demande de voyage</a></p>
@@ -40,4 +41,8 @@
     {% else %}
         <p>Aucune activité pour cette destination. Voir les activités de <a href="{% url 'country_detail' destination.country.pk %}">{{ destination.country.name }}</a>.</p>
     {% endif %}
+
+    <section id="avis">
+        {% include "reviews/_destination_reviews.html" %}
+    </section>
 {% endblock %}

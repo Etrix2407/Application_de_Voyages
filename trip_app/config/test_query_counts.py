@@ -16,6 +16,8 @@ from accounts.tests.factories import create_admin, create_agent, create_client
 from catalog.models import FavoriteActivity, FavoriteDestination
 from catalog.tests.factories import create_activity, create_country, create_destination
 from orders.tests.factories import create_order
+from reviews.models import ReviewStatus
+from reviews.tests.factories import create_review, create_trip_done
 
 EXTRA_ROWS = 4
 
@@ -124,3 +126,32 @@ class QueryCountTests(TestCase):
             create_activity(self.country, self.unique("Visite"), destination=destination)
 
         self.assert_constant_queries(reverse("manage_country", args=[self.country.pk]), add_content)
+
+    # --- Avis (v3) ---
+
+    def add_published_review(self, destination):
+        traveller = create_client(email=f"{self.unique('voyageur').replace(' ', '')}@example.com")
+        create_review(create_trip_done(traveller, destination), status=ReviewStatus.PUBLISHED)
+
+    def test_destination_list_with_ratings(self):
+        def add_rated_destination():
+            self.add_published_review(create_destination(self.country, self.unique("Ville")))
+
+        self.assert_constant_queries(reverse("destination_list"), add_rated_destination)
+
+    def test_destination_page_with_reviews(self):
+        destination = create_destination(self.country, "Kyoto")
+
+        self.assert_constant_queries(
+            reverse("destination_detail", args=[destination.pk]), lambda: self.add_published_review(destination)
+        )
+
+    def test_moderation_queue(self):
+        self.client.force_login(create_agent())
+        destination = create_destination(self.country, "Kyoto")
+
+        def add_pending_review():
+            traveller = create_client(email=f"{self.unique('voyageur').replace(' ', '')}@example.com")
+            create_review(create_trip_done(traveller, destination))
+
+        self.assert_constant_queries(reverse("manage_pending_reviews"), add_pending_review)

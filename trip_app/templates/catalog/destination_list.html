@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block title %}Toutes les destinations{% endblock %}
+
+{% block content %}
+    <h1>Toutes les destinations</h1>
+    <p>Les notes viennent uniquement de clients partis avec l'agence (avis vérifiés).</p>
+
+    {% if destinations %}
+        <ul class="cards">
+            {% for destination in destinations %}
+                {% include "catalog/_destination_card.html" with show_country=True %}
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p>Aucune destination pour le moment.</p>
+    {% endif %}
+{% endblock %}

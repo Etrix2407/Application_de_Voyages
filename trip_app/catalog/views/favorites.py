@@ -9,6 +9,7 @@ from django.views.decorators.http import require_POST
 
 from accounts.decorators import client_required
 from catalog.models import Activity, Destination, FavoriteActivity, FavoriteDestination
+from reviews.services.ratings import attach_ratings
 
 # Type d'élément (dans l'URL) -> (modèle, modèle de favori, nom du champ, page de détail).
 ITEM_TYPES = {
@@ -60,12 +61,11 @@ def remove_favorite(request, item_type, pk):
 def favorite_list(request):
     visible_destinations = set(Destination.objects.visible().values_list("pk", flat=True))
     visible_activities = set(Activity.objects.visible().values_list("pk", flat=True))
+    favorites = FavoriteDestination.objects.filter(client=request.user).select_related("destination__country")
+    destinations = attach_ratings(favorite.destination for favorite in favorites)
     context = {
         "favorite_destinations": [
-            (favorite.destination, favorite.destination_id in visible_destinations)
-            for favorite in FavoriteDestination.objects.filter(client=request.user).select_related(
-                "destination__country"
-            )
+            (destination, destination.pk in visible_destinations) for destination in destinations
         ],
         "favorite_activities": [
             (favorite.activity, favorite.activity_id in visible_activities)
