@@ -1,8 +1,10 @@
+import io
 from unittest import mock
 
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from django.urls import reverse
+from PIL import Image, PngImagePlugin
 
 from accounts.tests.factories import create_agent, create_client
 from catalog.models import Destination
@@ -87,3 +89,57 @@ class DestinationPhotoTests(TemporaryMediaMixin, TestCase):
 
         self.assertContains(response, f'src="{destination.photo.url}"')
         self.assertContains(response, 'alt="Photo : Kyoto"')
+
+
+def photo_with_metadata(image_format: str, size=(40, 20), orientation=None) -> SimpleUploadedFile:
+    """Photo « de téléphone » : position GPS, appareil et commentaire cachés dans le fichier."""
+    image = Image.new("RGB", size, "green")
+    exif = Image.Exif()
+    exif[0x010F] = "Telephone de Marie"  # fabricant de l'appareil
+    exif[0x8825] = {1: "N", 2: (50.0, 50.0, 0.0)}  # position GPS
+    if orientation:
+        exif[0x0112] = orientation
+    buffer = io.BytesIO()
+    options = {"exif": exif.tobytes()}
+    if image_format == "PNG":
+        info = PngImagePlugin.PngInfo()
+        info.add_text("Comment", "Rue des Lilas 12, Namur")
+        options["pnginfo"] = info
+    image.save(buffer, format=image_format, **options)
+    extension = {"JPEG": "jpg", "PNG": "png", "WEBP": "webp"}[image_format]
+    return SimpleUploadedFile(f"vacances.{extension}", buffer.getvalue(), content_type=f"image/{extension}")
+
+
+class PhotoMetadataTests(TemporaryMediaMixin, TestCase):
+    def setUp(self):
+        super().setUp()
+        self.client.force_login(create_agent())
+        self.country = create_country()
+
+    def upload(self, photo):
+        self.client.post(
+            reverse("manage_create_destination", args=[self.country.pk]),
+            {"name": "Kyoto", "description": "Temples.", "active": "on", "photo": photo},
+        )
+        return TEST_MEDIA_ROOT / Destination.objects.get().photo.name
+
+    def test_metadata_removed_for_every_format(self):
+        for image_format in ["JPEG", "PNG", "WEBP"]:
+            with self.subTest(image_format=image_format):
+                Destination.objects.all().delete()
+
+                saved = self.upload(photo_with_metadata(image_format))
+
+                content = saved.read_bytes()
+                with Image.open(saved) as image:
+                    self.assertEqual(image.format, image_format)
+                    self.assertEqual(len(image.getexif()), 0)
+                self.assertNotIn(b"Telephone de Marie", content)
+                self.assertNotIn(b"Rue des Lilas", content)
+
+    def test_photo_taken_sideways_stays_upright(self):
+        # Orientation 6 : l'appareil a été tourné, la photo doit s'afficher en portrait.
+        saved = self.upload(photo_with_metadata("JPEG", size=(40, 20), orientation=6))
+
+        with Image.open(saved) as image:
+            self.assertEqual(image.size, (20, 40))

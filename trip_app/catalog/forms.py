@@ -3,6 +3,7 @@
 from django import forms
 
 from .models import Activity, Category, Continent, Destination, Difficulty, Month, Country
+from .services.photos import without_metadata
 from .services.search import Criteria
 from .validators import PHOTO_FORMATS
 
@@ -54,9 +55,11 @@ class DestinationForm(_CountryContentForm):
         photo = self.cleaned_data.get("photo")
         # Pillow lit le vrai format : un GIF renommé en .jpg est refusé.
         image = getattr(photo, "image", None)
-        if image is not None and image.format not in PHOTO_FORMATS:
+        if image is None:
+            return photo  # pas de nouvelle photo : celle déjà enregistrée est gardée
+        if image.format not in PHOTO_FORMATS:
             raise forms.ValidationError("Formats acceptés : JPEG, PNG ou WebP.", code="invalid_photo_format")
-        return photo
+        return without_metadata(photo)
 
 
 class ActivityForm(_CountryContentForm):

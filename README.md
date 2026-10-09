@@ -83,7 +83,7 @@ Formats à respecter :
 | Décalage horaire (été / hiver) | Heures par rapport à la Belgique, par quart d'heure : `5.5`, `-6`, `5.75` |
 | Période idéale | Mois de début et mois de fin ; peut chevaucher l'année (novembre → mars). Facultative |
 | Durée d'une activité | En minutes : `90` pour 1 h 30 |
-| Photo | Fichier JPEG, PNG ou WebP de 5 Mo maximum, envoyé depuis l'ordinateur. Facultative ; une nouvelle photo remplace l'ancienne |
+| Photo | Fichier JPEG, PNG ou WebP de 5 Mo maximum, envoyé depuis l'ordinateur. Facultative ; une nouvelle photo remplace l'ancienne. Les données cachées de la photo (position GPS, appareil, date de prise de vue) sont retirées avant publication |
 | Prix | En euros. Le prix « à partir de » d'une destination est facultatif |
 
 ### Gérer les clients (agent ou administrateur)
