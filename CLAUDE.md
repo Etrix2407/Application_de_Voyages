@@ -16,6 +16,8 @@ trip_app/
 ├── catalog/           # pays, destinations, activités, recherche, favoris
 │   ├── views/
 │   └── services/
+├── promotions/        # promotions : remises automatiques ou sur code (v4)
+│   └── services/
 ├── orders/            # demandes de voyage (v2)
 │   ├── views/
 │   └── services/

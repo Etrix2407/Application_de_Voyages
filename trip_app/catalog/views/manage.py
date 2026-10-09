@@ -32,10 +32,10 @@ def _confirm_delete(request, item, back_url: str, consequence: str = ""):
         try:
             item.delete()
         except ProtectedError:
-            # Ex. une destination ou une activité déjà présente dans des demandes de voyage.
+            # Ex. une destination déjà présente dans des demandes de voyage ou visée par une promotion.
             messages.error(
                 request,
-                f"« {item} » est utilisé dans des demandes de voyage : il ne peut pas être "
+                f"« {item} » est utilisé dans des demandes de voyage ou des promotions : il ne peut pas être "
                 "supprimé. Vous pouvez le désactiver pour le masquer aux clients.",
             )
             return redirect(back_url)
