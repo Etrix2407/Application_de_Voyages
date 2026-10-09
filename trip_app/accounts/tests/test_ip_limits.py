@@ -37,6 +37,16 @@ class ClientIpTests(SimpleTestCase):
 
         self.assertEqual(get_client_ip(request), "198.51.100.7")
 
+    def test_ipv6_grouped_by_subscriber_network(self):
+        # Un abonné IPv6 reçoit tout un réseau /64 : changer d'adresse ne remet pas les compteurs à zéro.
+        first = get_client_ip(RequestFactory().get("/", REMOTE_ADDR="2001:db8:1:2::1"))
+        second = get_client_ip(RequestFactory().get("/", REMOTE_ADDR="2001:db8:1:2:abcd::9"))
+        neighbour = get_client_ip(RequestFactory().get("/", REMOTE_ADDR="2001:db8:1:3::1"))
+
+        self.assertEqual(first, second)
+        self.assertEqual(first, "2001:db8:1:2::/64")
+        self.assertNotEqual(first, neighbour)
+
 
 class LoginIpLimitTests(TestCase):
     def setUp(self):

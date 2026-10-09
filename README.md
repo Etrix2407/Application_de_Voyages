@@ -183,7 +183,7 @@ Points d'attention :
 
 - Planifiez chaque jour `python manage.py purge_unconfirmed` (tâche planifiée Windows ou cron) : elle efface les inscriptions non confirmées depuis plus de 7 jours (RGPD).
 - **Ne committez jamais** la clé secrète ni les identifiants SMTP.
-- Les limites (5 échecs de connexion, 3 liens « mot de passe oublié » par heure) utilisent le cache Django, en mémoire par défaut. Avec plusieurs processus serveur, configurez un cache partagé.
+- Les limites anti-abus (5 échecs de connexion, 3 liens « mot de passe oublié » par heure, 5 essais quand le mot de passe est redemandé, etc.) sont stockées dans le dossier `trip_app/cache/` (créé automatiquement, jamais commité) : elles sont partagées par tous les processus du serveur et conservées au redémarrage. Ce dossier doit être accessible en écriture par le serveur. Les adresses IPv6 sont comptées par réseau /64.
 - SQLite suffit pour le volume prévu (environ 1 000 clients).
 - Les photos envoyées sont stockées dans `trip_app/media/` (hors git). En développement, Django les sert lui-même ; en production, configurez le serveur web pour servir ce dossier à l'adresse `/media/`, et sauvegardez-le avec la base.
 

@@ -1,7 +1,7 @@
 """Formulaires des comptes : inscription, connexion, profil, personnel."""
 
 from django import forms
-from django.contrib.auth.forms import AuthenticationForm, PasswordResetForm
+from django.contrib.auth.forms import AuthenticationForm, PasswordChangeForm, PasswordResetForm
 from django.core.exceptions import ValidationError
 
 from .models import STAFF_ROLES, Role, User, normalize_email_address
@@ -9,6 +9,7 @@ from .services.throttling import (
     get_client_ip,
     login_failures,
     login_failures_by_ip,
+    password_confirmations,
     password_reset_requests,
     password_reset_requests_by_ip,
 )
@@ -123,7 +124,37 @@ class ClientCorrectionForm(ClientProfileForm):
     """Correction par un agent : ni mot de passe ni e-mail (identifiant géré par le client)."""
 
 
-class EmailChangeForm(forms.Form):
+TOO_MANY_PASSWORD_ATTEMPTS = "Trop d'essais. Pour votre sécurité, réessayez dans 15 minutes."
+
+
+def check_current_password(user: User, password: str) -> None:
+    """Vérifie le mot de passe actuel d'un utilisateur connecté, avec un nombre d'essais limité."""
+    key = f"user-{user.pk}"
+    if password_confirmations.is_locked(key):
+        raise ValidationError(TOO_MANY_PASSWORD_ATTEMPTS, code="locked")
+    if not user.check_password(password):
+        password_confirmations.record(key)
+        raise ValidationError("Mot de passe incorrect.", code="incorrect_password")
+    password_confirmations.reset(key)
+
+
+class CurrentPasswordMixin:
+    """Champ « password » : le mot de passe actuel, vérifié par check_current_password."""
+
+    def clean_password(self) -> str:
+        password = self.cleaned_data["password"]
+        check_current_password(self.user, password)
+        return password
+
+
+class AccountPasswordChangeForm(PasswordChangeForm):
+    def clean_old_password(self) -> str:
+        password = self.cleaned_data["old_password"]
+        check_current_password(self.user, password)
+        return password
+
+
+class EmailChangeForm(CurrentPasswordMixin, forms.Form):
     new_email = forms.EmailField(
         label="Nouvelle adresse e-mail", widget=forms.EmailInput(attrs={"autocomplete": "email"})
     )
@@ -137,12 +168,6 @@ class EmailChangeForm(forms.Form):
         self.user = user
         super().__init__(*args, **kwargs)
 
-    def clean_password(self) -> str:
-        password = self.cleaned_data["password"]
-        if not self.user.check_password(password):
-            raise ValidationError("Mot de passe incorrect.", code="incorrect_password")
-        return password
-
     def clean_new_email(self) -> str:
         new_email = normalize_email_address(self.cleaned_data["new_email"])
         if new_email == self.user.email:
@@ -150,7 +175,7 @@ class EmailChangeForm(forms.Form):
         return new_email
 
 
-class AccountDeletionForm(forms.Form):
+class AccountDeletionForm(CurrentPasswordMixin, forms.Form):
     password = forms.CharField(
         label="Votre mot de passe",
         strip=False,
@@ -160,12 +185,6 @@ class AccountDeletionForm(forms.Form):
     def __init__(self, user: User, *args, **kwargs):
         self.user = user
         super().__init__(*args, **kwargs)
-
-    def clean_password(self) -> str:
-        password = self.cleaned_data["password"]
-        if not self.user.check_password(password):
-            raise ValidationError("Mot de passe incorrect.", code="incorrect_password")
-        return password
 
 
 class AgentCreationForm(forms.ModelForm):

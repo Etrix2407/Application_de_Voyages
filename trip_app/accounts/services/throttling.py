@@ -1,5 +1,6 @@
 """Limitation des actions répétées, par adresse e-mail ou par adresse IP."""
 
+import ipaddress
 from dataclasses import dataclass
 
 from django.conf import settings
@@ -39,27 +40,44 @@ class Limiter:
 
 
 def get_client_ip(request) -> str:
-    """Adresse IP du visiteur.
+    """Adresse IP du visiteur, telle que comptée par les limites.
 
     Par défaut, l'IP de la connexion (REMOTE_ADDR), impossible à falsifier. L'en-tête
     X-Forwarded-For, que n'importe qui peut forger, n'est lu que si le site est déclaré
     derrière `NUM_PROXIES` serveurs intermédiaires de confiance : on prend alors l'adresse
     ajoutée par le premier d'entre eux.
+    Une adresse IPv6 est ramenée à son réseau /64 : un abonné en reçoit des milliards,
+    il ne doit pas pouvoir en changer à chaque essai.
     """
     if request is None:
         return ""
+    ip = request.META.get("REMOTE_ADDR", "")
     if settings.NUM_PROXIES:
         header = request.META.get("HTTP_X_FORWARDED_FOR", "")
-        forwarded = [ip.strip() for ip in header.split(",") if ip.strip()]
+        forwarded = [address.strip() for address in header.split(",") if address.strip()]
         if len(forwarded) >= settings.NUM_PROXIES:
-            return forwarded[-settings.NUM_PROXIES]
-    return request.META.get("REMOTE_ADDR", "")
+            ip = forwarded[-settings.NUM_PROXIES]
+    return _network_of(ip)
+
+
+def _network_of(ip: str) -> str:
+    try:
+        address = ipaddress.ip_address(ip)
+    except ValueError:
+        return ip
+    if address.version == 6:
+        return str(ipaddress.ip_network(f"{address}/64", strict=False))
+    return ip
 
 
 # Par adresse e-mail.
 login_failures = Limiter("login-failures", max_attempts=5, window_seconds=15 * 60)
 password_reset_requests = Limiter("password-reset", max_attempts=3, window_seconds=60 * 60)
 confirmation_emails = Limiter("sign-up-emails", max_attempts=3, window_seconds=60 * 60)
+
+# Par compte connecté : ressaisie du mot de passe (changement d'e-mail ou de mot de passe,
+# suppression du compte). Empêche de le deviner depuis une session volée.
+password_confirmations = Limiter("password-confirmations", max_attempts=5, window_seconds=15 * 60)
 
 # Par adresse IP : seuils larges, car un bureau ou un wifi partage souvent une même IP.
 login_failures_by_ip = Limiter("login-failures-ip", max_attempts=20, window_seconds=15 * 60)

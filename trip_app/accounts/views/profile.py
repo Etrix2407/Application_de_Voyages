@@ -9,7 +9,7 @@ from django.shortcuts import redirect, render
 from django.urls import reverse_lazy
 
 from accounts.decorators import client_required
-from accounts.forms import AccountDeletionForm, ClientProfileForm, EmailChangeForm
+from accounts.forms import AccountDeletionForm, AccountPasswordChangeForm, ClientProfileForm, EmailChangeForm
 from accounts.services.email_change import apply_email_change, request_email_change
 
 
@@ -30,6 +30,7 @@ def edit_profile(request):
 
 class AccountPasswordChangeView(SuccessMessageMixin, PasswordChangeView):
     template_name = "accounts/profile/change_password.html"
+    form_class = AccountPasswordChangeForm
     success_url = reverse_lazy("profile")
     success_message = "Votre mot de passe a été modifié."
 
