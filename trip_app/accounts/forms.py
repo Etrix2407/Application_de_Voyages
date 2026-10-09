@@ -1,12 +1,12 @@
 """Formulaires des comptes : inscription, connexion, profil, personnel."""
 
 from django import forms
-from django.contrib.auth.forms import AuthenticationForm, BaseUserCreationForm
+from django.contrib.auth.forms import AuthenticationForm, BaseUserCreationForm, PasswordResetForm
 from django.core.exceptions import ValidationError
 from django.utils import timezone
 
 from .models import STAFF_ROLES, Role, User
-from .services import throttling
+from .services.throttling import login_failures, password_reset_requests
 from .services.staff_rules import check_not_self
 
 
@@ -62,16 +62,31 @@ class LoginForm(AuthenticationForm):
 
     def clean(self):
         email = self.cleaned_data.get("username") or ""
-        if email and throttling.is_locked(email):
+        if email and login_failures.is_locked(email):
             raise ValidationError(self.error_messages["locked"], code="locked")
         try:
             cleaned_data = super().clean()
         except ValidationError:
             if email:
-                throttling.record_failure(email)
+                login_failures.record(email)
             raise
-        throttling.reset(email)
+        login_failures.reset(email)
         return cleaned_data
+
+
+class PasswordResetRequestForm(PasswordResetForm):
+    """« Mot de passe oublié » limité par adresse, pour empêcher d'inonder une boîte e-mail.
+
+    Au-delà de la limite, aucun e-mail ne part mais la page affichée reste la même :
+    rien ne révèle si l'adresse existe ni si la limite est atteinte.
+    """
+
+    def save(self, *args, **kwargs) -> None:
+        email = self.cleaned_data["email"]
+        if password_reset_requests.is_locked(email):
+            return
+        password_reset_requests.record(email)
+        super().save(*args, **kwargs)
 
 
 class ClientProfileForm(forms.ModelForm):

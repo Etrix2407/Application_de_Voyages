@@ -103,7 +103,7 @@ Formats à respecter :
 
 ### Mot de passe oublié
 
-Sur la page de connexion, **Mot de passe oublié ?** envoie un lien valable 1 heure. Après 5 tentatives de connexion échouées, la connexion est bloquée 15 minutes pour cette adresse e-mail.
+Sur la page de connexion, **Mot de passe oublié ?** envoie un lien valable 1 heure (3 demandes par heure au plus pour une même adresse, contre les envois en masse). Après 5 tentatives de connexion échouées, la connexion est bloquée 15 minutes pour cette adresse e-mail.
 
 ## Fonctionnalités par rôle
 
@@ -160,7 +160,7 @@ python manage.py collectstatic
 Points d'attention :
 
 - **Ne committez jamais** la clé secrète ni les identifiants SMTP.
-- Le blocage après 5 échecs de connexion utilise le cache Django, en mémoire par défaut. Avec plusieurs processus serveur, configurez un cache partagé.
+- Les limites (5 échecs de connexion, 3 liens « mot de passe oublié » par heure) utilisent le cache Django, en mémoire par défaut. Avec plusieurs processus serveur, configurez un cache partagé.
 - SQLite suffit pour le volume prévu (environ 1 000 clients).
 - Les photos envoyées sont stockées dans `trip_app/media/` (hors git). En développement, Django les sert lui-même ; en production, configurez le serveur web pour servir ce dossier à l'adresse `/media/`, et sauvegardez-le avec la base.
 

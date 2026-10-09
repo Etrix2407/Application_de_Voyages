@@ -7,7 +7,7 @@ from django.core.cache import cache
 from django.test import TestCase
 from django.urls import reverse
 
-from accounts.services import throttling
+from accounts.services.throttling import login_failures, password_reset_requests
 from accounts.models import Role
 
 from .factories import PASSWORD, create_client
@@ -119,7 +119,7 @@ class LoginTests(TestCase):
         self.assertNotIn("_auth_user_id", self.client.session)
 
     def test_locked_after_too_many_failures(self):
-        for _ in range(throttling.MAX_FAILURES):
+        for _ in range(login_failures.max_attempts):
             self.log_in(password="mauvais-mot-2026")
 
         response = self.log_in()
@@ -128,20 +128,20 @@ class LoginTests(TestCase):
         self.assertNotIn("_auth_user_id", self.client.session)
 
     def test_lockout_is_per_email(self):
-        for _ in range(throttling.MAX_FAILURES):
+        for _ in range(login_failures.max_attempts):
             self.log_in(email="autre@example.com", password="mauvais-mot-2026")
 
         self.assertRedirects(self.log_in(), reverse("home"))
 
     def test_success_resets_counter(self):
-        for _ in range(throttling.MAX_FAILURES - 1):
+        for _ in range(login_failures.max_attempts - 1):
             self.log_in(password="mauvais-mot-2026")
         self.log_in()
         self.client.logout()
 
         self.log_in(password="mauvais-mot-2026")
 
-        self.assertFalse(throttling.is_locked("client@example.com"))
+        self.assertFalse(login_failures.is_locked("client@example.com"))
 
     def test_logout(self):
         self.client.force_login(self.user)
@@ -154,6 +154,30 @@ class LoginTests(TestCase):
 
 class PasswordResetTests(TestCase):
     url = reverse("password_reset")
+
+    def setUp(self):
+        cache.clear()
+
+    def test_requests_limited_per_address(self):
+        create_client(email="victime@example.com")
+        limit = password_reset_requests.max_attempts
+
+        for _ in range(limit + 5):
+            response = self.client.post(self.url, {"email": "victime@example.com"})
+            # La page reste identique : rien ne révèle que la limite est atteinte.
+            self.assertRedirects(response, reverse("password_reset_done"))
+
+        self.assertEqual(len(mail.outbox), limit)
+
+    def test_limit_is_per_address(self):
+        create_client(email="victime@example.com")
+        create_client(email="autre@example.com")
+        for _ in range(password_reset_requests.max_attempts):
+            self.client.post(self.url, {"email": "victime@example.com"})
+
+        self.client.post(self.url, {"email": "AUTRE@example.com"})
+
+        self.assertEqual(mail.outbox[-1].to, ["autre@example.com"])
 
     def test_link_valid_one_hour(self):
         self.assertEqual(settings.PASSWORD_RESET_TIMEOUT, 3600)
