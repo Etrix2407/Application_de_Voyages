@@ -220,23 +220,27 @@ class EmailFailureTests(TestCase):
         self.client.force_login(create_admin())
 
     def test_agent_created_with_clear_message_when_email_fails(self, _send_mail):
-        response = self.client.post(
-            reverse("create_agent"),
-            {"first_name": "Luc", "last_name": "Martin", "email": "luc@example.com"},
-            follow=True,
-        )
+        with self.assertLogs("accounts.services.emails", level="ERROR") as logs:
+            response = self.client.post(
+                reverse("create_agent"),
+                {"first_name": "Luc", "last_name": "Martin", "email": "luc@example.com"},
+                follow=True,
+            )
 
         self.assertEqual(response.status_code, 200)
         self.assertTrue(User.objects.filter(email="luc@example.com").exists())
         self.assertContains(response, "n&#x27;a pas pu être envoyé")
+        self.assertIn("serveur SMTP injoignable", logs.output[0])
 
     def test_resend_link_failure_is_reported(self, _send_mail):
         agent = create_agent()
 
-        response = self.client.post(reverse("resend_staff_link", args=[agent.pk]), follow=True)
+        with self.assertLogs("accounts.services.emails", level="ERROR") as logs:
+            response = self.client.post(reverse("resend_staff_link", args=[agent.pk]), follow=True)
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "n&#x27;a pas pu être envoyé")
+        self.assertIn("serveur SMTP injoignable", logs.output[0])
 
 
 class InactiveMemberLinkTests(TestCase):

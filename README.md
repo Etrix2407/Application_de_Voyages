@@ -194,7 +194,7 @@ Le code (identifiants, fichiers, routes internes) est en anglais ; l'interface, 
 
 ```
 trip_app/
-├── config/                 # paramètres et routes du projet
+├── config/                 # paramètres et routes du projet ; tests transversaux (droits d'accès, nombre de requêtes)
 ├── common/                 # outils partagés entre applications (normalisation du texte)
 ├── accounts/               # comptes : utilisateurs, rôles, RGPD
 │   ├── views/              # auth, profile, staff, clients (une responsabilité par module)
@@ -204,7 +204,7 @@ trip_app/
 │   └── tests/
 ├── catalog/                # catalogue : pays, destinations, activités, favoris
 │   ├── views/              # browse, search, favorites, manage
-│   ├── services/           # recherche et filtres
+│   ├── services/           # recherche et filtres, favoris, nettoyage des photos
 │   ├── management/commands/load_demo.py
 │   ├── models.py · forms.py · validators.py · urls.py
 │   └── tests/

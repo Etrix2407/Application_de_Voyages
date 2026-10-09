@@ -4,7 +4,7 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, render
 
 from catalog.models import Activity, Continent, Country, Destination
-from catalog.views.favorites import is_favorite
+from catalog.services.favorites import is_favorite
 
 
 def country_list(request):
