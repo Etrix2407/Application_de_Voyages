@@ -1,15 +1,16 @@
 """Le client écrit, modifie ou supprime son avis.
 
 Tout avis écrit ou modifié repasse « En attente de validation » : il n'est visible
-du public qu'après la validation d'un membre du personnel. Le client garde la main
-pendant 30 jours après la création (modèle : EDIT_PERIOD).
+du public qu'après la validation d'un membre du personnel. Le client peut le modifier
+pendant 30 jours après la création (modèle : EDIT_PERIOD) et le retirer à tout moment ;
+un voyage dont l'avis a été retiré ne peut plus en recevoir.
 """
 
 from django.db import IntegrityError, transaction
 from django.utils import timezone
 
 from orders.models import Status
-from reviews.models import AgencyResponse, Review, ReviewStatus
+from reviews.models import AgencyResponse, Review, ReviewStatus, ReviewWithdrawal
 from reviews.services.eligibility import can_review
 
 
@@ -18,7 +19,7 @@ class ReviewNotAllowed(Exception):
 
 
 class ReviewLocked(Exception):
-    """L'avis ne peut plus être modifié ni supprimé."""
+    """L'avis ne peut plus être modifié."""
 
 
 def client_can_edit(review: Review) -> bool:
@@ -27,7 +28,8 @@ def client_can_edit(review: Review) -> bool:
 
 
 def client_can_delete(review: Review) -> bool:
-    return review.can_be_changed_by_client()
+    # Le client retire ses propos quand il le souhaite (RGPD) ; voir delete_review.
+    return True
 
 
 def write_review(client, review: Review) -> Review:
@@ -35,6 +37,7 @@ def write_review(client, review: Review) -> Review:
     if not can_review(client, review.order):
         raise ReviewNotAllowed
     review.status = ReviewStatus.PENDING
+    review.sign()
     review.full_clean(validate_unique=False)
     try:
         with transaction.atomic():
@@ -54,6 +57,8 @@ def update_review(review: Review) -> Review:
     if not client_can_edit(review):
         raise ReviewLocked
     review.status = ReviewStatus.PENDING
+    review.sign()
+    review.version += 1
     review.submitted_at = timezone.now()
     review.refusal_reason = ""
     review.refusal_details = ""
@@ -64,7 +69,8 @@ def update_review(review: Review) -> Review:
     return review
 
 
+@transaction.atomic
 def delete_review(review: Review) -> None:
-    if not client_can_delete(review):
-        raise ReviewLocked
+    """Retire l'avis (et la réponse de l'agence) ; le voyage ne pourra plus recevoir d'avis."""
+    ReviewWithdrawal.objects.get_or_create(order=review.order)
     review.delete()

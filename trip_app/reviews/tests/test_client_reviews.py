@@ -128,7 +128,7 @@ class EditReviewTests(TestCase):
         page = self.client.get(reverse("my_reviews"))
 
         self.assertContains(response, "ne peut plus être modifié")
-        self.assertContains(page, "Avis définitif")
+        self.assertContains(page, "Plus modifiable")
         review.refresh_from_db()
         self.assertEqual(review.title, "Avant")
 
@@ -160,19 +160,23 @@ class DeleteReviewTests(TestCase):
         self.assertContains(self.client.get(self.url), "définitive")
         self.assertTrue(Review.objects.exists())
 
-    def test_deleted_within_thirty_days_and_trip_reviewable_again(self):
+    def test_deleted_and_trip_cannot_be_reviewed_again(self):
+        # Sinon supprimer puis réécrire contournerait un refus et le délai de 30 jours.
+        trip = self.review.order
+
         response = self.client.post(self.url, follow=True)
+        self.client.post(reverse("create_review", args=[trip.pk]), GOOD_REVIEW)
 
         self.assertContains(response, "Votre avis a été supprimé.")
+        self.assertNotContains(response, reverse("create_review", args=[trip.pk]))
         self.assertFalse(Review.objects.exists())
-        self.assertContains(response, reverse("create_review", args=[self.review.order.pk]))
 
-    def test_cannot_delete_after_thirty_days(self):
+    def test_can_still_delete_after_thirty_days(self):
         age_beyond_edit_period(self.review)
 
         self.client.post(self.url)
 
-        self.assertTrue(Review.objects.exists())
+        self.assertFalse(Review.objects.exists())
 
     def test_order_detail_shows_given_review(self):
         response = self.client.get(reverse("my_order_detail", args=[self.review.order.pk]))

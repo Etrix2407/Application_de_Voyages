@@ -19,7 +19,7 @@ from reviews.services.writing import (
     write_review,
 )
 
-LOCKED_MESSAGE = "Cet avis ne peut plus être modifié ni supprimé."
+LOCKED_MESSAGE = "Cet avis ne peut plus être modifié."
 NOT_YET_MESSAGE = "Vous pourrez donner votre avis après votre retour, pour un voyage confirmé par l'agence."
 EDITED_MESSAGE = "Votre avis est modifié. Il sera de nouveau publié après validation par l'agence."
 
@@ -34,7 +34,7 @@ def my_reviews(request):
     reviews = Review.objects.filter(order__client=request.user).select_related("order", "response")
     context = {
         "to_review": reviewable_orders(request.user).order_by("-return_date", "-pk"),
-        "reviews": [(review, client_can_edit(review), client_can_delete(review)) for review in reviews],
+        "reviews": [(review, client_can_edit(review)) for review in reviews],
     }
     return render(request, "reviews/my_reviews.html", context)
 

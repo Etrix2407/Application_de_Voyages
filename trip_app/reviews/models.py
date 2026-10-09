@@ -68,6 +68,11 @@ class Review(models.Model):
         validators=[MaxLengthValidator(MAX_COMMENT_LENGTH)],
     )
     anonymous = models.BooleanField("publier en tant que « Voyageur anonyme »", default=False)
+    # Signature figée quand le client écrit ou modifie l'avis (texte relu par l'agence) :
+    # changer son nom ensuite ne modifie pas un avis déjà publié.
+    signature = models.CharField("signature publique", max_length=120, blank=True)
+    # Augmente à chaque modification du client : la modération porte sur la version relue.
+    version = models.PositiveIntegerField("version", default=1)
     status = models.CharField("état", max_length=20, choices=ReviewStatus.choices, default=ReviewStatus.PENDING)
     refusal_reason = models.CharField("motif du refus", max_length=20, choices=RefusalReason.choices, blank=True)
     refusal_details = models.TextField(
@@ -111,17 +116,29 @@ class Review(models.Model):
         return self.created_at + EDIT_PERIOD
 
     def can_be_changed_by_client(self, now=None) -> bool:
-        """Modification ou suppression par le client : 30 jours après la création."""
+        """Modification par le client : 30 jours après la création."""
         return (now or timezone.now()) < self.editable_until
 
     @property
     def author_name(self) -> str:
-        """Nom public : « Julie D. », ou « Voyageur anonyme » (choix du client ou compte supprimé)."""
-        client = self.order.client
-        if self.anonymous or client is None:
+        """Nom public : la signature figée, ou « Voyageur anonyme » (choix du client ou compte supprimé)."""
+        if self.anonymous or self.order.client_id is None:
             return ANONYMOUS_NAME
+        return self.signature
+
+    def sign(self) -> None:
+        """Fige la signature à partir du compte du client : « Julie D. »."""
+        client = self.order.client
+        if client is None:
+            self.signature = ""
+            return
         initial = f" {client.last_name[:1].upper()}." if client.last_name else ""
-        return f"{client.first_name}{initial}"
+        self.signature = f"{client.first_name}{initial}"
+
+    def save(self, *args, **kwargs) -> None:
+        if not self.signature:
+            self.sign()
+        super().save(*args, **kwargs)
 
     def clean(self) -> None:
         super().clean()
@@ -134,6 +151,22 @@ class Review(models.Model):
             errors["refusal_details"] = "Précisez le motif quand vous choisissez « Autre »."
         if errors:
             raise ValidationError(errors)
+
+
+class ReviewWithdrawal(models.Model):
+    """Trace qu'un avis a été retiré par son auteur : ce voyage ne peut plus recevoir d'avis.
+
+    Le client peut retirer son avis à tout moment (il garde la main sur ses propos), mais
+    ne peut pas en écrire un nouveau : sinon supprimer puis réécrire contournerait un refus
+    et le délai de 30 jours.
+    """
+
+    order = models.OneToOneField(Order, on_delete=models.CASCADE, related_name="review_withdrawal")
+    withdrawn_at = models.DateTimeField("retiré le", default=timezone.now)
+
+    class Meta:
+        verbose_name = "avis retiré"
+        verbose_name_plural = "avis retirés"
 
 
 MAX_RESPONSE_LENGTH = 1000

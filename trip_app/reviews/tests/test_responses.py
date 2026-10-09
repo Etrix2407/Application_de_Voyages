@@ -1,3 +1,5 @@
+from unittest import mock
+
 from django.test import TestCase
 from django.urls import reverse
 
@@ -104,3 +106,22 @@ class AgencyResponseTests(TestCase):
 
         self.assertEqual(self.client.post(self.url, {"text": "Moi aussi"}).status_code, 403)
         self.assertFalse(AgencyResponse.objects.exists())
+
+    def test_administrator_takes_over_when_author_is_deactivated(self):
+        save_response(self.review, self.luc, "Réponse de Luc")
+        self.luc.is_active = False
+        self.luc.save()
+
+        self.respond(create_admin(first_name="Anne"), "Réponse reprise")
+
+        self.assertEqual(AgencyResponse.objects.get().text, "Réponse reprise")
+
+    def test_simultaneous_responses_do_not_crash(self):
+        # Deux agents ont ouvert le formulaire avant toute réponse ; le second enregistre après le premier.
+        save_response(self.review, self.luc, "Première")
+
+        with mock.patch("reviews.services.responses.existing_response", return_value=None):
+            with self.assertRaises(ResponseNotAllowed):
+                save_response(self.review, create_agent(email="paul@example.com"), "Seconde")
+
+        self.assertEqual(AgencyResponse.objects.get().text, "Première")

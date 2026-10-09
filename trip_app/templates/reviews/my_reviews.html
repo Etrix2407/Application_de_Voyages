@@ -32,7 +32,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {% for review, can_edit, can_delete in reviews %}
+                    {% for review, can_edit in reviews %}
                         <tr>
                             <td>{{ review.order.destination_name }} ({{ review.order.country_name }})</td>
                             <td>{{ review.order.departure_date|date:"F Y" }}</td>
@@ -47,13 +47,13 @@
                                 {% endif %}
                             </td>
                             <td>
-                                {% if can_edit %}<a href="{% url 'edit_review' review.pk %}">Modifier</a><br>{% endif %}
-                                {% if can_delete %}
-                                    <a href="{% url 'remove_review' review.pk %}">Supprimer</a>
-                                    <br>Jusqu'au {{ review.editable_until|date:"j F Y" }}
+                                {% if can_edit %}
+                                    <a href="{% url 'edit_review' review.pk %}">Modifier</a>
+                                    (jusqu'au {{ review.editable_until|date:"j F Y" }})
                                 {% else %}
-                                    Avis définitif
+                                    Plus modifiable
                                 {% endif %}
+                                <br><a href="{% url 'remove_review' review.pk %}">Supprimer</a>
                             </td>
                         </tr>
                     {% endfor %}

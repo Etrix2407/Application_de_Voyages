@@ -8,6 +8,7 @@ from catalog.tests.factories import create_country, create_destination
 from orders.models import Status
 from reviews.models import ANONYMOUS_NAME, Review, ReviewStatus
 from reviews.services.ratings import attach_ratings
+from reviews.services.writing import update_review
 
 from .factories import create_review, create_trip_done
 
@@ -118,7 +119,7 @@ class ReviewJourneyTests(TestCase):
         # 2. Luc le voit dans la file, le publie et y répond.
         self.client.force_login(luc)
         self.assertContains(self.client.get(reverse("home")), "Avis à modérer (1)")
-        self.client.post(reverse("manage_publish_review", args=[review.pk]))
+        self.client.post(reverse("manage_publish_review", args=[review.pk]), {"version": review.version})
         self.client.post(reverse("manage_respond_review", args=[review.pk]), {"text": "Merci Julie, à bientôt !"})
         page = self.client.get(public_page)
         self.assertContains(page, "Très beau voyage")
@@ -138,8 +139,36 @@ class ReviewJourneyTests(TestCase):
 
         # 4. Luc valide la nouvelle version : la note suit.
         self.client.force_login(luc)
-        self.client.post(reverse("manage_publish_review", args=[review.pk]))
+        review.refresh_from_db()
+        self.client.post(reverse("manage_publish_review", args=[review.pk]), {"version": review.version})
         page = self.client.get(public_page)
         self.assertContains(page, "Voyage parfait")
         self.assertContains(page, "5,0 sur 5 (1 avis)")
         self.assertNotContains(page, "Merci Julie")
+
+
+class FrozenSignatureTests(TestCase):
+    """Un changement de nom ne modifie pas un avis publié : la signature a été relue avec l'avis."""
+
+    def setUp(self):
+        self.julie = create_client(first_name="Julie", last_name="Dupont")
+        self.destination = create_destination(create_country(), "Kyoto")
+        self.review = create_review(create_trip_done(self.julie, self.destination), status=ReviewStatus.PUBLISHED)
+
+    def test_renaming_does_not_change_published_signature(self):
+        self.julie.first_name = "Promo -50% sur arnaque.example"
+        self.julie.save()
+
+        page = self.client.get(reverse("destination_detail", args=[self.destination.pk]))
+
+        self.assertContains(page, "Julie D.")
+        self.assertNotContains(page, "arnaque")
+
+    def test_signature_updated_when_client_edits_the_review(self):
+        self.julie.first_name = "Juliette"
+        self.julie.save()
+
+        update_review(self.review)
+
+        self.review.refresh_from_db()
+        self.assertEqual((self.review.signature, self.review.status), ("Juliette D.", ReviewStatus.PENDING))

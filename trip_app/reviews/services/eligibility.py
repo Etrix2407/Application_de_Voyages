@@ -4,7 +4,7 @@ Conditions, toutes vérifiées sur la demande de voyage :
 - elle appartient au client ;
 - l'agence l'a confirmée (une demande annulée ou en attente ne compte pas) ;
 - sa date de retour est passée : le voyage a eu lieu ;
-- elle n'a pas encore d'avis (un seul avis par voyage).
+- elle n'a pas encore d'avis (un seul avis par voyage), et aucun avis n'y a été retiré.
 """
 
 from django.utils import timezone
@@ -19,6 +19,7 @@ def reviewable_orders(client):
         status=Status.CONFIRMED,
         return_date__lt=timezone.localdate(),
         review__isnull=True,
+        review_withdrawal__isnull=True,
     )
 
 
