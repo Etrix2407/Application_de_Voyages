@@ -1,0 +1,1 @@
+{% if review.order.client %}{{ review.order.client.first_name }} {{ review.order.client.last_name }}{% else %}Client supprimé{% endif %}{% if review.anonymous %} (publié en « Voyageur anonyme »){% endif %}

@@ -99,6 +99,12 @@ Formats à respecter :
 3. Le détail d'une demande affiche le téléphone et l'e-mail du client (cliquables pour appeler ou écrire), les voyageurs, les activités aux prix figés, les remarques et l'historique.
 4. Après avoir rappelé le client : **Confirmer la demande** (impossible une fois la date de départ passée : la demande ne peut alors plus qu'être annulée). **Annuler la demande** est possible tant qu'elle est en attente ou confirmée, avec un **motif obligatoire** (visible par le client). Chaque action est notée dans l'historique avec la date et votre nom (le client, lui, voit « Agence »).
 
+### Modérer les avis (agent ou administrateur)
+
+1. **Avis à modérer (N)** (menu) : les avis en attente de validation, du plus ancien envoi au plus récent ; un avis de 1 ou 2 étoiles porte le badge **Avis négatif**.
+2. « Lire et modérer » : l'avis, sa signature publique et toujours le **vrai client** et sa demande, même pour un avis « Voyageur anonyme ».
+3. **Publier l'avis**, ou **Refuser l'avis** avec un motif de la liste (langage injurieux, hors sujet, coordonnées personnelles, autre) et une précision, obligatoire pour « Autre ». Un avis publié peut être **masqué** de la même façon. Le client voit le motif. Le texte d'un client n'est jamais modifié.
+
 ### Utiliser l'application (client)
 
 1. **Créer un compte** : remplissez le formulaire (sans mot de passe) et acceptez la politique de confidentialité. Un e-mail contient un lien, valable 24 heures, pour confirmer l'adresse et **choisir le mot de passe** ; le compte est alors activé. Rien reçu ? « Renvoyer l'e-mail de confirmation » depuis la page de connexion. Le téléphone est facultatif ; s'il est rempli, il doit être un numéro belge (0470 12 34 56) ou international avec l'indicatif du pays (+33 6 12 34 56 78).
@@ -221,8 +227,9 @@ trip_app/
 │   ├── models.py · forms.py · signals.py · urls.py
 │   └── tests/
 ├── reviews/                # avis clients (v3) : modèle, avis vérifiés, lien avec les demandes
-│   ├── services/           # eligibility (qui peut donner un avis), order_events (voyage annulé)
-│   ├── models.py · signals.py
+│   ├── views/              # client (donner, modifier, supprimer), manage (modération)
+│   ├── services/           # eligibility, writing (client), moderation (personnel), order_events
+│   ├── models.py · forms.py · signals.py · urls.py · context_processors.py (compteur du menu)
 │   └── tests/
 ├── templates/
 │   ├── base.html · home.html · privacy.html · 403/404/500.html

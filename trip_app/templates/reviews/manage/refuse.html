@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+
+{% block title %}{% if is_hiding %}Masquer{% else %}Refuser{% endif %} l'avis — Gestion{% endblock %}
+
+{% block content %}
+    <h1>{% if is_hiding %}Masquer{% else %}Refuser{% endif %} l'avis « {{ review.title }} »</h1>
+    <p>
+        {% if is_hiding %}L'avis sera retiré du site.{% else %}L'avis ne sera pas publié.{% endif %}
+        Le client verra le motif et pourra corriger son avis tant qu'il est modifiable.
+    </p>
+
+    <form method="post" novalidate>
+        {% csrf_token %}
+        {{ form }}
+        <button type="submit" class="button-danger">{% if is_hiding %}Masquer{% else %}Refuser{% endif %} l'avis</button>
+    </form>
+
+    <p><a href="{% url 'manage_review_detail' review.pk %}">Revenir à l'avis</a></p>
+{% endblock %}

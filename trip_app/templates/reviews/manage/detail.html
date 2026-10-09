@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+
+{% block title %}Avis « {{ review.title }} » — Gestion{% endblock %}
+
+{% block content %}
+    <p><a href="{% url 'manage_pending_reviews' %}">← Avis à modérer</a></p>
+
+    <h1>Avis « {{ review.title }} »</h1>
+    <p>
+        État : <span class="status status-{{ review.status }}">{{ review.get_status_display }}</span>
+        {% if review.is_negative %}<span class="badge-negative">Avis négatif</span>{% endif %}
+    </p>
+    {% if review.refusal_reason %}
+        <p>Motif : {{ review.get_refusal_reason_display }}{% if review.refusal_details %} — {{ review.refusal_details }}{% endif %}</p>
+    {% endif %}
+
+    <h2>Avis du client</h2>
+    <dl class="details">
+        <dt>Note</dt>
+        <dd>{% include "reviews/_rating.html" %}</dd>
+        <dt>Titre</dt>
+        <dd>{{ review.title }}</dd>
+        <dt>Commentaire</dt>
+        <dd>{{ review.comment|default:"Aucun"|linebreaksbr }}</dd>
+        <dt>Signature publique</dt>
+        <dd>{{ review.author_name }}</dd>
+        <dt>Envoyé en validation le</dt>
+        <dd>{{ review.submitted_at|date:"j F Y à H:i" }}</dd>
+    </dl>
+
+    <h2>Voyage et client</h2>
+    <dl class="details">
+        <dt>Client</dt>
+        <dd>{% include "reviews/manage/_client.html" %}</dd>
+        <dt>Demande</dt>
+        <dd>
+            <a href="{% url 'manage_order_detail' review.order.pk %}">Demande n° {{ review.order.pk }}</a> :
+            {{ review.order.destination_name }} ({{ review.order.country_name }}),
+            du {{ review.order.departure_date|date:"j F Y" }} au {{ review.order.return_date|date:"j F Y" }}
+        </dd>
+    </dl>
+
+    {% if can_publish or can_refuse %}
+        <h2>Modération</h2>
+        <p>Le texte d'un client n'est jamais modifié : validez-le, ou refusez-le avec un motif qu'il verra.</p>
+        <ul class="actions">
+            {% if can_publish %}
+                <li>
+                    <form method="post" action="{% url 'manage_publish_review' review.pk %}">
+                        {% csrf_token %}
+                        <button type="submit">Publier l'avis</button>
+                    </form>
+                </li>
+            {% endif %}
+            {% if can_refuse %}
+                <li>
+                    <a class="button button-danger" href="{% url 'manage_refuse_review' review.pk %}">
+                        {% if review.status == "published" %}Masquer l'avis{% else %}Refuser l'avis{% endif %}
+                    </a>
+                </li>
+            {% endif %}
+        </ul>
+    {% endif %}
+{% endblock %}
