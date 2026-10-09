@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+
+{% block title %}Demande n° {{ order.pk }}{% endblock %}
+
+{% block content %}
+    <p><a href="{% url 'my_orders' %}">← Mes demandes</a></p>
+
+    <h1>Demande n° {{ order.pk }} : {{ order.destination.name }}</h1>
+    <p>État : <span class="status status-{{ order.status }}">{{ order.get_status_display }}</span></p>
+
+    <dl class="details">
+        <dt>Destination</dt>
+        <dd>{{ order.destination.name }} ({{ order.destination.country.name }})</dd>
+        <dt>Dates</dt>
+        <dd>Du {{ order.departure_date|date:"j F Y" }} au {{ order.return_date|date:"j F Y" }}</dd>
+        <dt>Voyageurs</dt>
+        <dd>{{ order.adults }} adulte{{ order.adults|pluralize }}, {{ order.children }} enfant{{ order.children|pluralize }}</dd>
+        <dt>Activités</dt>
+        <dd>
+            {% for line in activities %}{{ line.activity.name }} ({{ line.unit_price }} € par personne){% if not forloop.last %}, {% endif %}{% empty %}Aucune{% endfor %}
+        </dd>
+        <dt>Remarques</dt>
+        <dd>{{ order.remarks|default:"Aucune"|linebreaksbr }}</dd>
+        <dt>Prix estimé</dt>
+        <dd>
+            <strong>{{ order.estimated_price }} €</strong> — estimation, non contractuel, calculée le {{ order.created_at|date:"j F Y" }}.
+            {% if order.is_quote_required %}<br>Le prix de la destination est donné sur devis par votre conseiller.{% endif %}
+        </dd>
+        <dt>Demande faite le</dt>
+        <dd>{{ order.created_at|date:"j F Y à H:i" }}</dd>
+    </dl>
+
+    {% if can_cancel %}
+        <p><a class="button button-danger" href="{% url 'cancel_my_order' order.pk %}">Annuler ma demande</a></p>
+    {% elif is_confirmed %}
+        <p>Cette demande est confirmée : pour l'annuler, appelez l'agence.</p>
+    {% endif %}
+
+    <h2>Historique</h2>
+    <div class="table-scroll">
+        <table>
+            <caption>Changements d'état de la demande</caption>
+            <thead>
+                <tr>
+                    <th scope="col">Date</th>
+                    <th scope="col">État</th>
+                    <th scope="col">Par</th>
+                    <th scope="col">Motif</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for change in history %}
+                    <tr>
+                        <td>{{ change.changed_at|date:"j F Y à H:i" }}</td>
+                        <td>{{ change.get_status_display }}</td>
+                        <td>{{ change.author_name }}</td>
+                        <td>{{ change.reason|default:"—" }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% endblock %}

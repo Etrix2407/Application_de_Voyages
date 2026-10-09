@@ -50,3 +50,13 @@ class OrderForm(forms.ModelForm):
         earliest = timezone.localdate() + timedelta(days=MIN_DAYS_BEFORE_DEPARTURE)
         self.fields["departure_date"].widget.attrs["min"] = earliest.isoformat()
         self.fields["return_date"].widget.attrs["min"] = (earliest + timedelta(days=1)).isoformat()
+
+
+class ClientCancelForm(forms.Form):
+    reason = forms.CharField(
+        label="Motif (facultatif)",
+        required=False,
+        max_length=1000,
+        widget=forms.Textarea(attrs={"rows": 3}),
+        help_text="Nous aide à mieux vous servir, mais vous pouvez le laisser vide.",
+    )

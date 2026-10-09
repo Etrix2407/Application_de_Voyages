@@ -17,6 +17,7 @@
                 {% if user.is_authenticated %}
                     <li><a href="{% url 'search' %}">Rechercher</a></li>
                     {% if user.is_client %}
+                        <li><a href="{% url 'my_orders' %}">Mes demandes</a></li>
                         <li><a href="{% url 'favorite_list' %}">Mes favoris</a></li>
                     {% endif %}
                     {% if user.is_staff_member %}
