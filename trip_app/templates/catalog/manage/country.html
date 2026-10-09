@@ -48,7 +48,7 @@
                         <tr>
                             <td>
                                 {% if destination.photo %}
-                                    <img class="thumbnail" src="{{ destination.photo }}" alt="Photo : {{ destination.name }}" loading="lazy">
+                                    <img class="thumbnail" src="{{ destination.photo.url }}" alt="Photo : {{ destination.name }}" loading="lazy">
                                 {% endif %}
                             </td>
                             <td>{{ destination.name }}</td>

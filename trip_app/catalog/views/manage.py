@@ -91,14 +91,16 @@ def delete_country(request, pk):
 @staff_required
 def create_destination(request, country_pk):
     country = get_object_or_404(Country, pk=country_pk)
-    form = DestinationForm(request.POST or None, country=country)
+    form = DestinationForm(request.POST or None, request.FILES or None, country=country)
     return _render_form(request, form, f"Ajouter une destination — {country}", _country_page_url(country))
 
 
 @staff_required
 def edit_destination(request, pk):
     destination = get_object_or_404(Destination.objects.select_related("country"), pk=pk)
-    form = DestinationForm(request.POST or None, instance=destination, country=destination.country)
+    form = DestinationForm(
+        request.POST or None, request.FILES or None, instance=destination, country=destination.country
+    )
     title = f"Modifier la destination « {destination} » — {destination.country}"
     return _render_form(request, form, title, _country_page_url(destination))
 

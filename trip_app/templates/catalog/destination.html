@@ -8,7 +8,7 @@
     <h1>{{ destination.name }}</h1>
     {% include "catalog/_favorite_button.html" with item_type="destination" item=destination %}
     {% if destination.photo %}
-        <img class="photo" src="{{ destination.photo }}" alt="Photo : {{ destination.name }}">
+        <img class="photo" src="{{ destination.photo.url }}" alt="Photo : {{ destination.name }}">
     {% endif %}
     <p>{{ destination.description|linebreaksbr }}</p>
 
