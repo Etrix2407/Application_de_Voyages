@@ -115,6 +115,10 @@ textarea:focus-visible {
     border-color: var(--color-error);
 }
 
+.message-warning {
+    border-color: #b35c00;
+}
+
 /* Formulaires */
 
 label {

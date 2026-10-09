@@ -53,12 +53,14 @@
                                             </form>
                                         {% endif %}
                                     </li>
-                                    <li>
-                                        <form method="post" action="{% url 'resend_staff_link' member.pk %}">
-                                            {% csrf_token %}
-                                            <button type="submit">Envoyer un lien de mot de passe</button>
-                                        </form>
-                                    </li>
+                                    {% if member.is_active %}
+                                        <li>
+                                            <form method="post" action="{% url 'resend_staff_link' member.pk %}">
+                                                {% csrf_token %}
+                                                <button type="submit">Envoyer un lien de mot de passe</button>
+                                            </form>
+                                        </li>
+                                    {% endif %}
                                     <li><a href="{% url 'delete_staff_member' member.pk %}">Supprimer</a></li>
                                 {% else %}
                                     <li>(votre compte)</li>

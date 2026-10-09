@@ -1,4 +1,5 @@
 import re
+from unittest import mock
 from datetime import date
 
 from django.core import mail
@@ -176,3 +177,13 @@ class ClientPasswordLinkTests(TestCase):
         self.assertEqual(
             self.client.get(reverse("send_client_link", args=[client.pk])).status_code, 405
         )
+
+    @mock.patch("accounts.services.emails.send_mail", side_effect=OSError("serveur SMTP injoignable"))
+    def test_email_failure_is_reported(self, _send_mail):
+        self.client.force_login(create_agent())
+        client = create_client()
+
+        response = self.client.post(reverse("send_client_link", args=[client.pk]), follow=True)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "n&#x27;a pas pu être envoyé")
