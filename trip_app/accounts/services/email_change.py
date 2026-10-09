@@ -11,7 +11,7 @@ from datetime import timedelta
 from django.core import signing
 from django.urls import reverse
 
-from accounts.models import User, normalize_email_address
+from accounts.models import Role, User, normalize_email_address
 from accounts.services.emails import send_email
 from accounts.services.throttling import confirmation_emails
 
@@ -35,17 +35,27 @@ def request_email_change(request, user: User, new_email: str) -> None:
     )
 
 
-def apply_email_change(token: str) -> User | None:
-    """Applique le changement si le lien est valide et toujours d'actualité ; sinon None."""
+def pending_email_change(token: str) -> tuple[User, str] | None:
+    """Client et nouvelle adresse visés par le lien, s'il est valide et toujours d'actualité ; sinon None."""
     try:
         data = signing.loads(token, salt=_TOKEN_SALT, max_age=LINK_MAX_AGE)
     except signing.BadSignature:  # comprend les liens expirés
         return None
     # L'ancienne adresse doit être inchangée : un lien plus ancien ne s'applique plus.
-    user = User.objects.filter(pk=data.get("id"), email=data.get("old")).first()
+    # Réservé aux clients : le personnel ne change pas d'adresse par ce parcours.
+    user = User.objects.filter(pk=data.get("id"), email=data.get("old"), role=Role.CLIENT).first()
     if user is None or User.objects.filter(email=data.get("new")).exists():
         return None
-    user.email = data["new"]
+    return user, data["new"]
+
+
+def apply_email_change(token: str) -> User | None:
+    """Applique le changement si le lien est valide ; sinon None."""
+    pending = pending_email_change(token)
+    if pending is None:
+        return None
+    user, new_email = pending
+    user.email = new_email
     user.save(update_fields=["email"])
     return user
 

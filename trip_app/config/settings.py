@@ -19,8 +19,9 @@ if not TESTING:
 # Nom affiché sur le site (titres, en-tête, pied de page).
 SITE_NAME = "Horizons Lointains"
 
-# Mode debug activé par défaut en développement ; mettre DJANGO_DEBUG=0 en production.
-DEBUG = os.environ.get("DJANGO_DEBUG", "1") == "1"
+# Mode debug désactivé par défaut : un oubli en production ne l'active jamais.
+# En développement, mettre DJANGO_DEBUG=1 dans le fichier .env (voir .env.example).
+DEBUG = os.environ.get("DJANGO_DEBUG", "1" if TESTING else "0") == "1"
 
 # La clé secrète ne doit jamais être commitée : en production, elle vient de l'environnement.
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "")

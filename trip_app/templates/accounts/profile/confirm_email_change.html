@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+
+{% block title %}Confirmer votre nouvelle adresse{% endblock %}
+
+{% block content %}
+    <h1>Confirmer votre nouvelle adresse e-mail</h1>
+    <p>Votre adresse de connexion deviendra : <strong>{{ new_email }}</strong></p>
+
+    <form method="post">
+        {% csrf_token %}
+        <button type="submit">Confirmer ma nouvelle adresse</button>
+    </form>
+{% endblock %}

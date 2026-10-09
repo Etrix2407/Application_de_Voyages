@@ -1,6 +1,6 @@
 import re
 
-from django.core import mail
+from django.core import mail, signing
 from django.core.cache import cache
 from django.test import TestCase
 from django.urls import reverse
@@ -43,7 +43,13 @@ class EmailChangeTests(TestCase):
         # L'ancienne adresse est prévenue.
         self.assertTrue(any(m.to == ["client@example.com"] for m in mail.outbox))
 
-        response = self.client.get(self.link_sent_to("nouvelle@example.com"), follow=True)
+        link = self.link_sent_to("nouvelle@example.com")
+        page = self.client.get(link)
+        self.assertContains(page, "nouvelle@example.com")
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.email, "client@example.com")  # ouvrir le lien ne change rien
+
+        response = self.client.post(link, follow=True)
 
         self.assertContains(response, "Votre adresse e-mail est maintenant nouvelle@example.com")
         self.user.refresh_from_db()
@@ -79,7 +85,7 @@ class EmailChangeTests(TestCase):
         self.request_change("premiere@example.com")
         first_link = self.link_sent_to("premiere@example.com")
         self.request_change("seconde@example.com")
-        self.client.get(self.link_sent_to("seconde@example.com"))
+        self.client.post(self.link_sent_to("seconde@example.com"))
 
         self.assertContains(self.client.get(first_link), "plus valable")
         self.user.refresh_from_db()
@@ -100,7 +106,19 @@ class EmailChangeTests(TestCase):
         link = self.link_sent_to("nouvelle@example.com")
         self.client.logout()
 
-        response = self.client.get(link, follow=True)
+        response = self.client.post(link, follow=True)
 
         self.assertRedirects(response, reverse("login"))
         self.assertTrue(User.objects.filter(email="nouvelle@example.com").exists())
+
+    def test_link_for_a_staff_account_refused(self):
+        # Même un lien correctement signé ne change jamais l'adresse d'un membre du personnel.
+        agent = create_agent()
+        token = signing.dumps(
+            {"id": agent.pk, "old": agent.email, "new": "pirate@example.com"}, salt="accounts.email-change"
+        )
+        url = reverse("confirm_email_change", args=[token])
+
+        self.assertContains(self.client.post(url), "plus valable")
+        agent.refresh_from_db()
+        self.assertNotEqual(agent.email, "pirate@example.com")
