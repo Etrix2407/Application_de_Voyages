@@ -1,26 +1,17 @@
 """Catalogue : pays, destinations et activités."""
 
 import uuid
-from decimal import Decimal
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import FileExtensionValidator, MaxValueValidator, MinValueValidator
 from django.db import models, transaction
+from django.utils import timezone
 
 from common.text import normalize
 
-from .validators import PHOTO_EXTENSIONS, validate_photo_size, validate_time_offset
-
-
-def format_offset(hours: Decimal) -> str:
-    """Affiche un décalage horaire lisible : « +5 h 30 », « -6 h », « même heure »."""
-    if not hours:
-        return "même heure qu'en Belgique"
-    sign = "+" if hours > 0 else "-"
-    total_minutes = int(abs(hours) * 60)
-    h, minutes = divmod(total_minutes, 60)
-    return f"{sign}{h} h {minutes:02d}" if minutes else f"{sign}{h} h"
+from .services.time_zones import TimeOffsets, time_offsets
+from .validators import PHOTO_EXTENSIONS, validate_photo_size, validate_time_zone
 
 
 class Continent(models.TextChoices):
@@ -78,16 +69,6 @@ def _price_field(verbose_name: str, **options) -> models.DecimalField:
     )
 
 
-def _offset_field(verbose_name: str) -> models.DecimalField:
-    return models.DecimalField(
-        verbose_name,
-        max_digits=4,
-        decimal_places=2,
-        validators=[validate_time_offset],
-        help_text="En heures par rapport à la Belgique, par exemple 5.5 ou -6.",
-    )
-
-
 # Visibilité pour les clients (règle 5 : un pays désactivé disparaît avec son contenu).
 
 
@@ -115,8 +96,11 @@ class Country(models.Model):
     visa = models.CharField(
         "visa pour les Belges", max_length=20, choices=Visa.choices, default=Visa.NOT_REQUIRED
     )
-    summer_offset = _offset_field("décalage horaire en été")
-    winter_offset = _offset_field("décalage horaire en hiver")
+    # Fuseau principal (nom IANA, ex. « Asia/Tokyo ») : le décalage avec la Belgique en découle.
+    # Vide pour un pays créé avant le calcul automatique, en attendant qu'un agent le choisisse.
+    time_zone = models.CharField(
+        "fuseau horaire principal", max_length=64, blank=True, validators=[validate_time_zone]
+    )
     active = models.BooleanField("actif", default=True)
     # Nom normalisé (sans accents ni majuscules) : « Perou » et « PÉROU » sont des doublons.
     name_key = models.CharField(max_length=100, unique=True, editable=False)
@@ -140,11 +124,11 @@ class Country(models.Model):
         self.name_key = normalize(self.name)
         super().save(*args, **kwargs)
 
-    def summer_offset_display(self) -> str:
-        return format_offset(self.summer_offset)
-
-    def winter_offset_display(self) -> str:
-        return format_offset(self.winter_offset)
+    def time_offsets(self) -> TimeOffsets | None:
+        """Décalages avec la Belgique (été, hiver, aujourd'hui), ou None si le fuseau n'est pas choisi."""
+        if not self.time_zone:
+            return None
+        return time_offsets(self.time_zone, timezone.localdate())
 
     def can_be_deleted(self) -> bool:
         """Règle 5 : un pays qui contient des destinations ou des activités se désactive."""

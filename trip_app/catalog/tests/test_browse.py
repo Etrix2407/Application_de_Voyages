@@ -4,7 +4,8 @@ from django.contrib.auth import get_user_model
 from django.test import SimpleTestCase, TestCase
 from django.urls import reverse
 
-from catalog.models import Continent, format_offset
+from catalog.models import Continent
+from catalog.services.time_zones import format_offset
 from accounts.tests.factories import create_client
 
 from .factories import (
@@ -89,7 +90,7 @@ class CountryDetailTests(TemporaryMediaMixin, TestCase):
     def setUp(self):
         super().setUp()
         self.client.force_login(create_client())
-        self.country = create_country("Japon", summer_offset=Decimal("7"), winter_offset=Decimal("8"))
+        self.country = create_country("Japon", time_zone="Asia/Tokyo")
 
     def test_shows_information_and_visible_content(self):
         create_destination(self.country, "Kyoto", photo=make_image())

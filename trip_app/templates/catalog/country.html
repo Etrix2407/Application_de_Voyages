@@ -18,8 +18,7 @@
         <dd>{{ country.currency }}</dd>
         <dt>Visa pour les Belges</dt>
         <dd>{{ country.get_visa_display }}</dd>
-        <dt>Décalage horaire avec la Belgique</dt>
-        <dd>{{ country.summer_offset_display }} en été, {{ country.winter_offset_display }} en hiver</dd>
+        {% include "catalog/_time_offsets.html" %}
     </dl>
 
     <h2>Destinations</h2>

@@ -23,6 +23,7 @@ def country_detail(request, pk):
     country = get_object_or_404(Country.objects.visible(), pk=pk)
     context = {
         "country": country,
+        "time_offsets": country.time_offsets(),
         "destinations": Destination.objects.visible().filter(country=country),
         "activities": Activity.objects.visible().filter(country=country),
     }

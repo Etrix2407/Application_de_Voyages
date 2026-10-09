@@ -20,8 +20,7 @@ def create_country(name="Japon", **fields):
         "currency": "yen",
         "description": "Description du pays.",
         "visa": Visa.NOT_REQUIRED,
-        "summer_offset": Decimal("7"),
-        "winter_offset": Decimal("8"),
+        "time_zone": "Asia/Tokyo",
     }
     data.update(fields)
     return Country.objects.create(**data)

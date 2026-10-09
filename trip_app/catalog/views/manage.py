@@ -62,6 +62,7 @@ def country_page(request, pk):
     country = get_object_or_404(Country, pk=pk)
     context = {
         "country": country,
+        "time_offsets": country.time_offsets(),
         "destinations": country.destinations.all(),
         "activities": country.activities.select_related("destination"),
     }
