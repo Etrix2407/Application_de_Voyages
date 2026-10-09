@@ -9,7 +9,7 @@ from django.db import IntegrityError, transaction
 from django.utils import timezone
 
 from orders.models import Status
-from reviews.models import Review, ReviewStatus
+from reviews.models import AgencyResponse, Review, ReviewStatus
 from reviews.services.eligibility import can_review
 
 
@@ -48,7 +48,8 @@ def write_review(client, review: Review) -> Review:
 def update_review(review: Review) -> Review:
     """Enregistre la modification (déjà appliquée par le formulaire) et la renvoie en modération.
 
-    Un avis publié est masqué au public en attendant ; le motif d'un refus est effacé.
+    Un avis publié est masqué au public en attendant ; le motif d'un refus est effacé ;
+    la réponse de l'agence est supprimée (elle répondait à l'ancien texte).
     """
     if not client_can_edit(review):
         raise ReviewLocked
@@ -57,7 +58,9 @@ def update_review(review: Review) -> Review:
     review.refusal_reason = ""
     review.refusal_details = ""
     review.full_clean(validate_unique=False)
-    review.save()
+    with transaction.atomic():
+        review.save()
+        AgencyResponse.objects.filter(review=review).delete()
     return review
 
 

@@ -8,6 +8,7 @@ from reviews.models import (
     MAX_COMMENT_LENGTH,
     MAX_RATING,
     MAX_REFUSAL_DETAILS_LENGTH,
+    MAX_RESPONSE_LENGTH,
     MIN_RATING,
     NEGATIVE_RATING,
     RefusalReason,
@@ -84,4 +85,14 @@ class PublicReviewFilterForm(forms.Form):
         coerce=int,
         empty_value=None,
         choices=[("", "Toutes les notes"), *[(rating, label) for rating, label in RATING_CHOICES]],
+    )
+
+
+class ResponseForm(forms.Form):
+    text = forms.CharField(
+        label="Réponse de l'agence",
+        max_length=MAX_RESPONSE_LENGTH,
+        widget=forms.Textarea(attrs={"rows": 5}),
+        help_text=f"Publique, signée de votre prénom ({MAX_RESPONSE_LENGTH} caractères au maximum).",
+        error_messages={"required": "Écrivez la réponse."},
     )

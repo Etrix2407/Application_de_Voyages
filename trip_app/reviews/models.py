@@ -8,6 +8,7 @@ recevoir un avis : chaque avis publié correspond à un voyage vérifié.
 
 from datetime import timedelta
 
+from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import MaxLengthValidator, MaxValueValidator, MinValueValidator
 from django.db import models
@@ -133,3 +134,29 @@ class Review(models.Model):
             errors["refusal_details"] = "Précisez le motif quand vous choisissez « Autre »."
         if errors:
             raise ValidationError(errors)
+
+
+MAX_RESPONSE_LENGTH = 1000
+
+
+class AgencyResponse(models.Model):
+    """Réponse unique de l'agence sous un avis publié (pas de fil de discussion)."""
+
+    review = models.OneToOneField(Review, on_delete=models.CASCADE, related_name="response", verbose_name="avis")
+    author = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="+"
+    )
+    # Prénom figé : la réponse reste signée si le compte de l'agent est supprimé ensuite.
+    author_first_name = models.CharField("prénom de l'auteur", max_length=100)
+    text = models.TextField(
+        "réponse", max_length=MAX_RESPONSE_LENGTH, validators=[MaxLengthValidator(MAX_RESPONSE_LENGTH)]
+    )
+    created_at = models.DateTimeField("date de la réponse", default=timezone.now)
+    updated_at = models.DateTimeField("dernière modification", default=timezone.now)
+
+    class Meta:
+        verbose_name = "réponse de l'agence"
+        verbose_name_plural = "réponses de l'agence"
+
+    def __str__(self) -> str:
+        return f"Réponse de {self.author_first_name} à « {self.review.title} »"

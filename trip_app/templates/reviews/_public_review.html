@@ -4,4 +4,5 @@
     <p class="verified">✓ Voyage vérifié — séjour de {{ review.order.departure_date|date:"F Y" }}</p>
     {% if review.comment %}<p>{{ review.comment|linebreaksbr }}</p>{% endif %}
     <p class="review-meta">{{ review.author_name }} — publié le {{ review.published_at|date:"j F Y" }}</p>
+    {% if review.response %}{% include "reviews/_response.html" with response=review.response %}{% endif %}
 </li>

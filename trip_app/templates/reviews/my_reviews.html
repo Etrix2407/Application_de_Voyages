@@ -36,7 +36,10 @@
                         <tr>
                             <td>{{ review.order.destination_name }} ({{ review.order.country_name }})</td>
                             <td>{{ review.order.departure_date|date:"F Y" }}</td>
-                            <td>{% include "reviews/_rating.html" %}<br>« {{ review.title }} »</td>
+                            <td>
+                                {% include "reviews/_rating.html" %}<br>« {{ review.title }} »
+                                {% if review.response %}{% include "reviews/_response.html" with response=review.response %}{% endif %}
+                            </td>
                             <td>
                                 <span class="status status-{{ review.status }}">{{ review.get_status_display }}</span>
                                 {% if review.refusal_reason %}

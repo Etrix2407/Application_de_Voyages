@@ -40,6 +40,16 @@
         </dd>
     </dl>
 
+    <h2>Réponse de l'agence</h2>
+    {% if response %}
+        {% include "reviews/_response.html" %}
+    {% else %}
+        <p>Pas encore de réponse.{% if review.status != "published" %} On ne peut répondre qu'à un avis publié.{% endif %}</p>
+    {% endif %}
+    {% if can_respond %}
+        <p><a class="button" href="{% url 'manage_respond_review' review.pk %}">{% if response %}Modifier la réponse{% else %}Répondre à l'avis{% endif %}</a></p>
+    {% endif %}
+
     {% if can_publish or can_refuse %}
         <h2>Modération</h2>
         <p>Le texte d'un client n'est jamais modifié : validez-le, ou refusez-le avec un motif qu'il verra.</p>
