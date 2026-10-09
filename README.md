@@ -1,6 +1,6 @@
 # Application_de_Voyages
 
-Application web (Python 3, Django 5.2) pour une agence de voyage. Elle gère les comptes des clients et du personnel, et propose un catalogue de pays, destinations et activités. Le cahier des charges est résumé dans [Recap.md](Recap.md) (v1 : comptes et catalogue) et [Recap_2.md](Recap_2.md) (v2 : demandes de voyage).
+Application web (Python 3, Django 5.2) pour une agence de voyage. Elle gère les comptes des clients et du personnel, et propose un catalogue de pays, destinations et activités. Le cahier des charges est résumé dans [Recap.md](Recap.md) (v1 : comptes et catalogue) [Recap_2.md](Recap_2.md) (v2 : demandes de voyage) et [Recap_3.md](Recap_3.md) (v3 : avis clients). Les énoncés ne sont jamais modifiés : les décisions prises ensuite avec la cliente sont décrites dans ce README.
 
 ## Sommaire
 
@@ -136,9 +136,9 @@ Limites par adresse IP, contre les robots : 20 échecs de connexion par 15 minut
 
 | Rôle | Fonctionnalités |
 |---|---|
-| Visiteur | Catalogue complet (pays, destinations, activités) ; recherche et filtres ; inscription ; connexion |
-| Client | Détail des pays, destinations et activités ; recherche et filtres ; favoris ; demandes de voyage (faire une demande, suivre et annuler ses demandes en attente) ; profil (modifier, changer le mot de passe ou l'adresse e-mail, supprimer le compte) |
-| Agent | Consultation et recherche ; gestion du catalogue ; liste des clients, correction de leurs informations (sauf e-mail et mot de passe), envoi d'un lien de mot de passe ; traitement des demandes de voyage (filtrer, confirmer, annuler avec motif) ; profil (consultation, changement du mot de passe) |
+| Visiteur | Catalogue complet (pays, destinations, activités) ; page « Destinations » avec les notes ; lecture des avis vérifiés ; recherche et filtres ; inscription ; connexion |
+| Client | Détail des pays, destinations et activités ; recherche et filtres ; favoris ; demandes de voyage (faire une demande, suivre et annuler ses demandes en attente) ; avis sur ses voyages terminés (donner, modifier 30 jours, supprimer) ; profil (modifier, changer le mot de passe ou l'adresse e-mail, supprimer le compte) |
+| Agent | Consultation et recherche ; gestion du catalogue ; liste des clients, correction de leurs informations (sauf e-mail et mot de passe), envoi d'un lien de mot de passe ; traitement des demandes de voyage (filtrer, confirmer, annuler avec motif) ; modération des avis (publier, refuser ou masquer avec motif), réponse de l'agence, liste filtrée de tous les avis ; profil (consultation, changement du mot de passe) |
 | Administrateur | Droits de l'agent + gestion du personnel |
 
 ## Règles de gestion appliquées
@@ -148,6 +148,7 @@ Limites par adresse IP, contre les robots : 20 échecs de connexion par 15 minut
 - Hachage PBKDF2-SHA256 avec un **sel** aléatoire propre à chaque mot de passe (stocké dans la base) et un **poivre** (`DJANGO_PASSWORD_PEPPER`, gardé dans le `.env`, hors de la base) : une base volée seule ne suffit pas. **Sauvegardez le poivre à part : le perdre ou le changer rend tous les mots de passe inutilisables** (chacun devrait passer par « Mot de passe oublié »). Les anciens mots de passe sans poivre sont convertis à la connexion suivante.
 - Un nom de pays est unique, sans tenir compte des majuscules ni des accents (« Perou » = « Pérou »).
 - **Avis vérifiés (v3)** : un avis ne peut être laissé que pour une demande de voyage **confirmée par l'agence** dont la **date de retour est passée** : seuls les clients réellement partis donnent leur avis. Un seul avis par demande (garanti par la base). Si l'agence annule ensuite ce voyage, l'avis est retiré automatiquement (« Refusé », motif « Voyage annulé »).
+- Avis : seule la **destination** est notée ; les activités réalisées ne sont pas notées (option « souhaitable » du Recap 3 écartée par la cliente). Limites : titre 100 caractères, commentaire 1 000, réponse de l'agence 1 000, précision d'un refus 500.
 - Avis et **compte supprimé** : les avis restent publiés, signés « Voyageur anonyme », sans lien avec la personne (le personnel voit « Client supprimé »), et comptent toujours dans les notes. Avis et **destination ou pays désactivé** : les avis restent en base mais ne sont plus visibles ni comptés ; ils réapparaissent à la réactivation.
 - Une demande de voyage garde les **noms** (pays, destination, activités) et l'**estimation** du jour où elle a été envoyée : un renommage ou un changement de tarif dans le catalogue ne les modifie pas. À la **confirmation**, le prix est **recalculé aux tarifs du jour** (le prix peut varier entre la demande et la confirmation) ; l'estimation de départ reste affichée, et un changement de prix est noté dans l'historique.
 - Un client ne voit jamais les données d'un autre client ni celles du personnel. Les agents ne voient pas les favoris des clients.
@@ -239,8 +240,11 @@ trip_app/
 │   ├── base.html · home.html · privacy.html · 403/404/500.html
 │   ├── accounts/           # auth/ · profile/ · staff/ · clients/ · emails/
 │   ├── catalog/            # pages publiques, fragments _*.html, manage/
-│   └── orders/             # demandes côté client, fragments _*.html, manage/
+│   ├── orders/             # demandes côté client, fragments _*.html, manage/
+│   └── reviews/            # avis côté client, fragments publics _*.html, manage/ (modération)
 └── static/css/             # feuille de style (texte lisible, adaptée au mobile)
 ```
 
 Règle de rangement : les **vues** ne font que recevoir la requête et afficher la page ; la logique réutilisable va dans **services/** ; un outil utilisé par plusieurs applications va dans **common/**.
+
+Dépendances entre applications : les **modèles et services** suivent l'ordre `accounts ← catalog ← orders ← reviews` (une application ne dépend que de celles qui la précèdent ; les réactions en sens inverse passent par des signaux, par exemple l'anonymisation RGPD ou le retrait d'un avis quand un voyage est annulé). Les **vues et gabarits** peuvent assembler plusieurs applications (par exemple la note moyenne affichée dans le catalogue).
