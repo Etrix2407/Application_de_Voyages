@@ -94,7 +94,7 @@ AUTH_USER_MODEL = "accounts.User"
 AUTH_PASSWORD_VALIDATORS = [
     {
         "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
-        "OPTIONS": {"user_attributes": ("email", "nom", "first_name")},
+        "OPTIONS": {"user_attributes": ("email", "last_name", "first_name")},
     },
     {
         "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",

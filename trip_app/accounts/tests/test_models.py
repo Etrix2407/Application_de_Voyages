@@ -164,6 +164,12 @@ class PasswordStrengthTests(TestCase):
             with self.subTest(reason=reason), self.assertRaises(ValidationError):
                 validate_password(password)
 
+    def test_password_similar_to_last_name_or_first_name_rejected(self):
+        user = User(email="client@example.com", last_name="Vandermeulen", first_name="Bernadette")
+        for password in ["vandermeulen2026", "bernadette2026x"]:
+            with self.subTest(password=password), self.assertRaises(ValidationError):
+                validate_password(password, user=user)
+
     def test_password_similar_to_email_rejected(self):
         client = User(email="marie.dupont2024@example.com", last_name="Dupont", first_name="Marie")
 
