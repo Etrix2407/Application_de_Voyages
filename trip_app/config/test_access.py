@@ -50,6 +50,10 @@ ACCESS = {
     "create_review": CLIENT,
     "edit_review": CLIENT,
     "remove_review": CLIENT,
+    "manage_pending_reviews": STAFF,
+    "manage_review_detail": STAFF,
+    "manage_publish_review": STAFF,
+    "manage_refuse_review": STAFF,
     "manage_orders": STAFF,
     "manage_order_detail": STAFF,
     "manage_confirm_order": STAFF,
@@ -146,6 +150,9 @@ class AccessMatrixTests(TestCase):
             "create_review": {"order_pk": self.trip_to_review.pk},
             "edit_review": {"pk": self.review.pk},
             "remove_review": {"pk": self.review.pk},
+            "manage_review_detail": {"pk": self.review.pk},
+            "manage_publish_review": {"pk": self.review.pk},
+            "manage_refuse_review": {"pk": self.review.pk},
         }.get(name, {})
 
     def test_every_route_declares_its_access(self):

@@ -358,6 +358,15 @@ td {
     color: var(--color-error);
 }
 
+.badge-negative {
+    display: inline-block;
+    padding: 0.1rem 0.5rem;
+    font-weight: bold;
+    color: #ffffff;
+    background: var(--color-error);
+    border-radius: 4px;
+}
+
 .stars {
     color: #8a4b00;
     letter-spacing: 0.1em;

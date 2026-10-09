@@ -6,6 +6,7 @@ pendant 30 jours après la création (modèle : EDIT_PERIOD).
 """
 
 from django.db import IntegrityError, transaction
+from django.utils import timezone
 
 from orders.models import Status
 from reviews.models import Review, ReviewStatus
@@ -52,6 +53,7 @@ def update_review(review: Review) -> Review:
     if not client_can_edit(review):
         raise ReviewLocked
     review.status = ReviewStatus.PENDING
+    review.submitted_at = timezone.now()
     review.refusal_reason = ""
     review.refusal_details = ""
     review.full_clean(validate_unique=False)

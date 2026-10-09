@@ -2,7 +2,15 @@
 
 from django import forms
 
-from reviews.models import MAX_COMMENT_LENGTH, MAX_RATING, MIN_RATING, NEGATIVE_RATING, Review
+from reviews.models import (
+    MAX_COMMENT_LENGTH,
+    MAX_RATING,
+    MAX_REFUSAL_DETAILS_LENGTH,
+    MIN_RATING,
+    NEGATIVE_RATING,
+    RefusalReason,
+    Review,
+)
 
 RATING_CHOICES = [
     (rating, f"{rating} étoile{'s' if rating > 1 else ''} sur {MAX_RATING}")
@@ -34,3 +42,27 @@ class ReviewForm(forms.ModelForm):
                 "Votre avis sera signé « Voyageur anonyme » au lieu de votre prénom et de l'initiale de votre nom."
             ),
         }
+
+
+class RefusalForm(forms.Form):
+    """Refus ou masquage d'un avis : motif obligatoire, visible par le client."""
+
+    reason = forms.ChoiceField(
+        label="Motif",
+        choices=[("", "— Choisir un motif —")]
+        + [choice for choice in RefusalReason.choices if choice[0] != RefusalReason.TRIP_CANCELLED],
+        error_messages={"required": "Le motif est obligatoire."},
+    )
+    details = forms.CharField(
+        label="Précision",
+        required=False,
+        max_length=MAX_REFUSAL_DETAILS_LENGTH,
+        widget=forms.Textarea(attrs={"rows": 3}),
+        help_text="Facultative, sauf pour le motif « Autre ». Elle sera visible par le client.",
+    )
+
+    def clean(self):
+        data = super().clean()
+        if data.get("reason") == RefusalReason.OTHER and not data.get("details", "").strip():
+            self.add_error("details", "Précisez le motif quand vous choisissez « Autre ».")
+        return data

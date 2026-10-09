@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block title %}Avis à modérer{% endblock %}
+
+{% block content %}
+    <h1>Avis à modérer</h1>
+
+    {% if reviews %}
+        <div class="table-scroll">
+            <table>
+                <caption>Avis en attente de validation, du plus ancien au plus récent</caption>
+                <thead>
+                    <tr>
+                        <th scope="col">Envoyé le</th>
+                        <th scope="col">Destination</th>
+                        <th scope="col">Note et titre</th>
+                        <th scope="col">Client</th>
+                        <th scope="col">Détail</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for review in reviews %}
+                        <tr>
+                            <td>{{ review.submitted_at|date:"j F Y à H:i" }}</td>
+                            <td>{{ review.order.destination_name }} ({{ review.order.country_name }})</td>
+                            <td>
+                                {% include "reviews/_rating.html" %}
+                                {% if review.is_negative %}<span class="badge-negative">Avis négatif</span>{% endif %}
+                                <br>« {{ review.title }} »
+                            </td>
+                            <td>{% include "reviews/manage/_client.html" %}</td>
+                            <td><a href="{% url 'manage_review_detail' review.pk %}">Lire et modérer</a></td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <p>Aucun avis n'attend de validation.</p>
+    {% endif %}
+{% endblock %}

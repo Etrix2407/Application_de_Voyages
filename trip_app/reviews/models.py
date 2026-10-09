@@ -76,6 +76,8 @@ class Review(models.Model):
         validators=[MaxLengthValidator(MAX_REFUSAL_DETAILS_LENGTH)],
     )
     created_at = models.DateTimeField("date de l'avis", default=timezone.now)
+    # Dernier envoi en modération (création ou modification) : ordre de la file du personnel.
+    submitted_at = models.DateTimeField("envoyé en validation le", default=timezone.now)
     published_at = models.DateTimeField("date de publication", null=True, blank=True)
 
     objects = ReviewQuerySet.as_manager()
