@@ -58,13 +58,14 @@
                 <li>
                     <form method="post" action="{% url 'manage_publish_review' review.pk %}">
                         {% csrf_token %}
+        <input type="hidden" name="version" value="{{ review.version }}">
                         <button type="submit">Publier l'avis</button>
                     </form>
                 </li>
             {% endif %}
             {% if can_refuse %}
                 <li>
-                    <a class="button button-danger" href="{% url 'manage_refuse_review' review.pk %}">
+                    <a class="button button-danger" href="{% url 'manage_refuse_review' review.pk %}?version={{ review.version }}">
                         {% if review.status == "published" %}Masquer l'avis{% else %}Refuser l'avis{% endif %}
                     </a>
                 </li>

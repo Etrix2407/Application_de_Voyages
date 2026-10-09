@@ -61,8 +61,17 @@ class ModerationActionsTests(TestCase):
         self.trip = create_trip_done(self.julie, create_destination(create_country(), "Kyoto"))
         self.review = create_review(self.trip, title="Superbe", anonymous=True)
 
+    def version(self):
+        self.review.refresh_from_db()
+        return self.review.version
+
     def refused(self, **data):
-        return self.client.post(reverse("manage_refuse_review", args=[self.review.pk]), data, follow=True)
+        url = reverse("manage_refuse_review", args=[self.review.pk])
+        return self.client.post(url, {"version": self.version(), **data}, follow=True)
+
+    def published(self):
+        url = reverse("manage_publish_review", args=[self.review.pk])
+        return self.client.post(url, {"version": self.version()}, follow=True)
 
     def test_staff_sees_real_client_and_order_even_if_anonymous(self):
         response = self.client.get(reverse("manage_review_detail", args=[self.review.pk]))
@@ -72,7 +81,7 @@ class ModerationActionsTests(TestCase):
         self.assertContains(response, reverse("manage_order_detail", args=[self.trip.pk]))
 
     def test_publish(self):
-        response = self.client.post(reverse("manage_publish_review", args=[self.review.pk]), follow=True)
+        response = self.published()
 
         self.assertContains(response, "est publié")
         self.review.refresh_from_db()
@@ -172,3 +181,50 @@ class ModerationServiceTests(TestCase):
         update_review(self.review)
 
         self.assertEqual(list(pending_reviews()), [older, self.review])
+
+
+class ReviewedVersionTests(TestCase):
+    """L'agent publie ou refuse la version qu'il a lue, jamais une version modifiée entre-temps."""
+
+    def setUp(self):
+        self.client.force_login(create_agent())
+        self.julie = create_client()
+        self.review = create_review(create_trip_done(self.julie, create_destination(create_country())), title="Anodin")
+        self.seen = self.review.version  # version affichée à l'agent
+
+    def client_edits_meanwhile(self):
+        self.review.title = "Version jamais relue"
+        update_review(self.review)
+
+    def test_publish_refused_if_client_edited_meanwhile(self):
+        self.client_edits_meanwhile()
+
+        response = self.client.post(
+            reverse("manage_publish_review", args=[self.review.pk]), {"version": self.seen}, follow=True
+        )
+
+        self.assertContains(response, "relisez-le")
+        self.review.refresh_from_db()
+        self.assertEqual(self.review.status, ReviewStatus.PENDING)
+
+    def test_refusal_refused_if_client_edited_meanwhile(self):
+        self.client_edits_meanwhile()
+
+        self.client.post(
+            reverse("manage_refuse_review", args=[self.review.pk]),
+            {"version": self.seen, "reason": RefusalReason.OFF_TOPIC},
+        )
+
+        self.review.refresh_from_db()
+        self.assertEqual(self.review.status, ReviewStatus.PENDING)
+
+    def test_publish_without_version_refused(self):
+        self.client.post(reverse("manage_publish_review", args=[self.review.pk]))
+
+        self.review.refresh_from_db()
+        self.assertEqual(self.review.status, ReviewStatus.PENDING)
+
+    def test_detail_page_carries_the_version_it_shows(self):
+        response = self.client.get(reverse("manage_review_detail", args=[self.review.pk]))
+
+        self.assertContains(response, f'name="version" value="{self.seen}"')

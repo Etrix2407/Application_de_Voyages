@@ -16,6 +16,14 @@ from reviews.services.responses import ResponseNotAllowed, can_write_response, e
 REVIEWS_PER_PAGE = 25
 
 
+def _seen_version(request) -> int:
+    """Version relue par l'agent (champ caché du formulaire)."""
+    try:
+        return int(request.POST.get("version", ""))
+    except ValueError:
+        return 0  # absente ou illisible : aucune version ne correspond, l'action est refusée
+
+
 def _get_review(pk) -> Review:
     return get_object_or_404(Review.objects.select_related("order__client"), pk=pk)
 
@@ -54,7 +62,7 @@ def review_detail(request, pk):
 def publish_review(request, pk):
     review = _get_review(pk)
     try:
-        publish(review)
+        publish(review, seen_version=_seen_version(request))
     except ModerationNotAllowed as error:
         messages.error(request, str(error))
         return redirect("manage_review_detail", pk=review.pk)
@@ -71,13 +79,18 @@ def refuse_review(request, pk):
     if request.method == "POST" and form.is_valid():
         action = hide if is_hiding else refuse
         try:
-            action(review, form.cleaned_data["reason"], form.cleaned_data["details"])
+            action(
+                review, form.cleaned_data["reason"], form.cleaned_data["details"], seen_version=_seen_version(request)
+            )
         except ModerationNotAllowed as error:
             messages.error(request, str(error))
             return redirect("manage_review_detail", pk=review.pk)
         messages.success(request, f"L'avis « {review.title} » est {'masqué' if is_hiding else 'refusé'}.")
         return redirect("manage_pending_reviews")
-    return render(request, "reviews/manage/refuse.html", {"review": review, "form": form, "is_hiding": is_hiding})
+    # Version lue sur la fiche de l'avis, transmise jusqu'à l'envoi du refus.
+    version = request.POST.get("version") or request.GET.get("version") or review.version
+    context = {"review": review, "form": form, "is_hiding": is_hiding, "version": version}
+    return render(request, "reviews/manage/refuse.html", context)
 
 
 @staff_required

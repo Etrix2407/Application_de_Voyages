@@ -2,10 +2,12 @@
 
 - une seule réponse par avis, seulement sur un avis **publié** ;
 - écrite par un agent ou l'administrateur, signée de son **prénom** ;
-- seul son auteur la modifie (un administrateur si l'auteur n'existe plus) ;
+- seul son auteur la modifie (un administrateur si l'auteur a quitté l'agence :
+  compte supprimé ou désactivé) ;
 - supprimée si le client modifie son avis (voir services/writing.py).
 """
 
+from django.db import IntegrityError, transaction
 from django.utils import timezone
 
 from reviews.models import AgencyResponse, Review, ReviewStatus
@@ -25,7 +27,7 @@ def can_write_response(review: Review, staff_member) -> bool:
     response = existing_response(review)
     if response is None:
         return True
-    if response.author_id is None:
+    if response.author is None or not response.author.is_active:
         return staff_member.is_administrator
     return response.author_id == staff_member.pk
 
@@ -40,5 +42,10 @@ def save_response(review: Review, staff_member, text: str) -> AgencyResponse:
     response.text = text.strip()
     response.updated_at = timezone.now()
     response.full_clean(exclude=["review"])
-    response.save()
+    try:
+        with transaction.atomic():
+            response.save()
+    except IntegrityError:
+        # Deux agents ont répondu au même instant : la base garde une seule réponse.
+        raise ResponseNotAllowed from None
     return response
