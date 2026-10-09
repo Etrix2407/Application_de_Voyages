@@ -15,6 +15,11 @@ class HomeTests(TestCase):
 
         self.assertContains(response, '<html lang="fr">')
 
+    def test_browser_spellcheck_disabled(self):
+        response = self.client.get(reverse("home"))
+
+        self.assertContains(response, '<body spellcheck="false">')
+
     def test_site_name_in_title_header_and_footer(self):
         response = self.client.get(reverse("home"))
 
