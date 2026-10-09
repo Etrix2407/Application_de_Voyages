@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block title %}Tous les avis — Gestion{% endblock %}
+
+{% block content %}
+    <h1>Tous les avis</h1>
+    <p><a href="{% url 'manage_pending_reviews' %}">Voir les avis à modérer</a></p>
+
+    <form method="get" class="search-form" role="search">
+        {{ form }}
+        <button type="submit">Filtrer</button>
+        <a class="button button-secondary" href="{% url 'manage_reviews' %}">Effacer les filtres</a>
+    </form>
+
+    <p class="result-count" role="status">{{ page.paginator.count }} avis</p>
+
+    {% if page.object_list %}
+        <div class="table-scroll">
+            <table>
+                <caption>Avis, du plus récent au plus ancien{% if page.paginator.num_pages > 1 %}, page {{ page.number }} sur {{ page.paginator.num_pages }}{% endif %}</caption>
+                <thead>
+                    <tr>
+                        <th scope="col">Écrit le</th>
+                        <th scope="col">Destination</th>
+                        <th scope="col">Séjour</th>
+                        <th scope="col">Note et titre</th>
+                        <th scope="col">Client</th>
+                        <th scope="col">État</th>
+                        <th scope="col">Détail</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for review in page.object_list %}
+                        <tr>
+                            <td>{{ review.created_at|date:"j F Y" }}</td>
+                            <td>{{ review.order.destination_name }} ({{ review.order.country_name }})</td>
+                            <td>{{ review.order.departure_date|date:"F Y" }}</td>
+                            <td>
+                                {% include "reviews/_rating.html" %}
+                                {% if review.is_negative %}<span class="badge-negative">Avis négatif</span>{% endif %}
+                                <br>« {{ review.title }} »
+                            </td>
+                            <td>{% include "reviews/manage/_client.html" %}</td>
+                            <td><span class="status status-{{ review.status }}">{{ review.get_status_display }}</span></td>
+                            <td><a href="{% url 'manage_review_detail' review.pk %}">Voir</a></td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if page.paginator.num_pages > 1 %}
+            <nav aria-label="Pages de la liste des avis">
+                <ul class="actions">
+                    {% if page.has_previous %}
+                        <li><a class="button" href="?{{ query }}&amp;page={{ page.previous_page_number }}">← Page précédente</a></li>
+                    {% endif %}
+                    {% if page.has_next %}
+                        <li><a class="button" href="?{{ query }}&amp;page={{ page.next_page_number }}">Page suivante →</a></li>
+                    {% endif %}
+                </ul>
+            </nav>
+        {% endif %}
+    {% else %}
+        <p>Aucun avis ne correspond à ces critères.</p>
+    {% endif %}
+{% endblock %}

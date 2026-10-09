@@ -155,3 +155,9 @@ class QueryCountTests(TestCase):
             create_review(create_trip_done(traveller, destination))
 
         self.assert_constant_queries(reverse("manage_pending_reviews"), add_pending_review)
+
+    def test_staff_review_list(self):
+        self.client.force_login(create_agent())
+        destination = create_destination(self.country, "Kyoto")
+
+        self.assert_constant_queries(reverse("manage_reviews"), lambda: self.add_published_review(destination))
