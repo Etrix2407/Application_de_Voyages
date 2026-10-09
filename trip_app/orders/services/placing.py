@@ -8,22 +8,37 @@ from django.utils import timezone
 
 from catalog.models import Destination
 from orders.models import Order, OrderActivity, Status, StatusChange
-from orders.services.pricing import estimate_price
+from orders.services.pricing import Quote, estimate_price, price_parts
+from promotions.services.discounts import Offer, PriceParts, discount_amount
 
 # Garde-fou contre les envois en masse : largement au-dessus d'un usage normal.
 MAX_ORDERS_PER_DAY = 10
+NO_DISCOUNT = Decimal("0.00")
 
 
-def estimate_for(destination: Destination, activities, adults: int, children: int) -> Decimal:
-    return estimate_price(
+def parts_for(destination: Destination, activities, adults: int, children: int) -> PriceParts:
+    return price_parts(destination.price_from, [activity.price_per_person for activity in activities], adults, children)
+
+
+def quote_for(destination: Destination, activities, adults: int, children: int, discount=NO_DISCOUNT) -> Quote:
+    before = estimate_price(
         destination.price_from, [activity.price_per_person for activity in activities], adults, children
     )
+    return Quote(before, discount)
 
 
-def price_at_current_rates(order: Order) -> Decimal:
-    """Estimation d'une demande existante recalculée avec les tarifs actuels du catalogue."""
+def price_at_current_rates(order: Order) -> Quote:
+    """Prix d'une demande existante recalculé aux tarifs actuels du catalogue.
+
+    La promotion figée dans la demande est ré-appliquée telle quelle (un pourcentage reste
+    un pourcentage, un montant fixe reste le même montant), même si elle est terminée.
+    """
     activities = [line.activity for line in order.activities.select_related("activity")]
-    return estimate_for(order.destination, activities, order.adults, order.children)
+    discount = NO_DISCOUNT
+    if order.promotion:
+        prices = parts_for(order.destination, activities, order.adults, order.children)
+        discount = discount_amount(order.promotion, prices)
+    return quote_for(order.destination, activities, order.adults, order.children, discount)
 
 
 def find_pending_duplicates(client, destination: Destination, departure_date, return_date):
@@ -55,11 +70,14 @@ class AlreadySubmitted(Exception):
         self.order = order
 
 
-def place_order(client, destination: Destination, data: dict, submission_token=None) -> Order:
+def place_order(
+    client, destination: Destination, data: dict, offer: Offer | None = None, submission_token=None
+) -> Order:
     """Enregistre la demande « En attente » avec ses prix figés et son historique.
 
     `data` provient d'un formulaire validé (dates, voyageurs, activités, remarques) ; les règles
     du modèle sont tout de même revérifiées ici et lèvent ValidationError (rien n'est enregistré).
+    `offer` est la promotion retenue (orders.services.promotions) : son nom et la remise sont figés.
     Un `submission_token` déjà utilisé lève AlreadySubmitted : la base garantit l'unicité,
     même si deux envois arrivent au même instant. Au-delà de MAX_ORDERS_PER_DAY demandes
     en 24 heures, lève DailyLimitReached.
@@ -67,7 +85,7 @@ def place_order(client, destination: Destination, data: dict, submission_token=N
     if daily_limit_reached(client):
         raise DailyLimitReached
     try:
-        return _create_order(client, destination, data, submission_token)
+        return _create_order(client, destination, data, offer, submission_token)
     except IntegrityError:
         existing = Order.objects.filter(submission_token=submission_token).first() if submission_token else None
         if existing is None:
@@ -76,8 +94,10 @@ def place_order(client, destination: Destination, data: dict, submission_token=N
 
 
 @transaction.atomic
-def _create_order(client, destination: Destination, data: dict, submission_token) -> Order:
+def _create_order(client, destination: Destination, data: dict, offer: Offer | None, submission_token) -> Order:
     activities = list(data["activities"])
+    discount = offer.discount if offer else NO_DISCOUNT
+    quote = quote_for(destination, activities, data["adults"], data["children"], discount)
     order = Order(
         submission_token=submission_token,
         client=client,
@@ -90,7 +110,10 @@ def _create_order(client, destination: Destination, data: dict, submission_token
         children=data["children"],
         remarks=data["remarks"],
         destination_price=destination.price_from,
-        estimated_price=estimate_for(destination, activities, data["adults"], data["children"]),
+        estimated_price=quote.price,
+        discount=quote.discount,
+        promotion=offer.promotion if offer else None,
+        promotion_name=offer.promotion.name if offer else "",
     )
     # L'unicité du jeton est laissée à la base : elle seule tranche entre deux envois simultanés.
     order.full_clean(validate_unique=False)

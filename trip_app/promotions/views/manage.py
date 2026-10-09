@@ -20,6 +20,11 @@ from promotions.services.management import (
 PROMOTIONS_PER_PAGE = 25
 
 
+def _is_used(promotion: Promotion) -> bool:
+    """Utilisée par au moins une demande de voyage, même annulée (la demande garde la promotion)."""
+    return promotion.orders.exists()
+
+
 def _promotions():
     return Promotion.objects.prefetch_related("countries", "destinations")
 
@@ -40,12 +45,14 @@ def promotion_list(request):
 def promotion_detail(request, pk):
     promotion = get_object_or_404(_promotions(), pk=pk)
     state = promotion.state()
+    used = _is_used(promotion)
     context = {
         "promotion": promotion,
         "state": state,
         "history": promotion.history.all(),
         "can_manage": request.user.is_administrator,
         "can_disable": state != State.DISABLED,
+        "used": used,
     }
     return render(request, "promotions/manage/detail.html", context)
 
@@ -63,12 +70,13 @@ def create(request):
 @administrator_required
 def edit(request, pk):
     promotion = get_object_or_404(Promotion, pk=pk)
-    form = PromotionForm(request.POST or None, instance=promotion)
+    used = _is_used(promotion)
+    form = PromotionForm(request.POST or None, instance=promotion, used=used)
     if request.method == "POST" and form.is_valid():
         update_promotion(form, request.user)
         messages.success(request, f"La promotion « {promotion} » a été enregistrée.")
         return redirect("manage_promotion_detail", pk=promotion.pk)
-    context = {"form": form, "title": f"Modifier « {promotion} »", "promotion": promotion}
+    context = {"form": form, "title": f"Modifier « {promotion} »", "promotion": promotion, "used": used}
     return render(request, "promotions/manage/form.html", context)
 
 

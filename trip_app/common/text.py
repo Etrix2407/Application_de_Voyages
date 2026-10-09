@@ -1,6 +1,11 @@
-"""Outils de texte partagés par les applications."""
+"""Outils de texte partagés par les applications (comparaison sans accents, montants)."""
 
 import unicodedata
+
+
+def euros(amount) -> str:
+    """Montant en euros à la française : « 1234,50 € »."""
+    return f"{amount:.2f}".replace(".", ",") + " €"
 
 
 def normalize(text: str) -> str:

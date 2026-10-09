@@ -32,6 +32,12 @@ class OrderForm(forms.ModelForm):
         widget=forms.CheckboxSelectMultiple,
         help_text="Facultatif. Le prix des enfants est compté à 50 %, activités comprises.",
     )
+    promo_code = forms.CharField(
+        label="Code promo",
+        required=False,
+        max_length=30,
+        help_text="Facultatif. Les promotions sans code sont appliquées automatiquement.",
+    )
 
     class Meta:
         model = Order

@@ -50,6 +50,16 @@ class PromotionForm(forms.ModelForm):
             "max_uses_per_client": "Vide = illimité.",
         }
 
+    # Une promotion déjà utilisée ne change plus que ces champs : sa valeur, sa portée, etc.
+    # restent celles appliquées aux demandes. Pour les changer, on crée une nouvelle promotion.
+    EDITABLE_ONCE_USED = ("name", "description", "ends_on")
+
+    def __init__(self, *args, used: bool = False, **kwargs):
+        super().__init__(*args, **kwargs)
+        if used:
+            for name, field in self.fields.items():
+                field.disabled = name not in self.EDITABLE_ONCE_USED
+
     def clean_ends_on(self):
         ends_on = self.cleaned_data["ends_on"]
         # Avancer la fin est permis, pas la placer dans le passé : pour arrêter, on désactive.

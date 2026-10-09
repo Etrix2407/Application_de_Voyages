@@ -11,13 +11,16 @@ from catalog.models import Destination
 from orders.forms import ClientCancelForm, OrderForm
 from orders.models import Order, Status
 from orders.services.placing import (
+    NO_DISCOUNT,
     AlreadySubmitted,
     DailyLimitReached,
     daily_limit_reached,
-    estimate_for,
     find_pending_duplicates,
+    parts_for,
     place_order,
+    quote_for,
 )
+from orders.services.promotions import choose_promotion
 from orders.services.status import TransitionNotAllowed, cancel_by_client, client_can_cancel
 from reviews.services.eligibility import can_review
 
@@ -38,17 +41,26 @@ def create_order(request, destination_pk):
         return render(request, "orders/create.html", {"form": form, "destination": destination})
 
     data = form.cleaned_data
-    price = estimate_for(destination, data["activities"], data["adults"], data["children"])
+    activities, adults, children = data["activities"], data["adults"], data["children"]
+    choice = choose_promotion(
+        request.user, destination, data["departure_date"], parts_for(destination, activities, adults, children),
+        data["promo_code"],
+    )
+    if choice.code_error:
+        # Code refusé (ou devenu invalide depuis la vérification) : rien n'est envoyé, le client corrige.
+        form.add_error("promo_code", choice.code_error)
+        return render(request, "orders/create.html", {"form": form, "destination": destination})
+    quote = quote_for(destination, activities, adults, children, choice.offer.discount if choice.offer else NO_DISCOUNT)
     if "confirm" not in request.POST:
-        return _review(request, form, destination, price)
+        return _review(request, form, destination, quote, choice)
 
     expected = request.POST.get("expected_price")
     token = _parse_token(request.POST.get("submission_token"))
-    if expected != str(price) or token is None:
-        # Un tarif a changé depuis la page de vérification : le client doit revoir le prix.
-        return _review(request, form, destination, price, price_changed=expected is not None)
+    if expected != _expected(quote, choice) or token is None:
+        # Un tarif ou une promotion a changé depuis la page de vérification : le client revoit le prix.
+        return _review(request, form, destination, quote, choice, price_changed=expected is not None)
     try:
-        order = place_order(request.user, destination, data, submission_token=token)
+        order = place_order(request.user, destination, data, choice.offer, submission_token=token)
     except AlreadySubmitted as duplicate:
         messages.info(request, "Cette demande avait déjà été envoyée.")
         return redirect("my_order_detail", pk=duplicate.order.pk)
@@ -72,15 +84,21 @@ def _daily_limit_refusal(request):
     return redirect("my_orders")
 
 
-def _review(request, form, destination, price, price_changed=False):
+def _expected(quote, choice) -> str:
+    """Prix et promotion vus par le client, renvoyés à l'envoi pour détecter un changement."""
+    promotion = choice.offer.promotion.pk if choice.offer else ""
+    return f"{quote.price}|{promotion}"
+
+
+def _review(request, form, destination, quote, choice, price_changed=False):
     data = form.cleaned_data
     context = {
         "form": form,
         "destination": destination,
         "activities": data["activities"],
-        "estimated_price": price,
-        # Valeur exacte (non mise en forme) renvoyée à l'envoi pour détecter un changement de tarif.
-        "expected_price": str(price),
+        "quote": quote,
+        "choice": choice,
+        "expected_price": _expected(quote, choice),
         "submission_token": uuid.uuid4(),
         "price_changed": price_changed,
         "duplicates": find_pending_duplicates(request.user, destination, data["departure_date"], data["return_date"]),

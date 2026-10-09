@@ -8,11 +8,10 @@
 | cancel_after_account_deletion | En attente        | automatique (« Client »)  | fixé        |
 """
 
-from decimal import Decimal
-
 from django.db import transaction
 from django.utils import timezone
 
+from common.text import euros
 from orders.models import Order, Status, StatusChange
 from orders.services.placing import price_at_current_rates
 
@@ -58,19 +57,17 @@ def confirm_by_staff(order: Order, staff_member) -> None:
     """
     if departure_passed(order):
         raise TransitionNotAllowed("La date de départ est passée : cette demande ne peut plus être confirmée.")
-    price = price_at_current_rates(order)
-    note = "" if price == order.estimated_price else (
-        f"Prix recalculé aux tarifs du jour : {_euros(order.estimated_price)} → {_euros(price)}."
+    quote = price_at_current_rates(order)
+    note = "" if quote.price == order.estimated_price else (
+        f"Prix recalculé aux tarifs du jour : {euros(order.estimated_price)} → {euros(quote.price)}."
     )
     _change_status(
         order, CONFIRMABLE, Status.CONFIRMED, staff_member, staff_member.get_full_name(), note,
-        "Seule une demande en attente peut être confirmée.", updates={"confirmed_price": price},
+        "Seule une demande en attente peut être confirmée.",
+        updates={"confirmed_price": quote.price, "confirmed_discount": quote.discount},
     )
-    order.confirmed_price = price
-
-
-def _euros(amount: Decimal) -> str:
-    return f"{amount:.2f}".replace(".", ",") + " €"
+    order.confirmed_price = quote.price
+    order.confirmed_discount = quote.discount
 
 
 def cancel_by_staff(order: Order, staff_member, reason: str) -> None:
