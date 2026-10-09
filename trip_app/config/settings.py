@@ -88,6 +88,12 @@ DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
         "NAME": BASE_DIR / "db.sqlite3",
+        # Chaque transaction (transaction.atomic) prend le verrou d'écriture dès son début : deux
+        # enregistrements simultanés passent l'un après l'autre, et le second voit le premier.
+        # Ex. la dernière utilisation d'une promotion, revérifiée à l'envoi de la demande, ne peut
+        # pas être prise par deux clients. Sans ce réglage, SQLite pourrait refuser l'un des deux
+        # avec l'erreur « database is locked ». Le second attend au plus 5 secondes (délai par défaut).
+        "OPTIONS": {"transaction_mode": "IMMEDIATE"},
     }
 }
 

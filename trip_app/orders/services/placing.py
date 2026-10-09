@@ -9,6 +9,7 @@ from django.utils import timezone
 from catalog.models import Destination
 from orders.models import Order, OrderActivity, Status, StatusChange
 from orders.services.pricing import Quote, estimate_price, price_parts
+from orders.services.promotions import limit_problem
 from promotions.services.discounts import Offer, PriceParts, discount_amount
 
 # Garde-fou contre les envois en masse : largement au-dessus d'un usage normal.
@@ -70,6 +71,10 @@ class AlreadySubmitted(Exception):
         self.order = order
 
 
+class PromotionUnavailable(Exception):
+    """La limite de la promotion a été atteinte au moment de l'enregistrement (ex. dernière utilisation)."""
+
+
 def place_order(
     client, destination: Destination, data: dict, offer: Offer | None = None, submission_token=None
 ) -> Order:
@@ -80,7 +85,8 @@ def place_order(
     `offer` est la promotion retenue (orders.services.promotions) : son nom et la remise sont figés.
     Un `submission_token` déjà utilisé lève AlreadySubmitted : la base garantit l'unicité,
     même si deux envois arrivent au même instant. Au-delà de MAX_ORDERS_PER_DAY demandes
-    en 24 heures, lève DailyLimitReached.
+    en 24 heures, lève DailyLimitReached. Si la limite de la promotion est atteinte au moment
+    de l'enregistrement (dernière utilisation prise entre-temps), lève PromotionUnavailable.
     """
     if daily_limit_reached(client):
         raise DailyLimitReached
@@ -95,6 +101,10 @@ def place_order(
 
 @transaction.atomic
 def _create_order(client, destination: Destination, data: dict, offer: Offer | None, submission_token) -> Order:
+    # Limites revérifiées dans la transaction, qui détient déjà le verrou d'écriture (réglage
+    # « IMMEDIATE » de settings.py) : de deux envois simultanés, le second voit le premier.
+    if offer and limit_problem(offer.promotion, client):
+        raise PromotionUnavailable
     activities = list(data["activities"])
     discount = offer.discount if offer else NO_DISCOUNT
     quote = quote_for(destination, activities, data["adults"], data["children"], discount)

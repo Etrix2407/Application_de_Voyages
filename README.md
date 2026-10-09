@@ -191,7 +191,7 @@ En cours de développement. Le [Recap_4.md](Recap_4.md) décrit les promotions ;
   - « Ce code ne s'applique pas à ces dates de départ » (départ hors de la période autorisée) ;
   - un code dont la promotion n'a pas encore commencé donne « Code invalide », pour ne pas révéler les offres à venir.
 - **Sécurité** : 10 codes faux par heure au plus pour un client, contre les essais au hasard.
-- **Envoi de la demande** : si la remise change entre la page de vérification et l'envoi (promotion expirée, dernière utilisation prise), la demande n'est pas envoyée et le client revoit le récapitulatif avec le nouveau prix.
+- **Envoi de la demande** : si la remise change entre la page de vérification et l'envoi (promotion expirée, dernière utilisation prise), la demande n'est pas envoyée et le client revoit le récapitulatif avec le nouveau prix. Pour un code promo, il revoit le formulaire avec le message sous le champ « Code promo ». Les limites sont revérifiées au moment de l'enregistrement : si deux clients envoient leur demande au même instant pour la dernière utilisation, un seul l'obtient.
 - **Promotion déjà utilisée** : seuls le **nom**, la **description** et la **date de fin** restent modifiables ; pour changer le reste, on crée une nouvelle promotion.
 - **Dates** :
   - la date de fin peut être avancée, mais **pas avant aujourd'hui** ; pour arrêter une promotion tout de suite, on la désactive ;

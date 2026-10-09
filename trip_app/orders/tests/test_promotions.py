@@ -1,5 +1,6 @@
 from datetime import timedelta
 from decimal import Decimal
+from unittest import mock
 
 from django.core.cache import cache
 from django.test import TestCase
@@ -10,12 +11,12 @@ from accounts.tests.factories import create_admin, create_agent, create_client
 from catalog.tests.factories import create_country, create_destination
 from orders.models import Order, Status
 from orders.services import promotions as messages
-from orders.services.placing import parts_for
+from orders.services.placing import parts_for, place_order
 from orders.services.promotions import choose_promotion
 from promotions.models import Base, Kind, Promotion, Scope
 from promotions.tests.factories import create_promotion
 
-from .factories import create_order, departure_in, review_tokens
+from .factories import create_order, departure_in, review_tokens, submit_order
 
 
 class ChoosePromotionTests(TestCase):
@@ -151,6 +152,34 @@ class OrderWithPromotionTests(TestCase):
         self.assertContains(response, "2000,00 €")
         self.assertFalse(Order.objects.exists())
 
+    def used_just_before_saving(self, promotion, client):
+        """Une demande de `client` prend la promotion juste avant l'enregistrement (envoi simultané)."""
+        def place(*args, **kwargs):
+            create_order(client, self.kyoto, promotion=promotion)
+            return place_order(*args, **kwargs)
+        return mock.patch("orders.views.client.place_order", side_effect=place)
+
+    def test_last_automatic_use_taken_meanwhile_shows_new_price(self):
+        promotion = create_promotion(value=Decimal("10"), max_uses=1)
+
+        with self.used_just_before_saving(promotion, create_client(email="autre@example.com")):
+            response = submit_order(self.client, self.url, self.data)
+
+        self.assertContains(response, "a changé depuis votre vérification")
+        self.assertContains(response, "2000,00 €")
+        self.assertFalse(Order.objects.filter(client=self.marie).exists())
+
+    def test_last_code_use_taken_meanwhile_shown_on_the_form(self):
+        # Ex. la même demande envoyée depuis deux onglets avec un code limité à une fois par client.
+        promotion = create_promotion(code="UNEFOIS", max_uses_per_client=1)
+
+        with self.used_just_before_saving(promotion, self.marie):
+            response = submit_order(self.client, self.url, {**self.data, "promo_code": "UNEFOIS"})
+
+        self.assertTemplateUsed(response, "orders/create.html")
+        self.assertContains(response, "Vous avez déjà utilisé ce code")
+        self.assertEqual(Order.objects.count(), 1)
+
 
 class PublicOffersTests(TestCase):
     def test_exhausted_automatic_promotion_no_longer_shown(self):
@@ -172,6 +201,9 @@ class ConfirmationTests(TestCase):
                              estimated_price=Decimal("900"), discount=Decimal("100"))
         kyoto.price_from = Decimal("1200")
         kyoto.save()
+        # Désactivée pendant que la demande attendait : la remise figée s'applique quand même.
+        promotion.is_active = False
+        promotion.save()
         self.client.force_login(create_agent())
 
         self.client.post(reverse("manage_confirm_order", args=[order.pk]))
