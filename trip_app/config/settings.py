@@ -19,6 +19,10 @@ if not SECRET_KEY:
         raise RuntimeError("La variable d'environnement DJANGO_SECRET_KEY est obligatoire.")
     SECRET_KEY = "django-insecure-cle-de-developpement-uniquement"
 
+# Nombre de serveurs intermédiaires (proxy) de confiance devant le site : 0 en direct.
+# Sert à retrouver la vraie IP des visiteurs pour les limites anti-abus.
+NUM_PROXIES = int(os.environ.get("DJANGO_NUM_PROXIES", "0"))
+
 ALLOWED_HOSTS = [
     host for host in os.environ.get("DJANGO_ALLOWED_HOSTS", "").split(",") if host
 ]
