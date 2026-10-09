@@ -31,7 +31,8 @@
             {% if can_confirm %}
                 <li>
                     <p>
-                        Prix aux tarifs actuels : <strong>{{ price_if_confirmed }} €</strong>
+                        Prix aux tarifs actuels : <strong>{{ price_if_confirmed.price }} €</strong>
+                        {% if order.promotion_name %}(remise « {{ order.promotion_name }} » de {{ price_if_confirmed.discount }} € déduite){% endif %}
                         (estimation à la demande : {{ order.estimated_price }} €). C'est ce prix qui sera enregistré.
                     </p>
                     <form method="post" action="{% url 'manage_confirm_order' order.pk %}">

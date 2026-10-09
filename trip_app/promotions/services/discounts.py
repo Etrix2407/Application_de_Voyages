@@ -53,15 +53,23 @@ def discount_amount(promotion: Promotion, prices: PriceParts) -> Decimal:
     return discount.quantize(_CENT, rounding=ROUND_HALF_UP)
 
 
-def covers(promotion: Promotion, destination: Destination, departure_date: date) -> bool:
-    """La destination est dans la portée et le départ dans la période autorisée (s'il y en a une)."""
-    if promotion.departure_from and not promotion.departure_from <= departure_date <= promotion.departure_until:
-        return False
+def in_scope(promotion: Promotion, destination: Destination) -> bool:
     if promotion.scope == Scope.COUNTRIES:
         return promotion.countries.filter(pk=destination.country_id).exists()
     if promotion.scope == Scope.DESTINATIONS:
         return promotion.destinations.filter(pk=destination.pk).exists()
     return True
+
+
+def allows_departure(promotion: Promotion, departure_date: date) -> bool:
+    """Le départ est dans la période autorisée, bornes incluses (sans période : tous les départs)."""
+    if promotion.departure_from is None:
+        return True
+    return promotion.departure_from <= departure_date <= promotion.departure_until
+
+
+def covers(promotion: Promotion, destination: Destination, departure_date: date) -> bool:
+    return in_scope(promotion, destination) and allows_departure(promotion, departure_date)
 
 
 def offer_for(promotion: Promotion, prices: PriceParts) -> Offer | None:

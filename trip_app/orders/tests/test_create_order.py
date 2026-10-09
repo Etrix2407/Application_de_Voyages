@@ -230,7 +230,7 @@ class SubmissionSafetyTests(TestCase):
 
         response = self.confirm()
 
-        self.assertContains(response, "Un tarif a changé")
+        self.assertContains(response, "a changé depuis votre vérification")
         self.assertContains(response, "15000,00 €")  # (6000 × 2) + (6000 × 50 % × 1)
         self.assertFalse(Order.objects.exists())
 

@@ -19,8 +19,13 @@
                     </form>
                 </li>
             {% endif %}
-            <li><a class="button button-danger" href="{% url 'manage_delete_promotion' promotion.pk %}">Supprimer</a></li>
+            {% if not used %}
+                <li><a class="button button-danger" href="{% url 'manage_delete_promotion' promotion.pk %}">Supprimer</a></li>
+            {% endif %}
         </ul>
+        {% if used %}
+            <p>Cette promotion a déjà été utilisée : seuls son nom, sa description et sa date de fin peuvent être modifiés, et elle ne peut pas être supprimée.</p>
+        {% endif %}
     {% endif %}
 
     <dl class="details">

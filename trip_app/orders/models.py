@@ -14,6 +14,7 @@ from django.db import models
 from django.utils import timezone
 
 from catalog.models import Activity, Destination
+from promotions.models import Promotion
 
 MIN_DAYS_BEFORE_DEPARTURE = 7
 MAX_DAYS_BEFORE_DEPARTURE = 2 * 365
@@ -69,6 +70,15 @@ class Order(models.Model):
     # Recalculé aux tarifs du jour quand le personnel confirme (le prix peut avoir changé
     # depuis la demande). L'estimation de départ reste conservée à côté.
     confirmed_price = _price_field("prix recalculé à la confirmation", null=True, blank=True)
+    # Promotion appliquée (v4). Les prix ci-dessus sont après remise. PROTECT : une promotion
+    # utilisée ne se supprime pas ; son nom est figé, et ses valeur, portée et assiette ne
+    # changent plus une fois utilisée : la remise est ré-appliquée telle quelle à la confirmation.
+    promotion = models.ForeignKey(
+        Promotion, on_delete=models.PROTECT, null=True, blank=True, related_name="orders", verbose_name="promotion"
+    )
+    promotion_name = models.CharField("nom de la promotion au moment de la demande", max_length=100, blank=True)
+    discount = _price_field("remise à la demande", default=Decimal("0.00"))
+    confirmed_discount = _price_field("remise à la confirmation", null=True, blank=True)
     status = models.CharField("état", max_length=20, choices=Status.choices, default=Status.PENDING)
     created_at = models.DateTimeField("date de la demande", default=timezone.now)
     # Jeton de la page de vérification : unique, il empêche qu'un double clic crée deux demandes.
@@ -91,6 +101,16 @@ class Order(models.Model):
     def latest_price(self) -> Decimal:
         """Prix le plus récent : celui de la confirmation s'il existe, sinon l'estimation de départ."""
         return self.estimated_price if self.confirmed_price is None else self.confirmed_price
+
+    @property
+    def price_before_discount(self) -> Decimal:
+        return self.estimated_price + self.discount
+
+    @property
+    def confirmed_price_before_discount(self) -> Decimal | None:
+        if self.confirmed_price is None:
+            return None
+        return self.confirmed_price + (self.confirmed_discount or Decimal("0.00"))
 
     @property
     def is_quote_required(self) -> bool:

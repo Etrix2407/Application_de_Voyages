@@ -7,9 +7,15 @@
 
     {% if price_changed %}
         <p class="message message-warning" role="alert">
-            Un tarif a changé depuis votre vérification : le prix estimé ci-dessous a été mis à jour.
+            Un tarif ou une promotion a changé depuis votre vérification : le prix estimé ci-dessous a été mis à jour.
             Votre demande n'a pas encore été envoyée.
         </p>
+    {% endif %}
+
+    {% if choice.code_applied %}
+        <p class="message message-success" role="status">Code appliqué : -{{ quote.discount }} €</p>
+    {% elif choice.code_note %}
+        <p class="message" role="status">{{ choice.code_note }}. Votre code n'est pas utilisé : vous pourrez le garder pour une autre demande.</p>
     {% endif %}
 
     {% if duplicates %}
@@ -32,9 +38,15 @@
         </dd>
         <dt>Remarques</dt>
         <dd>{{ form.cleaned_data.remarks|default:"Aucune"|linebreaksbr }}</dd>
-        <dt>Prix estimé</dt>
+        {% if choice.offer %}
+            <dt>Prix avant remise</dt>
+            <dd>{{ quote.price_before_discount }} €</dd>
+            <dt>Remise</dt>
+            <dd>-{{ quote.discount }} € — {{ choice.offer.promotion.name }}</dd>
+        {% endif %}
+        <dt>{% if choice.offer %}Prix après remise{% else %}Prix estimé{% endif %}</dt>
         <dd>
-            <strong>{{ estimated_price }} €</strong> — estimation, non contractuel.
+            <strong>{{ quote.price }} €</strong> — estimation, non contractuel.
             {% if destination.price_from is None %}
                 <br>Le prix de la destination est donné sur devis par votre conseiller : ce montant ne compte que les activités.
             {% endif %}
