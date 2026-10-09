@@ -80,7 +80,7 @@ Formats à respecter :
 
 | Champ | Format |
 |---|---|
-| Fuseau horaire principal | Ville de référence du pays dans la liste (ex. « Asie — Tokyo » ; pour un pays à plusieurs fuseaux, celle de la destination principale). Le décalage avec la Belgique (été, hiver et aujourd'hui) est **calculé automatiquement**, changements d'heure compris |
+| Fuseau horaire principal | Tapez la ville de référence du pays (ex. « tokyo ») et choisissez-la dans les suggestions (« Asie — Tokyo » ; pour un pays à plusieurs fuseaux, celle de la destination principale). Le décalage avec la Belgique (été, hiver et aujourd'hui) est **calculé automatiquement**, changements d'heure compris |
 | Période idéale | Mois de début et mois de fin ; peut chevaucher l'année (novembre → mars). Facultative |
 | Durée d'une activité | En minutes : `90` pour 1 h 30 |
 | Photo | Fichier JPEG, PNG ou WebP de 5 Mo maximum, envoyé depuis l'ordinateur. Facultative ; une nouvelle photo remplace l'ancienne. Les données cachées de la photo (position GPS, appareil, date de prise de vue) sont retirées avant publication |
