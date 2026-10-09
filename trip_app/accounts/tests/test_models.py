@@ -8,7 +8,7 @@ from django.test import SimpleTestCase, TestCase
 from django.utils import timezone
 
 from accounts.models import Role
-from accounts.validators import validate_belgian_phone
+from accounts.validators import normalize_phone, validate_phone
 
 from .factories import PASSWORD, create_agent, create_client
 
@@ -119,16 +119,34 @@ class ClientValidationTests(TestCase):
         agent.full_clean(exclude=["password"])
 
 
-class BelgianPhoneTests(SimpleTestCase):
-    def test_valid_numbers(self):
+class PhoneTests(SimpleTestCase):
+    def test_belgian_numbers(self):
         for number in ["0470 12 34 56", "+32 470 12 34 56", "0032470123456", "02/123.45.67"]:
             with self.subTest(number=number):
-                validate_belgian_phone(number)
+                validate_phone(number)
+
+    def test_international_numbers(self):
+        for number in ["+33 6 12 34 56 78", "0033 6 12 34 56 78", "+31 6 12345678", "+1 (202) 555-0123"]:
+            with self.subTest(number=number):
+                validate_phone(number)
 
     def test_invalid_numbers(self):
-        for number in ["12345", "+33 6 12 34 56 78", "0470 12 34 56 78 9", "abc"]:
+        cases = [
+            "12345",  # trop court, sans indicatif
+            "abc",
+            "0470 12 34 56 78 9",  # belge trop long
+            "+32 12",  # +32 doit respecter le format belge
+            "+33 6",  # international trop court
+            "+33 6 12 34 56 78 90 12 34",  # plus de 15 chiffres
+            "+0 123 456 789",  # indicatif invalide
+        ]
+        for number in cases:
             with self.subTest(number=number), self.assertRaises(ValidationError):
-                validate_belgian_phone(number)
+                validate_phone(number)
+
+    def test_international_prefix_00_becomes_plus(self):
+        self.assertEqual(normalize_phone("0033 6 12 34 56 78"), "+33612345678")
+        self.assertEqual(normalize_phone("0470 12 34 56"), "0470123456")
 
 
 class PasswordStrengthTests(TestCase):

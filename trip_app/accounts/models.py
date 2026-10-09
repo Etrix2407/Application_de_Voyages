@@ -5,7 +5,7 @@ from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import timezone
 
-from .validators import normalize_phone, validate_belgian_phone
+from .validators import normalize_phone, validate_phone
 
 EMPLOYEE_NUMBER_PREFIX = "AG"
 
@@ -57,7 +57,7 @@ class User(AbstractBaseUser):
 
     # Données propres aux clients.
     phone = models.CharField(
-        "téléphone", max_length=20, blank=True, validators=[validate_belgian_phone]
+        "téléphone", max_length=20, blank=True, validators=[validate_phone]
     )
     birth_date = models.DateField("date de naissance", null=True, blank=True)
 

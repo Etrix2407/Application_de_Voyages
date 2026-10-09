@@ -21,7 +21,7 @@ CLIENT_WIDGETS = {
     "email": forms.EmailInput(attrs={"autocomplete": "email"}),
     "phone": forms.TextInput(attrs={"autocomplete": "tel", "inputmode": "tel"}),
 }
-CLIENT_HELP_TEXTS = {"phone": "Facultatif. Exemple : 0470 12 34 56."}
+CLIENT_HELP_TEXTS = {"phone": "Facultatif. Exemple : 0470 12 34 56, ou +33 6 12 34 56 78 depuis l'étranger."}
 
 
 class SignUpForm(forms.ModelForm):
