@@ -31,7 +31,7 @@ def _own_review(request, pk) -> Review:
 
 @client_required
 def my_reviews(request):
-    reviews = Review.objects.filter(order__client=request.user).select_related("order")
+    reviews = Review.objects.filter(order__client=request.user).select_related("order", "response")
     context = {
         "to_review": reviewable_orders(request.user).order_by("-return_date", "-pk"),
         "reviews": [(review, client_can_edit(review), client_can_delete(review)) for review in reviews],

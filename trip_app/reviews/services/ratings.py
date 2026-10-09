@@ -51,7 +51,7 @@ def attach_ratings(destinations) -> list:
 
 def destination_reviews(destination, order: str = NEWEST_FIRST, stars: int | None = None):
     """Avis publics d'une destination, triés (plus récents par défaut) et filtrés par nombre d'étoiles."""
-    reviews = Review.objects.public().filter(order__destination=destination).select_related("order__client")
+    reviews = Review.objects.public().filter(order__destination=destination).select_related("order__client", "response")
     if stars:
         reviews = reviews.filter(rating=stars)
     return reviews.order_by(*REVIEW_ORDERS.get(order, REVIEW_ORDERS[NEWEST_FIRST]))

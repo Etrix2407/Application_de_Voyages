@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block title %}Répondre à l'avis — Gestion{% endblock %}
+
+{% block content %}
+    <h1>{% if response %}Modifier la réponse{% else %}Répondre à l'avis{% endif %} « {{ review.title }} »</h1>
+    <p>{% include "reviews/_rating.html" %} — {{ review.author_name }}</p>
+    <p>{{ review.comment|default:"(pas de commentaire)"|linebreaksbr }}</p>
+    <p>Une seule réponse par avis, publique et signée de votre prénom. Si le client modifie son avis, la réponse est supprimée.</p>
+
+    <form method="post" novalidate>
+        {% csrf_token %}
+        {{ form }}
+        <button type="submit">Publier la réponse</button>
+    </form>
+
+    <p><a href="{% url 'manage_review_detail' review.pk %}">Revenir à l'avis</a></p>
+{% endblock %}

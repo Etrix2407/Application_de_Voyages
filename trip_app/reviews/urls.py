@@ -11,4 +11,5 @@ urlpatterns = [
     path("gestion/<int:pk>/", manage.review_detail, name="manage_review_detail"),
     path("gestion/<int:pk>/publier/", manage.publish_review, name="manage_publish_review"),
     path("gestion/<int:pk>/refuser/", manage.refuse_review, name="manage_refuse_review"),
+    path("gestion/<int:pk>/repondre/", manage.respond_review, name="manage_respond_review"),
 ]

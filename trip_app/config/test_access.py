@@ -55,6 +55,7 @@ ACCESS = {
     "manage_review_detail": STAFF,
     "manage_publish_review": STAFF,
     "manage_refuse_review": STAFF,
+    "manage_respond_review": STAFF,
     "manage_orders": STAFF,
     "manage_order_detail": STAFF,
     "manage_confirm_order": STAFF,
@@ -154,6 +155,7 @@ class AccessMatrixTests(TestCase):
             "manage_review_detail": {"pk": self.review.pk},
             "manage_publish_review": {"pk": self.review.pk},
             "manage_refuse_review": {"pk": self.review.pk},
+            "manage_respond_review": {"pk": self.review.pk},
         }.get(name, {})
 
     def test_every_route_declares_its_access(self):
