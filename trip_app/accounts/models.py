@@ -82,7 +82,7 @@ class User(AbstractBaseUser):
 
     class Meta:
         verbose_name = "utilisateur"
-        ordering = ["last_name", "first_name"]
+        ordering = ["last_name", "first_name", "pk"]
 
     def __str__(self) -> str:
         return f"{self.first_name} {self.last_name} <{self.email}>"

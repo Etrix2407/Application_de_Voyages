@@ -22,7 +22,7 @@ def _get_client(pk: int) -> User:
 @staff_required
 def client_list(request):
     query = request.GET.get("q", "").strip()
-    clients = User.objects.filter(role=Role.CLIENT).order_by("last_name", "first_name")
+    clients = User.objects.filter(role=Role.CLIENT).order_by("last_name", "first_name", "pk")
     words = normalize(query).split()
     if words:
         # Filtre en Python : SQLite ne sait pas ignorer les accents (~1 000 clients).

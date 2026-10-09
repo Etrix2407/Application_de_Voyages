@@ -125,7 +125,7 @@ class Country(models.Model):
 
     class Meta:
         verbose_name_plural = "pays"
-        ordering = ["name"]
+        ordering = ["name", "pk"]
 
     def __str__(self) -> str:
         return self.name
@@ -193,7 +193,7 @@ class Destination(models.Model):
     objects = DestinationQuerySet.as_manager()
 
     class Meta:
-        ordering = ["name"]
+        ordering = ["name", "pk"]
 
     def __str__(self) -> str:
         return self.name
@@ -273,7 +273,7 @@ class Activity(models.Model):
 
     class Meta:
         verbose_name = "activité"
-        ordering = ["name"]
+        ordering = ["name", "pk"]
 
     def __str__(self) -> str:
         return self.name
@@ -301,7 +301,7 @@ class Favorite(models.Model):
 
     class Meta:
         abstract = True
-        ordering = ["-added_at"]
+        ordering = ["-added_at", "-pk"]
 
 
 class FavoriteDestination(Favorite):
