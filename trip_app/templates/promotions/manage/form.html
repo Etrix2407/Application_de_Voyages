@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }} — Promotions{% endblock %}
+
+{% block content %}
+    <h1>{{ title }}</h1>
+
+    <form method="post" novalidate>
+        {% csrf_token %}
+        {{ form }}
+        <button type="submit">Enregistrer</button>
+    </form>
+
+    <p><a href="{% if promotion %}{% url 'manage_promotion_detail' promotion.pk %}{% else %}{% url 'manage_promotions' %}{% endif %}">Annuler et revenir</a></p>
+{% endblock %}

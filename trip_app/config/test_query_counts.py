@@ -16,6 +16,8 @@ from accounts.tests.factories import create_admin, create_agent, create_client
 from catalog.models import FavoriteActivity, FavoriteDestination
 from catalog.tests.factories import create_activity, create_country, create_destination
 from orders.tests.factories import create_order
+from promotions.models import Scope
+from promotions.tests.factories import create_promotion
 from reviews.models import ReviewStatus
 from reviews.tests.factories import create_review, create_trip_done
 
@@ -117,6 +119,16 @@ class QueryCountTests(TestCase):
             create_agent(email=f"{self.unique('agent').replace(' ', '')}@example.com")
 
         self.assert_constant_queries(reverse("staff_list"), add_agent)
+
+    def test_promotion_list(self):
+        self.client.force_login(create_agent())
+
+        def add_promotion():
+            destination = create_destination(self.country, self.unique("Ville"))
+            create_promotion(scope=Scope.DESTINATIONS, destinations=[destination])
+            create_promotion(scope=Scope.COUNTRIES, countries=[self.country])
+
+        self.assert_constant_queries(reverse("manage_promotions"), add_promotion)
 
     def test_manage_country_page(self):
         self.client.force_login(create_agent())

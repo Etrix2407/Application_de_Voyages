@@ -139,6 +139,23 @@ class Promotion(models.Model):
     def is_automatic(self) -> bool:
         return not self.code
 
+    @property
+    def discount_label(self) -> str:
+        """« -15 % », « -12,5 % », « -100 € » ou « -99,50 € »."""
+        if self.kind == Kind.PERCENT:
+            return f"-{self.value.normalize():f} %".replace(".", ",")
+        whole = self.value == self.value.to_integral_value()
+        return f"-{self.value:.0f} €" if whole else f"-{self.value:.2f} €".replace(".", ",")
+
+    @property
+    def targets_label(self) -> str:
+        """« Tout le catalogue » ou la liste des pays / destinations visés (à précharger)."""
+        if self.scope == Scope.COUNTRIES:
+            return ", ".join(country.name for country in self.countries.all())
+        if self.scope == Scope.DESTINATIONS:
+            return ", ".join(destination.name for destination in self.destinations.all())
+        return Scope.CATALOG.label
+
     def state(self, today=None) -> State:
         if not self.is_active:
             return State.DISABLED

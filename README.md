@@ -108,6 +108,22 @@ Formats à respecter :
 4. **Tous les avis** (lien depuis « Avis à modérer ») : tous les avis, du plus récent au plus ancien, 25 par page, filtrables par état, pays, destination, note, **avis négatifs seulement**, date de l'avis et date du séjour.
 5. **Répondre à l'avis** (avis publié uniquement) : une seule réponse par avis, publique, signée de votre **prénom**. Seul son auteur peut la modifier (un administrateur si l'auteur a quitté l'agence : compte supprimé ou désactivé). Si le client modifie son avis, la réponse est supprimée.
 
+### Gérer les promotions (administrateur ; agents en consultation)
+
+1. Menu **Promotions** : toutes les promotions, les plus récentes d'abord, avec leur remise, leur portée, leur code et leur état (**À venir**, **En cours**, **Terminée** ou **Désactivée**). Les agents consultent la liste et les fiches pour renseigner les clients ; seul l'administrateur peut agir.
+2. **Créer une promotion** :
+   - un nom et une description courte facultative ;
+   - une remise en **pourcentage** (de 1 à 50 %) ou en **montant fixe** (appliqué une fois par demande) ;
+   - une portée : tout le catalogue, des pays ou des destinations (cases à cocher) ;
+   - une assiette : séjour, activités ou total ;
+   - des dates de validité, qui portent sur la date de la demande (dernier jour inclus) ;
+   - une période de départ, facultative ;
+   - un code, facultatif : sans code, la promotion est automatique. Il compte de 4 à 20 lettres sans accents ou chiffres, et une saisie en minuscules est acceptée ;
+   - des limites d'utilisation, facultatives.
+3. **Modifier** : la date de fin peut être avancée, mais pas placée dans le passé. Chaque modification est notée dans l'**historique** de la fiche, avec la date, l'auteur et les champs modifiés.
+4. **Désactiver** : la promotion n'est plus proposée mais reste dans l'historique. **Supprimer** n'est possible que pour une promotion jamais utilisée.
+5. Un pays ou une destination visé par une promotion ne peut pas être supprimé : désactivez-le.
+
 ### Utiliser l'application (client)
 
 1. **Créer un compte** : remplissez le formulaire (sans mot de passe) et acceptez la politique de confidentialité. Un e-mail contient un lien, valable 24 heures, pour confirmer l'adresse et **choisir le mot de passe** ; le compte est alors activé. Rien reçu ? « Renvoyer l'e-mail de confirmation » depuis la page de connexion. Le téléphone est facultatif ; s'il est rempli, il doit être un numéro belge (0470 12 34 56) ou international avec l'indicatif du pays (+33 6 12 34 56 78).
@@ -139,8 +155,8 @@ Limites par adresse IP, contre les robots : 20 échecs de connexion par 15 minut
 |---|---|
 | Visiteur | Catalogue complet (pays, destinations, activités) ; page « Destinations » avec les notes ; lecture des avis vérifiés ; recherche et filtres ; inscription ; connexion |
 | Client | Détail des pays, destinations et activités ; recherche et filtres ; favoris ; demandes de voyage (faire une demande, suivre et annuler ses demandes en attente) ; avis sur ses voyages terminés (donner, modifier 30 jours, supprimer) ; profil (modifier, changer le mot de passe ou l'adresse e-mail, supprimer le compte) |
-| Agent | Consultation et recherche ; gestion du catalogue ; liste des clients, correction de leurs informations (sauf e-mail et mot de passe), envoi d'un lien de mot de passe ; traitement des demandes de voyage (filtrer, confirmer, annuler avec motif) ; modération des avis (publier, refuser ou masquer avec motif), réponse de l'agence, liste filtrée de tous les avis ; profil (consultation, changement du mot de passe) |
-| Administrateur | Droits de l'agent + gestion du personnel |
+| Agent | Consultation et recherche ; gestion du catalogue ; liste des clients, correction de leurs informations (sauf e-mail et mot de passe), envoi d'un lien de mot de passe ; traitement des demandes de voyage (filtrer, confirmer, annuler avec motif) ; modération des avis (publier, refuser ou masquer avec motif), réponse de l'agence, liste filtrée de tous les avis ; consultation des promotions ; profil (consultation, changement du mot de passe) |
+| Administrateur | Droits de l'agent + gestion du personnel + gestion des promotions (créer, modifier, désactiver, supprimer si jamais utilisée) |
 
 ## Règles de gestion appliquées
 
@@ -254,8 +270,9 @@ trip_app/
 │   ├── models.py · forms.py · validators.py · urls.py
 │   └── tests/
 ├── promotions/             # promotions (v4) : modèle, règles, historique
-│   ├── services/           # discounts (calcul de la remise, meilleure offre), history
-│   ├── models.py
+│   ├── views/              # manage (administrateur ; consultation par les agents)
+│   ├── services/           # discounts (calcul de la remise, meilleure offre), management, history
+│   ├── models.py · forms.py · urls.py
 │   └── tests/
 ├── orders/                 # demandes de voyage (v2) : modèles, prix estimé, historique
 │   ├── views/              # client (faire, suivre, annuler), manage (personnel)
@@ -274,6 +291,7 @@ trip_app/
 │   ├── accounts/           # auth/ · profile/ · staff/ · clients/ · emails/
 │   ├── catalog/            # pages publiques, fragments _*.html, manage/
 │   ├── orders/             # demandes côté client, fragments _*.html, manage/
+│   ├── promotions/         # manage/ (gestion)
 │   └── reviews/            # avis côté client, fragments publics _*.html, manage/ (modération)
 └── static/css/             # feuille de style (texte lisible, adaptée au mobile)
 ```

@@ -11,6 +11,7 @@ from django.urls import URLResolver, get_resolver, reverse
 from accounts.tests.factories import create_admin, create_agent, create_client
 from catalog.tests.factories import create_activity, create_country, create_destination
 from orders.tests.factories import create_order
+from promotions.tests.factories import create_promotion
 from reviews.tests.factories import create_review, create_trip_done
 
 PUBLIC, LOGGED_IN, CLIENT, STAFF, ADMIN = "public", "connecté", "client", "personnel", "administrateur"
@@ -75,6 +76,12 @@ ACCESS = {
     "manage_create_activity": STAFF,
     "manage_edit_activity": STAFF,
     "manage_delete_activity": STAFF,
+    "manage_promotions": STAFF,
+    "manage_promotion_detail": STAFF,
+    "manage_create_promotion": ADMIN,
+    "manage_edit_promotion": ADMIN,
+    "manage_disable_promotion": ADMIN,
+    "manage_delete_promotion": ADMIN,
     "staff_list": ADMIN,
     "create_agent": ADMIN,
     "edit_staff_member": ADMIN,
@@ -116,6 +123,7 @@ class AccessMatrixTests(TestCase):
         cls.order = create_order(cls.client_user, cls.destination)
         cls.trip_to_review = create_trip_done(cls.client_user, cls.destination)
         cls.review = create_review(create_trip_done(cls.client_user, cls.destination))
+        cls.promotion = create_promotion()
 
     def url_kwargs(self, name):
         member = self.other_agent.pk
@@ -157,6 +165,10 @@ class AccessMatrixTests(TestCase):
             "manage_publish_review": {"pk": self.review.pk},
             "manage_refuse_review": {"pk": self.review.pk},
             "manage_respond_review": {"pk": self.review.pk},
+            "manage_promotion_detail": {"pk": self.promotion.pk},
+            "manage_edit_promotion": {"pk": self.promotion.pk},
+            "manage_disable_promotion": {"pk": self.promotion.pk},
+            "manage_delete_promotion": {"pk": self.promotion.pk},
         }.get(name, {})
 
     def test_every_route_declares_its_access(self):
