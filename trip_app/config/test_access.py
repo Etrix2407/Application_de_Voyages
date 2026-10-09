@@ -52,6 +52,7 @@ ACCESS = {
     "edit_review": CLIENT,
     "remove_review": CLIENT,
     "manage_pending_reviews": STAFF,
+    "manage_reviews": STAFF,
     "manage_review_detail": STAFF,
     "manage_publish_review": STAFF,
     "manage_refuse_review": STAFF,

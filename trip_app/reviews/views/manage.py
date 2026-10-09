@@ -1,14 +1,19 @@
 """Avis côté personnel : file de modération, détail, publication, refus ou masquage."""
 
 from django.contrib import messages
+from django.core.paginator import Paginator
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
 from accounts.decorators import staff_required
-from reviews.forms import RefusalForm, ResponseForm
+from reviews.forms import RefusalForm, ResponseForm, StaffReviewFilterForm
+from reviews.services.filtering import filter_reviews
 from reviews.models import Review, ReviewStatus
 from reviews.services.moderation import ModerationNotAllowed, hide, pending_reviews, publish, refuse
 from reviews.services.responses import ResponseNotAllowed, can_write_response, existing_response, save_response
+
+
+REVIEWS_PER_PAGE = 25
 
 
 def _get_review(pk) -> Review:
@@ -18,6 +23,17 @@ def _get_review(pk) -> Review:
 @staff_required
 def pending_list(request):
     return render(request, "reviews/manage/pending.html", {"reviews": pending_reviews()})
+
+
+@staff_required
+def review_list(request):
+    form = StaffReviewFilterForm(request.GET or None)
+    criteria = form.cleaned_data if form.is_valid() else {}
+    page = Paginator(filter_reviews(criteria), REVIEWS_PER_PAGE).get_page(request.GET.get("page"))
+    # Les filtres sont conservés d'une page à l'autre.
+    query = request.GET.copy()
+    query.pop("page", None)
+    return render(request, "reviews/manage/list.html", {"form": form, "page": page, "query": query.urlencode()})
 
 
 @staff_required

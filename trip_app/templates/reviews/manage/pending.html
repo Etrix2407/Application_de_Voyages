@@ -4,6 +4,7 @@
 
 {% block content %}
     <h1>Avis à modérer</h1>
+    <p><a href="{% url 'manage_reviews' %}">Voir tous les avis (filtres, avis négatifs)</a></p>
 
     {% if reviews %}
         <div class="table-scroll">

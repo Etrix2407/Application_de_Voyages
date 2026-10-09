@@ -104,7 +104,8 @@ Formats à respecter :
 1. **Avis à modérer (N)** (menu) : les avis en attente de validation, du plus ancien envoi au plus récent ; un avis de 1 ou 2 étoiles porte le badge **Avis négatif**.
 2. « Lire et modérer » : l'avis, sa signature publique et toujours le **vrai client** et sa demande, même pour un avis « Voyageur anonyme ».
 3. **Publier l'avis**, ou **Refuser l'avis** avec un motif de la liste (langage injurieux, hors sujet, coordonnées personnelles, autre) et une précision, obligatoire pour « Autre ». Un avis publié peut être **masqué** de la même façon. Le client voit le motif. Le texte d'un client n'est jamais modifié.
-4. **Répondre à l'avis** (avis publié uniquement) : une seule réponse par avis, publique, signée de votre **prénom**. Seul son auteur peut la modifier (un administrateur si l'auteur a quitté l'agence). Si le client modifie son avis, la réponse est supprimée.
+4. **Tous les avis** (lien depuis « Avis à modérer ») : tous les avis, du plus récent au plus ancien, 25 par page, filtrables par état, pays, destination, note, **avis négatifs seulement**, date de l'avis et date du séjour.
+5. **Répondre à l'avis** (avis publié uniquement) : une seule réponse par avis, publique, signée de votre **prénom**. Seul son auteur peut la modifier (un administrateur si l'auteur a quitté l'agence). Si le client modifie son avis, la réponse est supprimée.
 
 ### Utiliser l'application (client)
 
@@ -229,8 +230,8 @@ trip_app/
 │   └── tests/
 ├── reviews/                # avis clients (v3) : modèle, avis vérifiés, lien avec les demandes
 │   ├── views/              # client (donner, modifier, supprimer), manage (modération)
-│   ├── services/           # eligibility, writing (client), moderation (personnel), ratings (notes publiques),
-│   │                       # order_events
+│   ├── services/           # eligibility, writing (client), moderation, responses, filtering (personnel),
+│   │                       # ratings (notes publiques), order_events
 │   ├── models.py · forms.py · signals.py · urls.py · context_processors.py (compteur du menu)
 │   └── tests/
 ├── templates/
