@@ -3,13 +3,13 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{% block title %}Application de voyage{% endblock %}</title>
+    <title>{% block title %}{% endblock %} — {{ site_name }}</title>
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
 </head>
 <body>
     <a class="skip-link" href="#content">Aller au contenu</a>
     <header class="site-header">
-        <a class="logo" href="{% url 'home' %}">Application de voyage</a>
+        <a class="logo" href="{% url 'home' %}">{{ site_name }}</a>
         <nav aria-label="Navigation principale">
             <ul class="menu">
                 <li><a href="{% url 'home' %}">Accueil</a></li>
@@ -54,7 +54,7 @@
     </main>
 
     <footer class="site-footer">
-        <p>Application de voyage — <a href="{% url 'privacy' %}">Politique de confidentialité</a></p>
+        <p>{{ site_name }} — <a href="{% url 'privacy' %}">Politique de confidentialité</a></p>
     </footer>
 </body>
 </html>
