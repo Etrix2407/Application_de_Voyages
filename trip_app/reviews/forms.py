@@ -4,7 +4,7 @@ from django import forms
 
 from catalog.models import Country, Destination
 
-from reviews.services.ratings import BEST_FIRST, NEWEST_FIRST
+from reviews.services.ratings import BEST_REVIEWS_FIRST, NEWEST_REVIEWS_FIRST
 
 from reviews.models import (
     MAX_COMMENT_LENGTH,
@@ -13,9 +13,10 @@ from reviews.models import (
     MAX_RESPONSE_LENGTH,
     MIN_RATING,
     NEGATIVE_RATING,
-    RefusalReason,
+    STAFF_REFUSAL_REASONS,
     Review,
     ReviewStatus,
+    refusal_problem,
 )
 
 RATING_CHOICES = [
@@ -55,8 +56,7 @@ class RefusalForm(forms.Form):
 
     reason = forms.ChoiceField(
         label="Motif",
-        choices=[("", "— Choisir un motif —")]
-        + [choice for choice in RefusalReason.choices if choice[0] != RefusalReason.TRIP_CANCELLED],
+        choices=[("", "— Choisir un motif —")] + [(reason.value, reason.label) for reason in STAFF_REFUSAL_REASONS],
         error_messages={"required": "Le motif est obligatoire."},
     )
     details = forms.CharField(
@@ -69,20 +69,25 @@ class RefusalForm(forms.Form):
 
     def clean(self):
         data = super().clean()
-        if data.get("reason") == RefusalReason.OTHER and not data.get("details", "").strip():
-            self.add_error("details", "Précisez le motif quand vous choisissez « Autre ».")
+        if data.get("reason"):
+            problem = refusal_problem(data["reason"], data.get("details", ""))
+            if "refusal_details" in problem:
+                self.add_error("details", problem["refusal_details"])
         return data
 
 
 class PublicReviewFilterForm(forms.Form):
     """Tri et filtre des avis d'une destination (fiche publique)."""
 
-    tri = forms.ChoiceField(
+    sort = forms.ChoiceField(
         label="Trier",
         required=False,
-        choices=[(NEWEST_FIRST, "Les plus récents d'abord"), (BEST_FIRST, "Les meilleures notes d'abord")],
+        choices=[
+            (NEWEST_REVIEWS_FIRST, "Les plus récents d'abord"),
+            (BEST_REVIEWS_FIRST, "Les meilleures notes d'abord"),
+        ],
     )
-    etoiles = forms.TypedChoiceField(
+    stars = forms.TypedChoiceField(
         label="Nombre d'étoiles",
         required=False,
         coerce=int,

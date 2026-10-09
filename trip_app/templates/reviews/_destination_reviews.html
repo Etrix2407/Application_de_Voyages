@@ -14,18 +14,7 @@
                 {% include "reviews/_public_review.html" %}
             {% endfor %}
         </ul>
-        {% if reviews_page.paginator.num_pages > 1 %}
-            <nav aria-label="Pages des avis">
-                <ul class="actions">
-                    {% if reviews_page.has_previous %}
-                        <li><a class="button" href="?{{ review_query }}&amp;page={{ reviews_page.previous_page_number }}#avis">← Avis précédents</a></li>
-                    {% endif %}
-                    {% if reviews_page.has_next %}
-                        <li><a class="button" href="?{{ review_query }}&amp;page={{ reviews_page.next_page_number }}#avis">Avis suivants →</a></li>
-                    {% endif %}
-                </ul>
-            </nav>
-        {% endif %}
+        {% include "_pagination.html" with page=reviews_page label="avis des voyageurs" anchor="#avis" %}
     {% else %}
         <p>Aucun avis ne correspond à ce filtre.</p>
     {% endif %}

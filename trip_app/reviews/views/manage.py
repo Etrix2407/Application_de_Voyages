@@ -38,10 +38,7 @@ def review_list(request):
     form = StaffReviewFilterForm(request.GET or None)
     criteria = form.cleaned_data if form.is_valid() else {}
     page = Paginator(filter_reviews(criteria), REVIEWS_PER_PAGE).get_page(request.GET.get("page"))
-    # Les filtres sont conservés d'une page à l'autre.
-    query = request.GET.copy()
-    query.pop("page", None)
-    return render(request, "reviews/manage/list.html", {"form": form, "page": page, "query": query.urlencode()})
+    return render(request, "reviews/manage/list.html", {"form": form, "page": page})
 
 
 @staff_required
@@ -51,6 +48,7 @@ def review_detail(request, pk):
         "review": review,
         "can_publish": review.status == ReviewStatus.PENDING,
         "can_refuse": review.status in (ReviewStatus.PENDING, ReviewStatus.PUBLISHED),
+        "is_published": review.status == ReviewStatus.PUBLISHED,
         "response": existing_response(review),
         "can_respond": can_write_response(review, request.user),
     }

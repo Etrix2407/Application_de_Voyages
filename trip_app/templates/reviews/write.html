@@ -11,7 +11,7 @@
         du {{ order.departure_date|date:"j F Y" }} au {{ order.return_date|date:"j F Y" }}.
     </p>
     <p>Votre avis sera publié après sa validation par l'agence. Vous pourrez le modifier ou le supprimer pendant 30 jours.</p>
-    {% if review.status == "published" %}
+    {% if is_published %}
         <p class="message">Votre avis est publié : en le modifiant, il sera masqué jusqu'à sa nouvelle validation.</p>
     {% endif %}
 

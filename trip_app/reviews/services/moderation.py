@@ -14,7 +14,7 @@ si le client a modifié son avis entre-temps, l'action est refusée.
 from django.utils import timezone
 
 from orders.models import Status
-from reviews.models import RefusalReason, Review, ReviewStatus
+from reviews.models import STAFF_REFUSAL_REASONS, Review, ReviewStatus, refusal_problem
 
 
 class ModerationNotAllowed(Exception):
@@ -49,10 +49,11 @@ def hide(review: Review, reason: str, details: str = "", seen_version=None) -> N
 
 
 def _check_reason(reason: str, details: str) -> None:
-    if reason not in RefusalReason.values or reason == RefusalReason.TRIP_CANCELLED:
+    if reason not in STAFF_REFUSAL_REASONS:
         raise ValueError("Choisissez un motif dans la liste.")
-    if reason == RefusalReason.OTHER and not details.strip():
-        raise ValueError("Précisez le motif quand vous choisissez « Autre ».")
+    problem = refusal_problem(reason, details)
+    if problem:
+        raise ValueError(next(iter(problem.values())))
 
 
 CHANGED_MESSAGE = "Le client a modifié cet avis pendant votre lecture : relisez-le avant de décider."

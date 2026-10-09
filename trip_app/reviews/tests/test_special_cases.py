@@ -73,21 +73,21 @@ class InactiveDestinationTests(TestCase):
         create_review(create_trip_done(create_client(), self.destination), status=ReviewStatus.PUBLISHED,
                       title="Temples superbes")
 
-    def public_pages(self):
-        return [reverse("destination_list"), reverse("country_list"), reverse("search") + "?keyword=temples"]
+    def rating_count(self):
+        return attach_ratings([self.destination])[0].rating_summary.count
 
-    def test_hidden_everywhere_then_back(self):
+    def test_not_counted_while_inactive_then_back(self):
+        # La destination reste lisible ici (pages publiques : elle y disparaît entièrement).
         for item in [self.destination, self.country]:
             with self.subTest(item=item):
                 item.active = False
                 item.save()
-                for url in self.public_pages():
-                    self.assertNotContains(self.client.get(url), "1 avis")
+                self.assertEqual(self.rating_count(), 0)
                 self.assertTrue(Review.objects.filter(title="Temples superbes").exists())
 
                 item.active = True
                 item.save()
-                self.assertContains(self.client.get(reverse("destination_list")), "1 avis")
+                self.assertEqual(self.rating_count(), 1)
 
     def test_staff_still_sees_the_review(self):
         self.destination.active = False
