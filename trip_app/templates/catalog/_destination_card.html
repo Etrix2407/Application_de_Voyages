@@ -3,6 +3,7 @@
         <img class="card-photo" src="{{ destination.photo.url }}" alt="Photo : {{ destination.name }}" loading="lazy">
     {% endif %}
     <h3><a href="{% url 'destination_detail' destination.pk %}">{{ destination.name }}</a></h3>
+    {% if destination.has_promotion %}<p><span class="badge-promo">Promo</span></p>{% endif %}
     {% if show_country %}<p>{{ destination.country.name }}</p>{% endif %}
     <p>{% include "reviews/_summary.html" with summary=destination.rating_summary %}</p>
     {% if destination.ideal_period %}

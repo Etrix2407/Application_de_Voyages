@@ -152,6 +152,18 @@ class OrderWithPromotionTests(TestCase):
         self.assertFalse(Order.objects.exists())
 
 
+class PublicOffersTests(TestCase):
+    def test_exhausted_automatic_promotion_no_longer_shown(self):
+        kyoto = create_destination(create_country(), "Kyoto")
+        promotion = create_promotion(name="Dernières places", max_uses=1)
+        order = create_order(create_client(), kyoto, promotion=promotion)
+
+        self.assertNotContains(self.client.get(reverse("offers")), "Dernières places")
+        order.status = Status.CANCELLED
+        order.save()
+        self.assertContains(self.client.get(reverse("offers")), "Dernières places")
+
+
 class ConfirmationTests(TestCase):
     def test_discount_reapplied_to_the_recalculated_price(self):
         kyoto = create_destination(create_country(), "Kyoto", price_from=Decimal("1000"))

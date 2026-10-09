@@ -148,6 +148,13 @@ class Promotion(models.Model):
         return f"-{self.value:.0f} €" if whole else f"-{self.value:.2f} €".replace(".", ",")
 
     @property
+    def base_label(self) -> str:
+        """Assiette en clair pour le public : « sur le séjour », « sur les activités », « sur le total »."""
+        return {Base.STAY: "sur le séjour", Base.ACTIVITIES: "sur les activités", Base.TOTAL: "sur le total"}[
+            self.base
+        ]
+
+    @property
     def targets_label(self) -> str:
         """« Tout le catalogue » ou la liste des pays / destinations visés (à précharger)."""
         if self.scope == Scope.COUNTRIES:

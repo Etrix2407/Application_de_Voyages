@@ -16,6 +16,7 @@
                 <li><a href="{% url 'home' %}">Accueil</a></li>
                 <li><a href="{% url 'country_list' %}">Nos pays</a></li>
                 <li><a href="{% url 'destination_list' %}">Destinations</a></li>
+                <li><a href="{% url 'offers' %}">Nos offres du moment</a></li>
                 <li><a href="{% url 'search' %}">Rechercher</a></li>
                 {% if user.is_authenticated %}
                     {% if user.is_client %}

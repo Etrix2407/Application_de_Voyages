@@ -129,6 +129,7 @@ Formats à respecter :
 
 1. **Créer un compte** : remplissez le formulaire (sans mot de passe) et acceptez la politique de confidentialité. Un e-mail contient un lien, valable 24 heures, pour confirmer l'adresse et **choisir le mot de passe** ; le compte est alors activé. Rien reçu ? « Renvoyer l'e-mail de confirmation » depuis la page de connexion. Le téléphone est facultatif ; s'il est rempli, il doit être un numéro belge (0470 12 34 56) ou international avec l'indicatif du pays (+33 6 12 34 56 78).
 2. **Nos pays** : le catalogue (pays, destinations, activités) et la recherche sont visibles par tous, même sans compte. Il faut être connecté pour enregistrer des favoris et faire une demande de voyage. Le menu **Destinations** liste toutes les destinations avec leur **note moyenne** (« ★ 4,6 sur 5 (23 avis) » ou « Pas encore d'avis »), également affichée sur la fiche pays, dans la recherche et les favoris. La page d'**accueil** présente les 5 derniers avis publiés à 5 étoiles. La fiche d'une destination montre ses **avis vérifiés** (badge « ✓ Voyage vérifié — séjour de mars 2026 »), triables (plus récents ou meilleures notes) et filtrables par nombre d'étoiles, 10 par page.
+   **Promotions** : le menu **Nos offres du moment**, visible par tous, liste les promotions automatiques en cours (nom, description, remise et partie du prix concernée, pays ou destinations visés, date de fin, période de départ éventuelle). La fiche d'une destination visée affiche un bandeau (« Semaine du Japon : -15 % sur le séjour jusqu'au 31 mars 2027, pour les départs du … au … »), et sa carte porte l'étiquette **Promo** dans la liste des destinations, la fiche pays et la recherche. Les promotions sur code, désactivées, à venir, terminées ou dont le maximum de demandes est atteint n'y apparaissent jamais ; un pays ou une destination désactivé n'est pas cité.
 3. **Rechercher** : recherche par mot-clé (sans tenir compte des accents) et filtres. Un filtre ne s'applique qu'au type de résultat qu'il concerne :
 
    | Filtre | S'applique à |
@@ -201,7 +202,7 @@ En cours de développement. Le [Recap_4.md](Recap_4.md) décrit les promotions ;
   - un pays ou une destination visé par une promotion **ne peut pas être supprimé** : on le désactive.
 - **Auteur** : le nom de l'administrateur reste affiché dans la promotion et son historique, même si son compte est supprimé.
 - **Statistiques** : les demandes annulées sont **exclues de tous les chiffres** et listées à part.
-- **Page « Nos offres du moment »** : retenue. Elle listera les promotions automatiques en cours, jamais les codes.
+- **Page « Nos offres du moment »** : retenue. Elle liste les promotions automatiques en cours, jamais les codes.
 
 > **Avant la mise en ligne :** dans la politique de confidentialité, remplacez l'adresse e-mail **fictive** `vie-privee@horizons-lointains.example` par la vraie adresse de contact et ajoutez l'adresse postale de l'agence (rappel en commentaire dans `trip_app/templates/privacy.html`).
 
@@ -272,8 +273,9 @@ trip_app/
 │   ├── models.py · forms.py · validators.py · urls.py
 │   └── tests/
 ├── promotions/             # promotions (v4) : modèle, règles, historique
-│   ├── views/              # manage (administrateur ; consultation par les agents)
-│   ├── services/           # discounts (calcul de la remise, meilleure offre), management, history
+│   ├── views/              # manage (administrateur ; consultation par les agents), public (« Nos offres du moment »)
+│   ├── services/           # discounts (calcul de la remise, meilleure offre), management, history,
+│   │                       # public (offres affichées : bandeau, étiquette « Promo », page des offres)
 │   ├── models.py · forms.py · urls.py
 │   └── tests/
 ├── orders/                 # demandes de voyage (v2) : modèles, prix estimé, historique
@@ -294,7 +296,7 @@ trip_app/
 │   ├── accounts/           # auth/ · profile/ · staff/ · clients/ · emails/
 │   ├── catalog/            # pages publiques, fragments _*.html, manage/
 │   ├── orders/             # demandes côté client, fragments _*.html, manage/
-│   ├── promotions/         # manage/ (gestion, statistiques)
+│   ├── promotions/         # offers.html (offres du moment), fragment _offer_terms.html, manage/ (gestion)
 │   └── reviews/            # avis côté client, fragments publics _*.html, manage/ (modération)
 └── static/css/             # feuille de style (texte lisible, adaptée au mobile)
 ```

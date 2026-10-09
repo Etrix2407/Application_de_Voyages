@@ -10,6 +10,7 @@
 from dataclasses import dataclass
 from datetime import date
 
+from django.db.models import Count, F, Q
 from django.utils import timezone
 
 from accounts.services.throttling import Limiter
@@ -26,6 +27,7 @@ from promotions.services.discounts import (
     in_scope,
     offer_for,
 )
+from promotions.services.public import current_offers
 
 INVALID_CODE = "Code invalide"
 EXPIRED_CODE = "Ce code a expiré"
@@ -58,6 +60,21 @@ def uses(promotion: Promotion, client=None) -> int:
     if client is not None:
         orders = orders.filter(client=client)
     return orders.count()
+
+
+def exhausted_promotions():
+    """Promotions dont le maximum au total est atteint (demandes non annulées), en une requête."""
+    return (
+        Promotion.objects.filter(max_uses__isnull=False)
+        .annotate(used=Count("orders", filter=~Q(orders__status=Status.CANCELLED)))
+        .filter(used__gte=F("max_uses"))
+        .values_list("pk", flat=True)
+    )
+
+
+def public_offers(today=None) -> list[Promotion]:
+    """Promotions automatiques montrées au public : en cours et pas encore épuisées."""
+    return current_offers(today, exclude=exhausted_promotions())
 
 
 def limit_problem(promotion: Promotion, client) -> str:

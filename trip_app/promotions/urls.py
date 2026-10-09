@@ -1,8 +1,9 @@
 from django.urls import path
 
-from promotions.views import manage
+from promotions.views import manage, public
 
 urlpatterns = [
+    path("offres/", public.offers, name="offers"),
     path("gestion/", manage.promotion_list, name="manage_promotions"),
     path("gestion/creer/", manage.create, name="manage_create_promotion"),
     path("gestion/<int:pk>/", manage.promotion_detail, name="manage_promotion_detail"),

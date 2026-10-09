@@ -1,0 +1,1 @@
+<strong>{{ promotion.discount_label }} {{ promotion.base_label }}</strong> jusqu'au {{ promotion.ends_on|date:"j F Y" }}{% if promotion.departure_from %}, pour les départs du {{ promotion.departure_from|date:"j F Y" }} au {{ promotion.departure_until|date:"j F Y" }}{% endif %}
