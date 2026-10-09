@@ -10,7 +10,7 @@ from accounts.tests.factories import create_agent, create_client
 from catalog.tests.factories import create_activity, create_country, create_destination
 from orders.models import MIN_DAYS_BEFORE_DEPARTURE, Order, Status, StatusChange
 
-from .factories import create_order, departure_in
+from .factories import create_order, departure_in, review_tokens, submit_order
 
 
 class CreateOrderTests(TestCase):
@@ -67,7 +67,7 @@ class CreateOrderTests(TestCase):
         self.assertFalse(Order.objects.exists())
 
     def test_confirm_creates_pending_order_with_frozen_prices(self):
-        response = self.client.post(self.url, {**self.data(), "confirm": ""}, follow=True)
+        response = submit_order(self.client, self.url, self.data(), follow=True)
 
         self.assertContains(response, "un conseiller vous rappellera sous 48 heures")
         order = Order.objects.get()
@@ -115,7 +115,10 @@ class CreateOrderTests(TestCase):
         self.destination.active = False
         self.destination.save()
 
-        self.assertEqual(self.client.get(self.url).status_code, 404)
+        response = self.client.get(self.url, follow=True)
+
+        self.assertContains(response, "plus proposée")
+        self.assertFalse(Order.objects.exists())
 
     def test_duplicate_pending_order_warns_without_blocking(self):
         data = self.data()
@@ -128,7 +131,7 @@ class CreateOrderTests(TestCase):
 
         review = self.client.post(self.url, data)
         self.assertContains(review, "déjà une demande en attente")
-        self.client.post(self.url, {**data, "confirm": ""})
+        self.client.post(self.url, {**data, **review_tokens(review), "confirm": ""})
 
         self.assertEqual(Order.objects.count(), 2)
 
@@ -138,7 +141,7 @@ class CreateOrderTests(TestCase):
         self.assertNotContains(self.client.post(self.url, self.data()), "déjà une demande en attente")
 
     def test_estimated_price_cannot_be_forced_by_the_client(self):
-        self.client.post(self.url, {**self.data(), "estimated_price": "1", "confirm": ""})
+        submit_order(self.client, self.url, {**self.data(), "estimated_price": "1"})
 
         self.assertEqual(Order.objects.get().estimated_price, Decimal("3150.00"))
 
@@ -157,3 +160,64 @@ class CreateOrderTests(TestCase):
         self.assertEqual(set(order.activities.values_list("activity__name", flat=True)), {"Cérémonie du thé", "Sumo"})
         self.assertEqual(order.remarks, "Chambre calme si possible.")
         self.assertEqual((order.adults, order.children), (2, 2))
+
+
+class SubmissionSafetyTests(TestCase):
+    """Constats de l'audit : prix modifié avant l'envoi, double clic, destination désactivée."""
+
+    def setUp(self):
+        self.client_user = create_client()
+        self.client.force_login(self.client_user)
+        self.destination = create_destination(create_country(), "Kyoto", price_from=Decimal("1000"))
+        self.url = reverse("create_order", args=[self.destination.pk])
+        departure = departure_in()
+        self.data = {
+            "departure_date": departure.isoformat(),
+            "return_date": (departure + timedelta(days=7)).isoformat(),
+            "adults": "2",
+            "children": "1",
+            "remarks": "",
+        }
+        self.tokens = review_tokens(self.client.post(self.url, self.data))
+
+    def confirm(self, **extra):
+        return self.client.post(self.url, {**self.data, **self.tokens, "confirm": "", **extra}, follow=True)
+
+    def test_price_change_after_review_is_shown_before_saving(self):
+        self.destination.price_from = Decimal("6000")
+        self.destination.save()
+
+        response = self.confirm()
+
+        self.assertContains(response, "Un tarif a changé")
+        self.assertContains(response, "15000,00 €")  # (6000 × 2) + (6000 × 50 % × 1)
+        self.assertFalse(Order.objects.exists())
+
+        # Le client renvoie la nouvelle page de vérification : la demande est enregistrée au prix affiché.
+        submit = self.client.post(self.url, {**self.data, **review_tokens(response), "confirm": ""})
+        self.assertEqual(submit.status_code, 302)
+        self.assertEqual(Order.objects.get().estimated_price, Decimal("15000.00"))
+
+    def test_double_click_creates_a_single_order(self):
+        first = self.confirm()
+        second = self.confirm()
+
+        order = Order.objects.get()
+        self.assertRedirects(second, reverse("my_order_detail", args=[order.pk]))
+        self.assertContains(second, "avait déjà été envoyée")
+        self.assertContains(first, "rappellera sous 48 heures")
+
+    def test_confirm_without_review_tokens_shows_review_again(self):
+        response = self.client.post(self.url, {**self.data, "confirm": ""})
+
+        self.assertTemplateUsed(response, "orders/review.html")
+        self.assertFalse(Order.objects.exists())
+
+    def test_destination_deactivated_between_review_and_confirm(self):
+        self.destination.active = False
+        self.destination.save()
+
+        response = self.confirm()
+
+        self.assertContains(response, "plus proposée")
+        self.assertFalse(Order.objects.exists())

@@ -2,7 +2,7 @@
 
 from decimal import Decimal
 
-from django.db import transaction
+from django.db import IntegrityError, transaction
 
 from catalog.models import Destination
 from orders.models import Order, OrderActivity, Status, StatusChange
@@ -26,14 +26,35 @@ def find_pending_duplicates(client, destination: Destination, departure_date, re
     )
 
 
-@transaction.atomic
-def place_order(client, destination: Destination, data: dict) -> Order:
+class AlreadySubmitted(Exception):
+    """La même page de vérification a déjà été envoyée (double clic)."""
+
+    def __init__(self, order: Order):
+        super().__init__("Cette demande a déjà été envoyée.")
+        self.order = order
+
+
+def place_order(client, destination: Destination, data: dict, submission_token=None) -> Order:
     """Enregistre la demande « En attente » avec ses prix figés et son historique.
 
     `data` provient d'un formulaire validé (dates, voyageurs, activités, remarques).
+    Un `submission_token` déjà utilisé lève AlreadySubmitted : la base garantit l'unicité,
+    même si deux envois arrivent au même instant.
     """
+    try:
+        return _create_order(client, destination, data, submission_token)
+    except IntegrityError:
+        existing = Order.objects.filter(submission_token=submission_token).first() if submission_token else None
+        if existing is None:
+            raise
+        raise AlreadySubmitted(existing) from None
+
+
+@transaction.atomic
+def _create_order(client, destination: Destination, data: dict, submission_token) -> Order:
     activities = list(data["activities"])
     order = Order.objects.create(
+        submission_token=submission_token,
         client=client,
         destination=destination,
         departure_date=data["departure_date"],

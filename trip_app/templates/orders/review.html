@@ -5,6 +5,13 @@
 {% block content %}
     <h1>Vérifiez votre demande</h1>
 
+    {% if price_changed %}
+        <p class="message message-warning" role="alert">
+            Un tarif a changé depuis votre vérification : le prix estimé ci-dessous a été mis à jour.
+            Votre demande n'a pas encore été envoyée.
+        </p>
+    {% endif %}
+
     {% if duplicates %}
         <p class="message message-warning" role="alert">
             Vous avez déjà une demande en attente pour {{ destination.name }} aux mêmes dates.
@@ -37,6 +44,8 @@
     <form method="post">
         {% csrf_token %}
         {% for field in form %}{{ field.as_hidden }}{% endfor %}
+        <input type="hidden" name="expected_price" value="{{ expected_price }}">
+        <input type="hidden" name="submission_token" value="{{ submission_token }}">
         <ul class="actions">
             <li><button type="submit" name="confirm">Envoyer ma demande</button></li>
             <li><button type="submit" name="edit" class="button-secondary">Modifier</button></li>
