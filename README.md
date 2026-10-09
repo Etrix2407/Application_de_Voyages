@@ -195,6 +195,9 @@ trip_app/
 │   ├── management/commands/load_demo.py
 │   ├── models.py · forms.py · validators.py · urls.py
 │   └── tests/
+├── orders/                 # demandes de voyage (v2) : modèles, prix estimé, historique
+│   ├── services/           # calcul du prix estimé
+│   └── tests/
 ├── templates/
 │   ├── base.html · home.html · privacy.html · 403/404/500.html
 │   ├── accounts/           # auth/ · profile/ · staff/ · clients/ · emails/

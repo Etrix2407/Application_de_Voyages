@@ -1,0 +1,137 @@
+"""Demandes de voyage : une destination, des dates, des voyageurs et des activités.
+
+Côté client, une commande s'appelle « demande de voyage ». Les prix sont copiés
+au moment de la demande : un changement de tarif ultérieur ne la modifie pas.
+"""
+
+from datetime import timedelta
+
+from django.conf import settings
+from django.core.exceptions import ValidationError
+from django.core.validators import MinValueValidator
+from django.db import models
+from django.utils import timezone
+
+from catalog.models import Activity, Destination
+
+MIN_DAYS_BEFORE_DEPARTURE = 7
+MAX_TRAVELLERS = 10
+
+
+class Status(models.TextChoices):
+    PENDING = "pending", "En attente"
+    CONFIRMED = "confirmed", "Confirmée"
+    CANCELLED = "cancelled", "Annulée"
+
+
+def _price_field(verbose_name: str, **options) -> models.DecimalField:
+    return models.DecimalField(verbose_name, max_digits=10, decimal_places=2, **options)
+
+
+class Order(models.Model):
+    # Vide quand le client a supprimé son compte : la demande est alors anonymisée (RGPD).
+    client = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="orders",
+        verbose_name="client",
+    )
+    # PROTECT : une destination déjà demandée ne peut pas être supprimée, seulement désactivée.
+    destination = models.ForeignKey(
+        Destination, on_delete=models.PROTECT, related_name="orders", verbose_name="destination"
+    )
+    departure_date = models.DateField("date de départ")
+    return_date = models.DateField("date de retour")
+    adults = models.PositiveSmallIntegerField("adultes", validators=[MinValueValidator(1)])
+    children = models.PositiveSmallIntegerField("enfants", default=0)
+    remarks = models.TextField("remarques", blank=True)
+    # Prix figés au moment de la demande. Prix de destination vide = « sur devis ».
+    destination_price = _price_field("prix indicatif de la destination", null=True, blank=True)
+    estimated_price = _price_field("prix estimé")
+    status = models.CharField("état", max_length=20, choices=Status.choices, default=Status.PENDING)
+    created_at = models.DateTimeField("date de la demande", default=timezone.now)
+
+    class Meta:
+        verbose_name = "demande de voyage"
+        verbose_name_plural = "demandes de voyage"
+        ordering = ["-created_at"]
+
+    def __str__(self) -> str:
+        return f"Demande n° {self.pk} — {self.destination}"
+
+    @property
+    def traveller_count(self) -> int:
+        return self.adults + self.children
+
+    @property
+    def is_quote_required(self) -> bool:
+        """La destination n'avait pas de prix indicatif : son prix sera donné sur devis."""
+        return self.destination_price is None
+
+    def clean(self) -> None:
+        super().clean()
+        errors = {}
+        if self.departure_date and self.return_date and self.return_date <= self.departure_date:
+            errors["return_date"] = "La date de retour doit être après la date de départ."
+        if self.adults is not None and self.adults < 1:
+            errors["adults"] = "Il faut au moins un adulte."
+        if (self.adults or 0) + (self.children or 0) > MAX_TRAVELLERS:
+            errors["children"] = f"Une demande compte au maximum {MAX_TRAVELLERS} voyageurs."
+        # Règles de création : une demande existante reste valable si le temps passe
+        # ou si la destination est désactivée ensuite.
+        if self._state.adding:
+            earliest = timezone.localdate() + timedelta(days=MIN_DAYS_BEFORE_DEPARTURE)
+            if self.departure_date and self.departure_date < earliest:
+                errors["departure_date"] = (
+                    f"Le départ doit être au moins {MIN_DAYS_BEFORE_DEPARTURE} jours après la demande."
+                )
+            if self.destination_id and not Destination.objects.visible().filter(pk=self.destination_id).exists():
+                errors["destination"] = "Cette destination n'est plus proposée."
+        if errors:
+            raise ValidationError(errors)
+
+
+class OrderActivity(models.Model):
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name="activities")
+    # PROTECT : une activité déjà demandée ne peut pas être supprimée, seulement désactivée.
+    activity = models.ForeignKey(Activity, on_delete=models.PROTECT, related_name="order_lines")
+    unit_price = _price_field("prix par personne au moment de la demande")
+
+    class Meta:
+        verbose_name = "activité demandée"
+        constraints = [
+            models.UniqueConstraint(fields=["order", "activity"], name="order_activity_unique")
+        ]
+
+    def __str__(self) -> str:
+        return str(self.activity)
+
+    def clean(self) -> None:
+        super().clean()
+        if self.activity_id and self.order_id and self.activity.country_id != self.order.destination.country_id:
+            raise ValidationError({"activity": "L'activité doit se trouver dans le pays de la destination."})
+
+
+class StatusChange(models.Model):
+    """Historique : chaque changement d'état, avec sa date et son auteur."""
+
+    CLIENT_AUTHOR = "Client"
+
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name="history")
+    status = models.CharField("état", max_length=20, choices=Status.choices)
+    changed_at = models.DateTimeField("date", default=timezone.now)
+    # Nom figé au moment de l'action : reste lisible si le compte de l'agent est supprimé.
+    author_name = models.CharField("auteur", max_length=210)
+    author = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="+"
+    )
+    reason = models.TextField("motif", blank=True)
+
+    class Meta:
+        verbose_name = "changement d'état"
+        ordering = ["changed_at", "pk"]
+
+    def __str__(self) -> str:
+        return f"{self.get_status_display()} — {self.author_name}"
