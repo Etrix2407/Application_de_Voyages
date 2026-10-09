@@ -9,9 +9,14 @@ une application pour gérer les comptes des clients et des agents, ainsi qu'un c
 ```
 trip_app/
 ├── config/            # settings, urls
+├── common/            # outils partagés entre applications
 ├── accounts/          # utilisateurs, inscription, profil, personnel, clients, RGPD
+│   ├── views/         # une responsabilité par module
+│   └── services/      # logique métier réutilisable
 ├── catalog/           # pays, destinations, activités, recherche, favoris
-├── templates/
+│   ├── views/
+│   └── services/
+├── templates/         # accounts/ et catalog/ rangés par sous-dossier
 └── static/
 ```
 
