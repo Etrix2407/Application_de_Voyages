@@ -9,7 +9,7 @@ from catalog.tests.factories import create_activity, create_country, create_dest
 from orders.models import Order, Status, StatusChange
 from orders.services.status import TransitionNotAllowed, cancel_by_client
 
-from .factories import create_order, departure_in
+from .factories import create_order, departure_in, submit_order
 
 
 class MyOrdersTests(TestCase):
@@ -129,7 +129,8 @@ class AfterCreationTests(TestCase):
         destination = create_destination(create_country(), "Kyoto")
         departure = departure_in()
 
-        response = self.client.post(
+        response = submit_order(
+            self.client,
             reverse("create_order", args=[destination.pk]),
             {
                 "departure_date": departure.isoformat(),
@@ -137,7 +138,6 @@ class AfterCreationTests(TestCase):
                 "adults": "1",
                 "children": "0",
                 "remarks": "",
-                "confirm": "",
             },
             follow=True,
         )

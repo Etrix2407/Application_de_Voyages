@@ -52,6 +52,8 @@ class Order(models.Model):
     estimated_price = _price_field("prix estimé")
     status = models.CharField("état", max_length=20, choices=Status.choices, default=Status.PENDING)
     created_at = models.DateTimeField("date de la demande", default=timezone.now)
+    # Jeton de la page de vérification : unique, il empêche qu'un double clic crée deux demandes.
+    submission_token = models.UUIDField(null=True, blank=True, unique=True, editable=False)
 
     class Meta:
         verbose_name = "demande de voyage"
