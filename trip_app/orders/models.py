@@ -51,6 +51,9 @@ class Order(models.Model):
     destination = models.ForeignKey(
         Destination, on_delete=models.PROTECT, related_name="orders", verbose_name="destination"
     )
+    # Noms figés à la demande, comme les prix : un renommage du catalogue ne la modifie pas.
+    destination_name = models.CharField("nom de la destination au moment de la demande", max_length=150)
+    country_name = models.CharField("nom du pays au moment de la demande", max_length=100)
     departure_date = models.DateField("date de départ")
     return_date = models.DateField("date de retour")
     adults = models.PositiveSmallIntegerField("adultes", validators=[MinValueValidator(1)])
@@ -74,7 +77,7 @@ class Order(models.Model):
         ordering = ["-created_at", "-pk"]
 
     def __str__(self) -> str:
-        return f"Demande n° {self.pk} — {self.destination}"
+        return f"Demande n° {self.pk} — {self.destination_name}"
 
     @property
     def traveller_count(self) -> int:
@@ -116,6 +119,7 @@ class OrderActivity(models.Model):
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name="activities")
     # PROTECT : une activité déjà demandée ne peut pas être supprimée, seulement désactivée.
     activity = models.ForeignKey(Activity, on_delete=models.PROTECT, related_name="order_lines")
+    activity_name = models.CharField("nom de l'activité au moment de la demande", max_length=150)
     unit_price = _price_field("prix par personne au moment de la demande")
 
     class Meta:
@@ -125,7 +129,7 @@ class OrderActivity(models.Model):
         ]
 
     def __str__(self) -> str:
-        return str(self.activity)
+        return self.activity_name
 
     def clean(self) -> None:
         super().clean()

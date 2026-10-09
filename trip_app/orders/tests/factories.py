@@ -19,9 +19,13 @@ def create_order(client, destination, activities=(), **fields) -> Order:
     fields.setdefault("adults", 2)
     fields.setdefault("destination_price", destination.price_from)
     fields.setdefault("estimated_price", Decimal("0"))
+    fields.setdefault("destination_name", destination.name)
+    fields.setdefault("country_name", destination.country.name)
     order = Order.objects.create(client=client, destination=destination, **fields)
     for activity in activities:
-        OrderActivity.objects.create(order=order, activity=activity, unit_price=activity.price_per_person)
+        OrderActivity.objects.create(
+            order=order, activity=activity, activity_name=activity.name, unit_price=activity.price_per_person
+        )
     return order
 
 

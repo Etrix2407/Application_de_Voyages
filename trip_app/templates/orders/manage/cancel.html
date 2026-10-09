@@ -5,7 +5,7 @@
 {% block content %}
     <h1>Annuler la demande n° {{ order.pk }}</h1>
     <p>
-        {{ order.destination.name }}, du {{ order.departure_date|date:"j F Y" }} au {{ order.return_date|date:"j F Y" }}
+        {{ order.destination_name }}, du {{ order.departure_date|date:"j F Y" }} au {{ order.return_date|date:"j F Y" }}
         — état actuel : <span class="status status-{{ order.status }}">{{ order.get_status_display }}</span>.
     </p>
     <p><strong>L'annulation est définitive.</strong></p>

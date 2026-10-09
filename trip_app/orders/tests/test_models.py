@@ -19,6 +19,7 @@ from orders.models import (
     Status,
     StatusChange,
 )
+from orders.services.placing import place_order
 from orders.services.pricing import estimate_price
 
 from .factories import create_order, departure_in
@@ -54,7 +55,13 @@ class OrderValidationTests(TestCase):
         fields.setdefault("return_date", fields["departure_date"] + timedelta(days=7))
         fields.setdefault("adults", 2)
         fields.setdefault("estimated_price", Decimal("0"))
-        return Order(client=self.client_user, destination=self.destination, **fields)
+        return Order(
+            client=self.client_user,
+            destination=self.destination,
+            destination_name=self.destination.name,
+            country_name=self.destination.country.name,
+            **fields,
+        )
 
     def assert_invalid(self, order, field):
         with self.assertRaises(ValidationError) as error:
@@ -117,7 +124,7 @@ class OrderValidationTests(TestCase):
     def test_activity_must_be_in_destination_country(self):
         order = create_order(self.client_user, self.destination)
         elsewhere = create_activity(create_country("Pérou"))
-        line = OrderActivity(order=order, activity=elsewhere, unit_price=Decimal("10"))
+        line = OrderActivity(order=order, activity=elsewhere, activity_name=elsewhere.name, unit_price=Decimal("10"))
 
         with self.assertRaises(ValidationError):
             line.full_clean()
@@ -190,3 +197,59 @@ class OrderedCatalogItemProtectionTests(TestCase):
         self.client.post(reverse("manage_delete_destination", args=[other.pk]))
 
         self.assertFalse(Destination.objects.filter(pk=other.pk).exists())
+
+
+class FrozenNamesTests(TestCase):
+    """Comme les prix, les noms sont ceux du jour de la demande."""
+
+    def setUp(self):
+        self.marie = create_client()
+        self.country = create_country("Japon")
+        self.destination = create_destination(self.country, "Kyoto")
+        self.tea = create_activity(self.country, "Cérémonie du thé")
+        self.order = place_order(
+            self.marie,
+            self.destination,
+            {
+                "departure_date": departure_in(),
+                "return_date": departure_in() + timedelta(days=7),
+                "adults": 2,
+                "children": 0,
+                "remarks": "",
+                "activities": [self.tea],
+            },
+        )
+
+    def rename_catalog(self):
+        self.country.name = "Nippon"
+        self.country.save()
+        self.destination.name = "Kyōto (ancienne capitale)"
+        self.destination.save()
+        self.tea.name = "Atelier thé matcha"
+        self.tea.save()
+
+    def test_service_copies_names(self):
+        self.assertEqual((self.order.destination_name, self.order.country_name), ("Kyoto", "Japon"))
+        self.assertEqual(self.order.activities.get().activity_name, "Cérémonie du thé")
+
+    def test_renaming_catalog_does_not_change_orders(self):
+        self.rename_catalog()
+
+        for user, url in [
+            (self.marie, reverse("my_order_detail", args=[self.order.pk])),
+            (create_agent(), reverse("manage_order_detail", args=[self.order.pk])),
+        ]:
+            with self.subTest(url=url):
+                self.client.force_login(user)
+                response = self.client.get(url)
+
+                self.assertContains(response, "Kyoto (Japon)")
+                self.assertContains(response, "Cérémonie du thé")
+                self.assertNotContains(response, "Nippon")
+                self.assertNotContains(response, "matcha")
+
+    def test_lists_show_frozen_names(self):
+        self.rename_catalog()
+        self.client.force_login(self.marie)
+
+        self.assertContains(self.client.get(reverse("my_orders")), "Kyoto (Japon)")

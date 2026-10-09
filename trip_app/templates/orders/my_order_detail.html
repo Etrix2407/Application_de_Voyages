@@ -5,7 +5,7 @@
 {% block content %}
     <p><a href="{% url 'my_orders' %}">← Mes demandes</a></p>
 
-    <h1>Demande n° {{ order.pk }} : {{ order.destination.name }}</h1>
+    <h1>Demande n° {{ order.pk }} : {{ order.destination_name }}</h1>
     <p>État : <span class="status status-{{ order.status }}">{{ order.get_status_display }}</span></p>
 
     {% include "orders/_order_summary.html" %}
