@@ -1,0 +1,15 @@
+{# Pagination commune. Paramètres : page, label (nom de la liste), anchor (facultatif, ex. « #avis »).
+   La balise querystring garde les filtres de l'adresse et ne change que le numéro de page. #}
+{% if page.paginator.num_pages > 1 %}
+    <nav aria-label="Pages : {{ label }}">
+        <p>Page {{ page.number }} sur {{ page.paginator.num_pages }}</p>
+        <ul class="actions">
+            {% if page.has_previous %}
+                <li><a class="button" href="{% querystring page=page.previous_page_number %}{{ anchor }}">← Page précédente</a></li>
+            {% endif %}
+            {% if page.has_next %}
+                <li><a class="button" href="{% querystring page=page.next_page_number %}{{ anchor }}">Page suivante →</a></li>
+            {% endif %}
+        </ul>
+    </nav>
+{% endif %}

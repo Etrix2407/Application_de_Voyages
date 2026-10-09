@@ -1,7 +1,5 @@
 """Consultation du catalogue, ouverte à tous : seuls les éléments visibles (actifs) sont montrés."""
 
-from urllib.parse import urlencode
-
 from django.core.paginator import Paginator
 from django.shortcuts import get_object_or_404, render
 
@@ -42,15 +40,13 @@ def destination_detail(request, pk):
     attach_ratings([destination])
     filters = PublicReviewFilterForm(request.GET or None)
     criteria = filters.cleaned_data if filters.is_valid() else {}
-    reviews = destination_reviews(destination, criteria.get("tri") or "", criteria.get("etoiles"))
+    reviews = destination_reviews(destination, criteria.get("sort") or "", criteria.get("stars"))
     context = {
         "destination": destination,
         "activities": Activity.objects.visible().filter(destination=destination),
         "is_favorite": is_favorite(request.user, destination),
         "review_filters": filters,
         "reviews_page": Paginator(reviews, REVIEWS_PER_PAGE).get_page(request.GET.get("page")),
-        # Le tri et le filtre sont conservés d'une page d'avis à l'autre.
-        "review_query": urlencode({key: value for key, value in request.GET.items() if key != "page"}),
     }
     return render(request, "catalog/destination.html", context)
 

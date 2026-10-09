@@ -7,7 +7,7 @@ from django.views.decorators.http import require_http_methods
 from accounts.decorators import client_required
 from orders.models import Order
 from reviews.forms import ReviewForm
-from reviews.models import Review
+from reviews.models import Review, ReviewStatus
 from reviews.services.eligibility import can_review, reviewable_orders
 from reviews.services.writing import (
     ReviewLocked,
@@ -72,7 +72,9 @@ def edit_review(request, pk):
         else:
             messages.success(request, EDITED_MESSAGE)
         return redirect("my_reviews")
-    return render(request, "reviews/write.html", {"form": form, "order": review.order, "review": review})
+    is_published = review.status == ReviewStatus.PUBLISHED
+    context = {"form": form, "order": review.order, "review": review, "is_published": is_published}
+    return render(request, "reviews/write.html", context)
 
 
 @client_required

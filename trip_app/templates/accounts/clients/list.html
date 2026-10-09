@@ -45,18 +45,7 @@
             </table>
         </div>
 
-        {% if page.paginator.num_pages > 1 %}
-            <nav aria-label="Pages de la liste des clients">
-                <ul class="actions">
-                    {% if page.has_previous %}
-                        <li><a class="button" href="?q={{ query|urlencode }}&amp;page={{ page.previous_page_number }}">← Page précédente</a></li>
-                    {% endif %}
-                    {% if page.has_next %}
-                        <li><a class="button" href="?q={{ query|urlencode }}&amp;page={{ page.next_page_number }}">Page suivante →</a></li>
-                    {% endif %}
-                </ul>
-            </nav>
-        {% endif %}
+        {% include "_pagination.html" with page=page label="liste des clients" %}
     {% else %}
         <p>Aucun client trouvé.</p>
     {% endif %}

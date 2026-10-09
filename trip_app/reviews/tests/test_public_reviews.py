@@ -92,13 +92,13 @@ class DestinationPageTests(ReviewsMixin, TestCase):
         new_average = self.published(3, days_ago=1, title="Récent moyen")
 
         self.assertEqual(list(self.page().context["reviews_page"]), [new_average, old_good])
-        self.assertEqual(list(self.page(tri="meilleures-notes").context["reviews_page"]), [old_good, new_average])
+        self.assertEqual(list(self.page(sort="meilleures-notes").context["reviews_page"]), [old_good, new_average])
 
     def test_filter_by_stars(self):
         self.published(5, title="Cinq")
         self.published(2, comment="Bof", title="Deux")
 
-        response = self.page(etoiles="2")
+        response = self.page(stars="2")
 
         self.assertContains(response, "Deux")
         self.assertNotContains(response, "Cinq")
@@ -107,10 +107,10 @@ class DestinationPageTests(ReviewsMixin, TestCase):
         for _ in range(11):
             self.published(5)
 
-        response = self.page(tri="meilleures-notes")
+        response = self.page(sort="meilleures-notes")
 
         self.assertEqual(len(response.context["reviews_page"]), 10)
-        self.assertContains(response, "tri=meilleures-notes&amp;page=2")
+        self.assertContains(response, "sort=meilleures-notes&amp;page=2")
 
     def test_pending_and_refused_reviews_not_shown(self):
         create_review(create_trip_done(create_client(email="a@example.com"), self.destination), title="En attente")
@@ -150,3 +150,11 @@ class DestinationListsTests(ReviewsMixin, TestCase):
 
     def test_menu_link(self):
         self.assertContains(self.client.get(reverse("home")), reverse("destination_list"))
+
+    def test_page_position_announced(self):
+        for _ in range(11):
+            self.published(5)
+
+        response = self.client.get(reverse("destination_detail", args=[self.destination.pk]))
+
+        self.assertContains(response, "Page 1 sur 2")

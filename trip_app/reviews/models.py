@@ -42,6 +42,20 @@ class RefusalReason(models.TextChoices):
     OTHER = "other", "Autre"
 
 
+# Motifs que le personnel peut choisir (« Voyage annulé » est posé automatiquement).
+STAFF_REFUSAL_REASONS = [reason for reason in RefusalReason if reason != RefusalReason.TRIP_CANCELLED]
+REASONS_REQUIRING_DETAILS = {RefusalReason.OTHER}
+
+
+def refusal_problem(reason: str, details: str) -> dict[str, str]:
+    """Erreurs d'un motif de refus, par champ ; vide si le motif est valable."""
+    if reason not in RefusalReason.values:
+        return {"refusal_reason": "Choisissez un motif dans la liste."}
+    if reason in REASONS_REQUIRING_DETAILS and not details.strip():
+        return {"refusal_details": "Précisez le motif quand vous choisissez « Autre »."}
+    return {}
+
+
 class ReviewQuerySet(models.QuerySet):
     def public(self):
         """Avis visibles par tous : publiés, sur une destination encore proposée."""
@@ -147,8 +161,8 @@ class Review(models.Model):
             errors["comment"] = "Un commentaire est obligatoire pour une note de 1 ou 2 étoiles."
         if self.status == ReviewStatus.REFUSED and not self.refusal_reason:
             errors["refusal_reason"] = "Le motif est obligatoire pour refuser ou masquer un avis."
-        if self.refusal_reason == RefusalReason.OTHER and not self.refusal_details.strip():
-            errors["refusal_details"] = "Précisez le motif quand vous choisissez « Autre »."
+        elif self.refusal_reason:
+            errors.update(refusal_problem(self.refusal_reason, self.refusal_details))
         if errors:
             raise ValidationError(errors)
 

@@ -44,7 +44,7 @@
     {% if response %}
         {% include "reviews/_response.html" %}
     {% else %}
-        <p>Pas encore de réponse.{% if review.status != "published" %} On ne peut répondre qu'à un avis publié.{% endif %}</p>
+        <p>Pas encore de réponse.{% if not is_published %} On ne peut répondre qu'à un avis publié.{% endif %}</p>
     {% endif %}
     {% if can_respond %}
         <p><a class="button" href="{% url 'manage_respond_review' review.pk %}">{% if response %}Modifier la réponse{% else %}Répondre à l'avis{% endif %}</a></p>
@@ -66,7 +66,7 @@
             {% if can_refuse %}
                 <li>
                     <a class="button button-danger" href="{% url 'manage_refuse_review' review.pk %}?version={{ review.version }}">
-                        {% if review.status == "published" %}Masquer l'avis{% else %}Refuser l'avis{% endif %}
+                        {% if is_published %}Masquer l'avis{% else %}Refuser l'avis{% endif %}
                     </a>
                 </li>
             {% endif %}

@@ -12,11 +12,11 @@ from django.db.models import Avg, Count
 from reviews.models import MAX_RATING, Review
 
 # Tri des avis d'une destination : clé dans l'URL -> ordre.
-NEWEST_FIRST = "recents"
-BEST_FIRST = "meilleures-notes"
+NEWEST_REVIEWS_FIRST = "recents"
+BEST_REVIEWS_FIRST = "meilleures-notes"
 REVIEW_ORDERS = {
-    NEWEST_FIRST: ("-published_at", "-pk"),
-    BEST_FIRST: ("-rating", "-published_at", "-pk"),
+    NEWEST_REVIEWS_FIRST: ("-published_at", "-pk"),
+    BEST_REVIEWS_FIRST: ("-rating", "-published_at", "-pk"),
 }
 
 
@@ -49,12 +49,12 @@ def attach_ratings(destinations) -> list:
     return destinations
 
 
-def destination_reviews(destination, order: str = NEWEST_FIRST, stars: int | None = None):
+def destination_reviews(destination, order: str = NEWEST_REVIEWS_FIRST, stars: int | None = None):
     """Avis publics d'une destination, triés (plus récents par défaut) et filtrés par nombre d'étoiles."""
     reviews = Review.objects.public().filter(order__destination=destination).select_related("order__client", "response")
     if stars:
         reviews = reviews.filter(rating=stars)
-    return reviews.order_by(*REVIEW_ORDERS.get(order, REVIEW_ORDERS[NEWEST_FIRST]))
+    return reviews.order_by(*REVIEW_ORDERS.get(order, REVIEW_ORDERS[NEWEST_REVIEWS_FIRST]))
 
 
 def latest_top_reviews(limit: int = 5):
