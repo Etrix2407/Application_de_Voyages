@@ -6,7 +6,13 @@ from django.core.exceptions import ValidationError
 from django.utils import timezone
 
 from .models import STAFF_ROLES, Role, User
-from .services.throttling import login_failures, password_reset_requests
+from .services.throttling import (
+    get_client_ip,
+    login_failures,
+    login_failures_by_ip,
+    password_reset_requests,
+    password_reset_requests_by_ip,
+)
 from .services.staff_rules import check_not_self
 
 
@@ -62,14 +68,18 @@ class LoginForm(AuthenticationForm):
 
     def clean(self):
         email = self.cleaned_data.get("username") or ""
-        if email and login_failures.is_locked(email):
+        ip = get_client_ip(self.request)
+        if (email and login_failures.is_locked(email)) or login_failures_by_ip.is_locked(ip):
             raise ValidationError(self.error_messages["locked"], code="locked")
         try:
             cleaned_data = super().clean()
         except ValidationError:
             if email:
                 login_failures.record(email)
+            login_failures_by_ip.record(ip)
             raise
+        # Le compteur de l'IP n'est pas remis à zéro : un compte valide ne doit pas
+        # permettre de relancer une série d'essais sur d'autres comptes.
         login_failures.reset(email)
         return cleaned_data
 
@@ -81,12 +91,14 @@ class PasswordResetRequestForm(PasswordResetForm):
     rien ne révèle si l'adresse existe ni si la limite est atteinte.
     """
 
-    def save(self, *args, **kwargs) -> None:
+    def save(self, *args, request=None, **kwargs) -> None:
         email = self.cleaned_data["email"]
-        if password_reset_requests.is_locked(email):
+        ip = get_client_ip(request)
+        if password_reset_requests.is_locked(email) or password_reset_requests_by_ip.is_locked(ip):
             return
         password_reset_requests.record(email)
-        super().save(*args, **kwargs)
+        password_reset_requests_by_ip.record(ip)
+        super().save(*args, request=request, **kwargs)
 
 
 class ClientProfileForm(forms.ModelForm):
