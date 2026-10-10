@@ -40,6 +40,7 @@ class CreatePromotionTests(TestCase):
         self.assertContains(response, "a été créée")
         self.assertEqual(promotion.code, "BIENVENUE15")
         self.assertEqual(promotion.created_by_name, "Marc Dupont")
+        self.assertContains(response, "<dt>Créée par</dt><dd>Marc Dupont</dd>", html=True)
 
     def test_country_scope_needs_a_country(self):
         response = self.client.post(self.url, form_data(scope="countries"))
