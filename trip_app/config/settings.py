@@ -23,12 +23,13 @@ SITE_NAME = "Horizons Lointains"
 # En développement, mettre DJANGO_DEBUG=1 dans le fichier .env (voir .env.example).
 DEBUG = os.environ.get("DJANGO_DEBUG", "1" if TESTING else "0") == "1"
 
-# La clé secrète ne doit jamais être commitée : en production, elle vient de l'environnement.
+# La clé secrète ne doit jamais être commitée : elle vient toujours de l'environnement,
+# même en développement. Seuls les tests ont une valeur fixe, inutilisable ailleurs.
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "")
 if not SECRET_KEY:
-    if not DEBUG:
+    if not TESTING:
         raise RuntimeError("La variable d'environnement DJANGO_SECRET_KEY est obligatoire.")
-    SECRET_KEY = "django-insecure-cle-de-developpement-uniquement"
+    SECRET_KEY = "cle-reservee-aux-tests-uniquement"
 
 # Nombre de serveurs intermédiaires (proxy) de confiance devant le site : 0 en direct.
 # Sert à retrouver la vraie IP des visiteurs pour les limites anti-abus.

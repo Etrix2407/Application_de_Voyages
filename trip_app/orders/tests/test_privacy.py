@@ -94,7 +94,7 @@ class AccountDeletionAnonymizesOrdersTests(TestCase):
 
         response = self.client.get(reverse("manage_order_detail", args=[self.order.pk]))
 
-        self.assertContains(response, "anonymisée")
+        self.assertContains(response, "cette demande n'est plus liée à lui")
         self.assertNotContains(response, "arachides")
         self.assertNotContains(response, "hospitalisée")
         self.assertNotContains(response, "client@example.com")
@@ -102,7 +102,7 @@ class AccountDeletionAnonymizesOrdersTests(TestCase):
     def test_deletion_page_announces_anonymous_conservation(self):
         self.client.force_login(self.marie)
 
-        self.assertContains(self.client.get(reverse("delete_account")), "de façon anonyme")
+        self.assertContains(self.client.get(reverse("delete_account")), "sans votre nom ni vos coordonnées")
 
 
 class PendingOrdersOfDeletedAccountTests(TestCase):

@@ -1,7 +1,6 @@
 """Filtrage et tri des demandes de voyage pour le personnel."""
 
-from accounts.models import Role, User
-from accounts.services.client_search import client_matches, search_words
+from accounts.services.client_search import matching_clients, search_words
 from orders.models import Order
 
 NEWEST_FIRST = "recent"
@@ -30,8 +29,6 @@ def filter_orders(criteria: dict):
 
     words = search_words(criteria.get("client"))
     if words:
-        # Les clients (nombre borné) sont cherchés en Python, sans accents ; les demandes, qui
-        # s'accumulent, restent filtrées et paginées par la base. Une demande anonymisée est exclue.
-        matching = [client.pk for client in User.objects.filter(role=Role.CLIENT) if client_matches(client, words)]
-        orders = orders.filter(client_id__in=matching)
+        # Sous-requête : une seule requête SQL, quel que soit le nombre de clients. Une demande anonymisée est exclue.
+        orders = orders.filter(client__in=matching_clients(words))
     return orders

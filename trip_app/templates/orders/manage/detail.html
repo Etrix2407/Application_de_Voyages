@@ -19,7 +19,7 @@
             <dd><a href="mailto:{{ order.client.email }}">{{ order.client.email }}</a></dd>
         </dl>
     {% else %}
-        <p>Le client a supprimé son compte : cette demande est anonymisée.</p>
+        <p>Le client a supprimé son compte : cette demande n'est plus liée à lui (seule une empreinte de son adresse est gardée pour les limites des promotions).</p>
     {% endif %}
 
     {% if can_confirm or can_cancel %}
@@ -34,6 +34,7 @@
                         Prix aux tarifs actuels : <strong>{{ price_if_confirmed.price }} €</strong>
                         {% if order.promotion_name %}(remise « {{ order.promotion_name }} » de {{ price_if_confirmed.discount }} € déduite){% endif %}
                         (estimation à la demande : {{ order.estimated_price }} €). C'est ce prix qui sera enregistré.
+                        {% if destination_on_quote_now %}<br>Le prix de la destination est donné sur devis.{% endif %}
                     </p>
                     <form method="post" action="{% url 'manage_confirm_order' order.pk %}">
                         {% csrf_token %}

@@ -7,6 +7,7 @@ from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
+from accounts.services.email_change import apply_email_change
 from accounts.tests.factories import create_admin, create_agent, create_client
 from catalog.tests.factories import create_country, create_destination
 from orders.models import Order, Status
@@ -76,6 +77,14 @@ class ChoosePromotionTests(TestCase):
         order.status = Status.CANCELLED
         order.save()
         self.assertTrue(self.choose("unefois").code_applied)
+
+    def test_limit_per_client_follows_email_change(self):
+        promotion = create_promotion(code="UNEFOIS", max_uses_per_client=1)
+        create_order(self.marie, self.kyoto, promotion=promotion)
+
+        apply_email_change(self.marie, "nouvelle.adresse@example.com")
+
+        self.assertEqual(self.choose("UNEFOIS").code_error, messages.ALREADY_USED)
 
     def test_total_limit(self):
         promotion = create_promotion(code="CINQUANTE", max_uses=1)
@@ -192,6 +201,33 @@ class OrderWithPromotionTests(TestCase):
         self.assertContains(response, "Vous avez déjà utilisé ce code")
         self.assertEqual(Order.objects.count(), 1)
 
+    def use_code_once(self):
+        """Marie envoie une demande avec un code limité à une fois par client."""
+        create_promotion(code="UNEFOIS", max_uses_per_client=1)
+        submit_order(self.client, self.url, {**self.data, "promo_code": "UNEFOIS"})
+
+    def try_code_again_as(self, email):
+        self.client.force_login(create_client(email=email))
+        return self.client.post(self.url, {**self.data, "promo_code": "UNEFOIS"})
+
+    def test_limit_per_client_survives_account_deletion_and_new_sign_up(self):
+        self.use_code_once()
+        # Confirmée : elle reste comptée (une demande en attente est annulée si le compte est supprimé).
+        Order.objects.update(status=Status.CONFIRMED)
+        self.marie.delete()
+
+        response = self.try_code_again_as(self.marie.email)
+
+        self.assertContains(response, "Vous avez déjà utilisé ce code")
+
+    def test_limit_per_client_applies_to_plus_aliases(self):
+        self.use_code_once()
+        local, domain = self.marie.email.split("@")
+
+        response = self.try_code_again_as(f"{local.upper()}+promo@{domain}")
+
+        self.assertContains(response, "Vous avez déjà utilisé ce code")
+
 
 class PublicOffersTests(TestCase):
     def test_exhausted_automatic_promotion_no_longer_shown(self):
@@ -222,6 +258,25 @@ class ConfirmationTests(TestCase):
 
         order.refresh_from_db()
         self.assertEqual((order.confirmed_price, order.confirmed_discount), (Decimal("1080.00"), Decimal("120.00")))
+
+    def test_stay_discount_not_applicable_once_destination_is_on_quote(self):
+        kyoto = create_destination(create_country(), "Kyoto", price_from=Decimal("1000"))
+        promotion = create_promotion(base=Base.STAY, value=Decimal("10"))
+        client = create_client()
+        order = create_order(client, kyoto, adults=1, promotion=promotion, promotion_name=promotion.name,
+                             estimated_price=Decimal("900"), discount=Decimal("100"))
+        kyoto.price_from = None
+        kyoto.save()
+        self.client.force_login(create_agent())
+        self.client.post(reverse("manage_confirm_order", args=[order.pk]))
+        self.client.force_login(client)
+
+        response = self.client.get(reverse("my_order_detail", args=[order.pk]))
+
+        self.assertContains(response, f"Remise « {promotion.name} » non applicable au prix recalculé")
+        self.assertNotContains(response, "ré-appliquée")
+        self.assertContains(response, "Le prix de la destination est donné sur devis par votre conseiller.")
+        self.assertContains(self.client.get(reverse("my_orders")), "+ destination sur devis")
 
 
 class UsedPromotionTests(TestCase):

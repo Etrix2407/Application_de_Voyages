@@ -2,12 +2,14 @@
 
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager
 from django.core.exceptions import ValidationError
-from django.db import models
+from django.db import IntegrityError, models, transaction
+from django.db.models.functions import Length
 from django.utils import timezone
 
 from .validators import normalize_phone, validate_phone
 
 EMPLOYEE_NUMBER_PREFIX = "AG"
+EMPLOYEE_NUMBER_ATTEMPTS = 5
 
 
 class Role(models.TextChoices):
@@ -131,14 +133,31 @@ class User(AbstractBaseUser):
         self.email = normalize_email_address(self.email)
         self.phone = normalize_phone(self.phone)
         if self.is_staff_member and not self.employee_number:
+            self._save_with_new_employee_number(*args, **kwargs)
+        else:
+            super().save(*args, **kwargs)
+
+    def _save_with_new_employee_number(self, *args, **kwargs) -> None:
+        # Deux créations simultanées peuvent calculer le même numéro :
+        # on recalcule et on réessaie quelques fois si le numéro vient d'être pris.
+        for attempt in range(EMPLOYEE_NUMBER_ATTEMPTS):
             self.employee_number = self._next_employee_number()
-        super().save(*args, **kwargs)
+            try:
+                with transaction.atomic():
+                    super().save(*args, **kwargs)
+                return
+            except IntegrityError:
+                number_taken = User.objects.filter(employee_number=self.employee_number).exists()
+                if not number_taken or attempt == EMPLOYEE_NUMBER_ATTEMPTS - 1:
+                    self.employee_number = None
+                    raise
 
     @classmethod
     def _next_employee_number(cls) -> str:
+        # Tri par longueur puis par texte : AG10000 passe après AG9999.
         last = (
             cls.objects.filter(employee_number__startswith=EMPLOYEE_NUMBER_PREFIX)
-            .order_by("-employee_number")
+            .order_by(Length("employee_number").desc(), "-employee_number")
             .values_list("employee_number", flat=True)
             .first()
         )

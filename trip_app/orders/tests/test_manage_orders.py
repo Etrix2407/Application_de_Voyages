@@ -7,6 +7,7 @@ from django.urls import reverse
 from accounts.tests.factories import create_agent, create_client
 from catalog.tests.factories import create_country, create_destination
 from orders.models import Order, Status
+from orders.services.filtering import filter_orders
 from orders.views.manage import ORDERS_PER_PAGE
 
 from .factories import create_order, departure_in
@@ -49,6 +50,11 @@ class StaffOrderListTests(TestCase):
     def test_filter_by_client_without_accents(self):
         self.assertEqual(self.listed(client="helene lefevre"), [self.old])
         self.assertEqual(self.listed(client="PAUL@"), [self.new])
+
+    def test_filter_by_client_in_one_query(self):
+        # Les clients ne sont pas chargés en Python : la base filtre via une sous-requête.
+        with self.assertNumQueries(1):
+            self.assertEqual(list(filter_orders({"client": "Hélène"})), [self.old])
 
     def test_filter_by_departure_period(self):
         self.assertEqual(
