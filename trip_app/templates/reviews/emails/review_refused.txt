@@ -1,0 +1,12 @@
+{% autoescape off %}Bonjour {{ client.first_name }},
+
+Votre avis « {{ review.title }} » ({{ review.order.destination_name }}, {{ review.order.country_name }}) n'est pas publié sur notre site.
+
+Motif : {{ review.get_refusal_reason_display }}{% if review.refusal_details %} — {{ review.refusal_details }}{% endif %}
+{% if can_correct %}
+Vous pouvez corriger votre avis jusqu'au {{ review.editable_until|date:"j F Y" }}, depuis la page « Mes avis ». Il sera de nouveau relu par l'agence avant sa publication.
+
+{{ my_reviews_link }}
+{% elif deadline_passed %}
+Le délai de 30 jours pour corriger cet avis est dépassé.
+{% endif %}{% endautoescape %}

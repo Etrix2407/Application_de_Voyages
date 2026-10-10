@@ -1,0 +1,11 @@
+{% autoescape off %}Bonjour {{ client.first_name }},
+
+{% if created %}L'agence a répondu{% else %}L'agence a modifié sa réponse{% endif %} à votre avis « {{ review.title }} » ({{ review.order.destination_name }}, {{ review.order.country_name }}).
+
+Réponse de {{ response.author_first_name }} :
+
+{{ response.text }}
+
+Vous retrouvez votre avis et cette réponse sur la page « Mes avis » :
+
+{{ my_reviews_link }}{% endautoescape %}
