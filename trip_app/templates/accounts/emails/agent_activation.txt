@@ -1,7 +1,7 @@
 {% autoescape off %}Bonjour {{ user.first_name }},
 
 Un compte agent a été créé pour vous (numéro d'employé : {{ user.employee_number }}).
-Pour choisir votre mot de passe, ouvrez ce lien (valable 1 heure) :
+Pour choisir votre mot de passe, ouvrez ce lien (valable 7 jours) :
 
 {{ link }}
 

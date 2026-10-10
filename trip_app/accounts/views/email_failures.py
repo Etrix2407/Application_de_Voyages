@@ -12,8 +12,8 @@ from accounts.services.email_retry import NOT_REBUILDABLE, OBSOLETE, resend
 
 FAILURES_PER_PAGE = 25
 
-# Invitations des agents : leur renvoi relève de la gestion du personnel (administrateur).
-ADMINISTRATOR_ONLY_KINDS = (EmailKind.AGENT_ACTIVATION,)
+# Liens envoyés au personnel : leur renvoi relève de la gestion du personnel (administrateur).
+ADMINISTRATOR_ONLY_KINDS = (EmailKind.AGENT_ACTIVATION, EmailKind.STAFF_PASSWORD_LINK)
 
 
 def _failures():

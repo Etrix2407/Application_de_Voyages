@@ -1,0 +1,7 @@
+{% autoescape off %}Bonjour {{ user.first_name }},
+
+Comme vous l'avez demandé, votre compte a été supprimé et vos données personnelles ont été effacées.
+
+Ce message est le dernier que vous recevrez de notre part.
+
+Merci de nous avoir fait confiance.{% endautoescape %}

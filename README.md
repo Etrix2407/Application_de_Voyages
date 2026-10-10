@@ -73,12 +73,12 @@ C'est le **mode test**, actif par défaut dès que `DJANGO_DEBUG=1` (jamais en p
 
 1. Créez le compte de la gérante avec `python manage.py createsuperuser` (e-mail, nom, prénom, mot de passe).
 2. Connectez-vous, puis ouvrez le menu **Personnel** et cliquez sur **Créer un agent**.
-3. L'agent reçoit un e-mail avec un lien valable 1 heure pour choisir son mot de passe. S'il a expiré, utilisez **Envoyer un lien de mot de passe** dans la liste du personnel.
+3. L'agent reçoit un e-mail avec un lien valable 7 jours pour choisir son mot de passe (pas de mot de passe provisoire). S'il a expiré, utilisez **Envoyer un lien de mot de passe** dans la liste du personnel : le nouveau lien est lui aussi valable 7 jours. Le même bouton sert à un membre qui a oublié son mot de passe : il reçoit alors un e-mail « Choisissez un nouveau mot de passe », et son mot de passe actuel reste valable tant qu'il n'utilise pas le lien.
 4. Depuis **Personnel**, l'administrateur peut aussi :
    - modifier un membre ;
    - le promouvoir administrateur ou le rétrograder ;
    - le désactiver (il est déconnecté immédiatement) ou le réactiver ;
-   - le supprimer.
+   - le supprimer (il reçoit un dernier e-mail qui l'annonce).
 
    Il ne peut jamais faire ces actions sur son propre compte.
 
@@ -112,7 +112,7 @@ Formats à respecter :
 ### E-mails en échec (agent ou administrateur)
 
 1. Menu **E-mails en échec** : les e-mails qui n'ont pas pu partir et peuvent encore être renvoyés, les plus récents d'abord, par pages de 25, avec le destinataire, le compte et la demande de voyage liés, le type, l'objet, le nombre de tentatives et la raison de l'échec.
-2. **Renvoyer** : le message est refait à neuf (avec un nouveau lien s'il en contient un) et envoyé tout de suite. S'il échoue encore, de nouvelles tentatives automatiques ont lieu 5 puis 15 minutes plus tard. Un message devenu sans objet (par exemple un lien de confirmation pour une adresse déjà confirmée, ou un lien de mot de passe pour une adresse qui a changé) n'est pas renvoyé : la raison est affichée et il disparaît de la liste. L'invitation d'un agent ne peut être renvoyée que par l'administrateur.
+2. **Renvoyer** : le message est refait à neuf (avec un nouveau lien s'il en contient un) et envoyé tout de suite. S'il échoue encore, de nouvelles tentatives automatiques ont lieu 5 puis 15 minutes plus tard. Un message devenu sans objet (par exemple un lien de confirmation pour une adresse déjà confirmée, ou un lien de mot de passe pour une adresse qui a changé) n'est pas renvoyé : la raison est affichée et il disparaît de la liste. L'invitation d'un agent et le lien « Choisissez un nouveau mot de passe » envoyé à un membre du personnel ne peuvent être renvoyés que par l'administrateur (avec un nouveau lien de 7 jours). Les e-mails « Votre compte a été supprimé » ne sont jamais renvoyés : l'adresse est effacée à la suppression du compte.
 
 ### Traiter les demandes de voyage (agent ou administrateur)
 
@@ -165,11 +165,13 @@ Formats à respecter :
    **Mes demandes** (menu) : liste de vos demandes (destination, dates, état, prix estimé), détail avec l'historique (les actions du personnel y apparaissent sous le nom « Agence »). Tant qu'une demande est « En attente », vous pouvez l'annuler (motif facultatif) ; une demande confirmée s'annule en appelant l'agence.
 5. **Favoris** : le bouton « Ajouter à mes favoris » se trouve sur la page d'une destination ou d'une activité. Retrouvez-les dans **Mes favoris**. Un favori devenu indisponible y reste signalé et peut être retiré.
 6. **Mes avis** (menu) : après un voyage **confirmé par l'agence**, une fois rentré, « Donner mon avis » (sur la demande ou dans « Mes avis ») : note de 1 à 5 étoiles, titre, commentaire (obligatoire pour 1 ou 2 étoiles), signature « Prénom N. » ou « Voyageur anonyme ». L'avis est publié après validation par l'agence ; son état et, le cas échéant, le motif du refus sont visibles dans « Mes avis ». Il reste **modifiable 30 jours** après sa création ; une modification le renvoie en validation (masqué en attendant). Il peut être **supprimé à tout moment**, mais ce voyage ne pourra alors plus recevoir d'avis. La signature (« Julie D. ») est fixée à l'envoi de l'avis : changer son nom ensuite ne modifie pas un avis publié.
-7. **Mon profil** : modifier ses informations, changer son mot de passe, **changer son adresse e-mail** (mot de passe demandé, puis lien de confirmation envoyé à la nouvelle adresse ; l'ancienne est prévenue ; si l'adresse du compte n'était pas encore confirmée, confirmer la nouvelle adresse confirme aussi le compte) ou **supprimer son compte**. La suppression est définitive et efface aussi les favoris. **Télécharger mes données** fournit un fichier JSON avec ses informations de compte (sans le mot de passe), ses demandes de voyage, ses avis (avec la réponse de l'agence), ses favoris et la liste des e-mails reçus (sans leur contenu).
+7. **Mon profil** : modifier ses informations, changer son mot de passe, **changer son adresse e-mail** (mot de passe demandé, puis lien de confirmation envoyé à la nouvelle adresse ; l'ancienne est prévenue ; si l'adresse du compte n'était pas encore confirmée, confirmer la nouvelle adresse confirme aussi le compte) ou **supprimer son compte**. La suppression est définitive et efface aussi les favoris ; un dernier e-mail confirme que le compte est supprimé et les données effacées, puis plus aucun e-mail n'est envoyé. **Télécharger mes données** fournit un fichier JSON avec ses informations de compte (sans le mot de passe), ses demandes de voyage, ses avis (avec la réponse de l'agence), ses favoris et la liste des e-mails reçus (sans leur contenu).
 
 ### Mot de passe oublié
 
 Sur la page de connexion, **Mot de passe oublié ?** envoie un lien valable 1 heure (3 demandes par heure au plus pour une même adresse, contre les envois en masse).
+
+Après chaque changement de mot de passe (depuis le profil, par « Mot de passe oublié » ou par un lien envoyé par l'agence), un e-mail de sécurité prévient le titulaire du compte, client ou membre du personnel : « Si ce n'est pas vous, contactez-nous ». Il n'est pas envoyé quand un agent invité choisit son tout premier mot de passe.
 
 Limites par adresse IP, contre les robots : 20 échecs de connexion par 15 minutes, 5 inscriptions, 10 demandes de lien et 30 codes promo faux par heure ; et, dans l'heure qui suit une inscription depuis cette IP, 3 échecs de connexion suffisent à la bloquer 15 minutes. Elles sont volontairement larges, car un bureau ou un wifi partage souvent une même IP. Après 5 tentatives de connexion échouées, la connexion est bloquée 15 minutes pour cette adresse e-mail.
 
@@ -261,7 +263,7 @@ Fonctionnement :
   - Un message avec un lien de sécurité ne part qu'à l'**adresse actuelle** du compte, jamais à une ancienne adresse.
   - Un message devenu sans objet n'est pas renvoyé et passe en « échec » avec la raison : compte supprimé, adresse déjà confirmée, adresse changée depuis, compte désactivé…
   - Confirmation d'une nouvelle adresse e-mail : jamais reconstruite (l'ancienne adresse, qui fait partie du lien, n'est pas conservée). En cas d'échec, elle passe en « échec » et le client refait sa demande.
-- **Renvoi manuel** (menu **E-mails en échec**, personnel ; l'invitation d'un agent ne peut être renvoyée que par l'administrateur) : la liste ne montre que les e-mails qui peuvent encore être renvoyés (les messages sans objet ou impossibles à refaire restent au journal avec leur raison). La **même ligne** du journal est remise en attente, son nombre de tentatives repart de zéro, et l'envoi est tenté tout de suite. Une ligne par message : un message renvoyé plusieurs fois ne compte qu'une fois pour « adresse à vérifier ».
+- **Renvoi manuel** (menu **E-mails en échec**, personnel ; l'invitation d'un agent et les liens envoyés au personnel ne peuvent être renvoyés que par l'administrateur) : la liste ne montre que les e-mails qui peuvent encore être renvoyés (les messages sans objet ou impossibles à refaire restent au journal avec leur raison). La **même ligne** du journal est remise en attente, son nombre de tentatives repart de zéro, et l'envoi est tenté tout de suite. Une ligne par message : un message renvoyé plusieurs fois ne compte qu'une fois pour « adresse à vérifier ».
 - **Adresse à vérifier** : calculée à partir du journal (`accounts/services/address_check.py`), sans champ à tenir à jour. Un client est marqué quand 3 messages différents envoyés à son adresse actuelle sont arrivés à l'état « échec » après leurs 3 tentatives, sans envoi réussi vers cette adresse depuis.
 - **Conservation** : les lignes du journal de plus d'**un an** sont effacées par la même commande `process_emails`.
 
@@ -347,7 +349,7 @@ Trois commandes doivent tourner seules sur le serveur (tâche planifiée Windows
 | Commande | Fréquence | Rôle |
 |---|---|---|
 | `python manage.py process_emails` | Toutes les 5 minutes | Retente les e-mails en attente (5 puis 15 minutes après l'échec précédent) et efface les lignes du journal des e-mails de plus d'un an |
-| `python manage.py purge_unconfirmed` | Une fois par jour | Efface les comptes clients dont l'adresse n'a pas été confirmée dans les 30 jours (RGPD) |
+| `python manage.py purge_unconfirmed` | Une fois par jour | Efface les comptes clients dont l'adresse n'a pas été confirmée dans les 30 jours (RGPD) ; chacun reçoit un dernier e-mail qui l'annonce |
 | `python manage.py send_trip_reminders` | Une fois par jour | Envoie le rappel des départs dans 7 jours ou moins et l'invitation à donner un avis après le retour, une seule fois par demande, avec rattrapage des jours manqués (voir [Rappels de voyage](#rappels-de-voyage)) |
 
 Exemples (remplacez `C:\chemin` ou `/chemin` par l'emplacement réel ; l'heure quotidienne est au choix) :
@@ -388,8 +390,10 @@ trip_app/
 │   ├── services/           # inscription, changement d'e-mail, emails (envoi de tous les e-mails du site
 │   │                       # et journal), email_retry (nouvelles tentatives, renvoi), email_rebuilders
 │   │                       # (reconstruction des e-mails des comptes), address_check (« adresse à vérifier »),
-│   │                       # password_links (liens de mot de passe), règles du personnel, recherche de client,
-│   │                       # limites anti-abus, privacy (effacement RGPD et conservation du journal)
+│   │                       # password_links (liens de mot de passe), password_notice (alerte « mot de passe
+│   │                       # modifié »), account_deletion (suppression du compte avec un dernier e-mail),
+│   │                       # règles du personnel, recherche de client, limites anti-abus,
+│   │                       # privacy (effacement RGPD et conservation du journal)
 │   ├── management/commands/ # process_emails (toutes les 5 minutes), purge_unconfirmed (chaque jour)
 │   ├── models.py · forms.py · validators.py · decorators.py · urls.py
 │   └── tests/

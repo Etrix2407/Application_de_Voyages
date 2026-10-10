@@ -1,4 +1,5 @@
 import re
+from datetime import datetime, timedelta
 from unittest import mock
 
 from django.contrib.auth import get_user_model
@@ -7,6 +8,7 @@ from django.test import TestCase
 from django.urls import reverse
 
 from accounts.models import Role
+from accounts.services.password_links import AgentInvitationTokenGenerator, agent_invitation_token_generator
 
 from .email_delivery import SendEmailsImmediately
 from .factories import create_admin, create_agent, create_client
@@ -77,6 +79,18 @@ class AgentCreationTests(SendEmailsImmediately, TestCase):
         )
         agent.refresh_from_db()
         self.assertTrue(agent.check_password("bureau-voyage-12"))
+        # Premier mot de passe : pas d'alerte « mot de passe modifié ».
+        self.assertEqual(len(mail.outbox), 1)
+
+    def test_invitation_link_valid_seven_days(self):
+        agent = create_agent()
+        token = agent_invitation_token_generator.make_token(agent)
+        now = datetime.now()
+
+        for days, valid in [(6, True), (8, False)]:
+            later = now + timedelta(days=days)
+            with self.subTest(days=days), mock.patch.object(AgentInvitationTokenGenerator, "_now", return_value=later):
+                self.assertIs(agent_invitation_token_generator.check_token(agent, token), valid)
 
     def test_email_already_used_rejected(self):
         create_client(email="pris@example.com")
@@ -187,6 +201,17 @@ class ActivationTests(SendEmailsImmediately, TestCase):
         self.assertEqual(len(mail.outbox), 1)
         self.assertEqual(mail.outbox[0].to, ["agent@example.com"])
 
+    def test_resent_link_text_depends_on_existing_password(self):
+        invited = create_agent(email="invite@example.com")
+        invited.set_unusable_password()
+        invited.save()
+
+        for member, subject in [(invited, "Activation de votre compte"), (self.agent, "Choisissez un nouveau mot de passe")]:
+            with self.subTest(subject=subject):
+                mail.outbox.clear()
+                self.client.post(reverse("resend_staff_link", args=[member.pk]))
+                self.assertEqual([(m.to, m.subject) for m in mail.outbox], [([member.email], subject)])
+
 
 class StaffMemberDeletionTests(TestCase):
     def setUp(self):
@@ -200,6 +225,16 @@ class StaffMemberDeletionTests(TestCase):
         self.assertContains(self.client.get(url), "définitive")
         self.assertRedirects(self.client.post(url), reverse("staff_list"))
         self.assertFalse(User.objects.filter(pk=self.agent.pk).exists())
+
+    def test_deleted_member_receives_last_email(self):
+        with self.captureOnCommitCallbacks(execute=True):
+            self.client.post(reverse("delete_staff_member", args=[self.agent.pk]))
+
+        self.assertEqual(
+            [(message.to, message.subject) for message in mail.outbox],
+            [(["agent@example.com"], "Votre compte a été supprimé")],
+        )
+        self.assertIn("supprimé par l'administrateur", mail.outbox[0].body)
 
     def test_cannot_delete_self(self):
         response = self.client.post(reverse("delete_staff_member", args=[self.admin.pk]), follow=True)

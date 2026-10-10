@@ -1,13 +1,15 @@
 from datetime import date
 
 from django.contrib.auth import get_user_model
+from django.core import mail
 from django.test import TestCase
 from django.urls import reverse
 
 from accounts.forms import ClientCorrectionForm
 from accounts.models import Role
 
-from .factories import PASSWORD, create_agent, create_client
+from .email_delivery import SendEmailsImmediately
+from .factories import PASSWORD, create_admin, create_agent, create_client
 
 User = get_user_model()
 
@@ -108,7 +110,7 @@ class ProfileEditTests(TestCase):
         self.assertEqual(self.user.birth_date, date(1955, 4, 12))
 
 
-class PasswordChangeTests(TestCase):
+class PasswordChangeTests(SendEmailsImmediately, TestCase):
     url = reverse("change_password")
 
     def change_password(self, old_password, new_password="montagne-lac-77"):
@@ -152,6 +154,19 @@ class PasswordChangeTests(TestCase):
         self.client.force_login(agent)
 
         self.assertRedirects(self.change_password(PASSWORD), reverse("profile"))
+
+    def test_security_email_sent_to_clients_and_staff(self):
+        for user in [create_client(), create_agent(), create_admin()]:
+            with self.subTest(role=user.role):
+                mail.outbox.clear()
+                self.client.force_login(user)
+
+                self.change_password(PASSWORD)
+
+                self.assertEqual(
+                    [(message.to, message.subject) for message in mail.outbox],
+                    [([user.email], "Votre mot de passe a été modifié")],
+                )
 
 
 class AccountDeletionTests(TestCase):

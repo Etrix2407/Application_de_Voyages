@@ -21,6 +21,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from accounts.models import EmailKind, Role, User, normalize_email_address
+from accounts.services.account_deletion import delete_account
 from accounts.services.emails import send_email
 from accounts.services.throttling import confirmation_emails
 
@@ -100,11 +101,13 @@ def confirm(user: User) -> None:
 def purge_unconfirmed(now=None) -> int:
     """Supprime les comptes clients jamais confirmés (RGPD : pas de données sans raison)."""
     limit = (now or timezone.now()) - UNCONFIRMED_RETENTION
-    _, deleted = User.objects.filter(
-        role=Role.CLIENT, email_confirmed_at__isnull=True, date_joined__lt=limit
-    ).delete()
-    # Seuls les comptes sont comptés, pas leurs favoris supprimés avec eux.
-    return deleted.get(User._meta.label, 0)
+    accounts = User.objects.filter(role=Role.CLIENT, email_confirmed_at__isnull=True, date_joined__lt=limit)
+    # Un par un : chaque titulaire reçoit un dernier e-mail (quelques comptes par jour au plus).
+    deleted = 0
+    for user in accounts:
+        delete_account(user, EmailKind.UNCONFIRMED_ACCOUNT_DELETED)
+        deleted += 1
+    return deleted
 
 
 def notification_context(user: User, absolute_url: Callable[[str], str]) -> dict:

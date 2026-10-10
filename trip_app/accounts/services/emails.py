@@ -40,6 +40,11 @@ SUBJECTS = {
     EmailKind.NEW_ORDER_ALERT: "Nouvelle demande de voyage",
     EmailKind.DEPARTURE_REMINDER: "Votre départ approche",
     EmailKind.REVIEW_INVITATION: "Comment s'est passé votre voyage ?",
+    EmailKind.PASSWORD_CHANGED: "Votre mot de passe a été modifié",
+    EmailKind.ACCOUNT_DELETED: "Votre compte a été supprimé",
+    EmailKind.UNCONFIRMED_ACCOUNT_DELETED: "Votre compte a été supprimé",
+    EmailKind.STAFF_ACCOUNT_DELETED: "Votre compte a été supprimé",
+    EmailKind.STAFF_PASSWORD_LINK: "Choisissez un nouveau mot de passe",
 }
 
 

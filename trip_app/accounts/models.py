@@ -212,6 +212,11 @@ class EmailKind(models.TextChoices):
     NEW_ORDER_ALERT = "new_order_alert", "Alerte au personnel : nouvelle demande de voyage"
     DEPARTURE_REMINDER = "departure_reminder", "Rappel 7 jours avant le départ"
     REVIEW_INVITATION = "review_invitation", "Invitation à donner un avis"
+    PASSWORD_CHANGED = "password_changed", "Mot de passe modifié"
+    ACCOUNT_DELETED = "account_deleted", "Compte supprimé"
+    UNCONFIRMED_ACCOUNT_DELETED = "unconfirmed_account_deleted", "Compte jamais confirmé supprimé"
+    STAFF_ACCOUNT_DELETED = "staff_account_deleted", "Compte du personnel supprimé"
+    STAFF_PASSWORD_LINK = "staff_password_link", "Lien de mot de passe envoyé à un membre du personnel"
 
 
 class EmailStatus(models.TextChoices):

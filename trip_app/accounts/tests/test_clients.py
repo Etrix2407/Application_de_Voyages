@@ -137,6 +137,11 @@ class ClientPasswordLinkTests(SendEmailsImmediately, TestCase):
         )
         client.refresh_from_db()
         self.assertTrue(client.check_password("montagne-lac-77"))
+        # Alerte de sécurité « mot de passe modifié ».
+        self.assertEqual(
+            (len(mail.outbox), mail.outbox[-1].to, mail.outbox[-1].subject),
+            (2, ["client@example.com"], "Votre mot de passe a été modifié"),
+        )
 
     def test_get_denied(self):
         self.client.force_login(create_agent())

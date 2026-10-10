@@ -1,0 +1,5 @@
+{% autoescape off %}Bonjour {{ user.first_name }},
+
+Votre compte du personnel (numéro d'employé : {{ user.employee_number }}) a été supprimé par l'administrateur. Vous ne pouvez plus vous connecter au site.
+
+Ce message est le dernier que vous recevrez de notre part.{% endautoescape %}

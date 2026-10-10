@@ -1,11 +1,14 @@
-"""Inscription (avec confirmation de l'adresse e-mail) et connexion."""
+"""Inscription (avec confirmation de l'adresse e-mail), connexion et liens pour choisir un mot de passe."""
 
 from django.contrib import messages
-from django.contrib.auth.views import LoginView
+from django.contrib.auth.views import LoginView, PasswordResetConfirmView
 from django.shortcuts import redirect, render
+from django.urls import reverse_lazy
 
 from accounts.forms import LoginForm, ResendConfirmationForm, SignUpForm
 from accounts.services import sign_up as sign_up_service
+from accounts.services.password_links import agent_invitation_token_generator
+from accounts.services.password_notice import send_password_changed_notice
 from accounts.services.throttling import (
     confirmation_requests_by_ip,
     get_client_ip,
@@ -89,3 +92,32 @@ class AccountLoginView(LoginView):
     template_name = "accounts/auth/login.html"
     authentication_form = LoginForm
     redirect_authenticated_user = True
+
+
+class PasswordChangedNoticeMixin:
+    """Mot de passe choisi par un lien reçu par e-mail : alerte de sécurité envoyée ensuite.
+
+    Pas d'alerte à la toute première définition (agent invité, qui n'avait pas encore de mot de passe).
+    """
+
+    def form_valid(self, form):
+        had_password = self.user.has_usable_password()
+        response = super().form_valid(form)
+        if had_password:
+            send_password_changed_notice(self.user)
+        return response
+
+
+class AccountPasswordResetConfirmView(PasswordChangedNoticeMixin, PasswordResetConfirmView):
+    """Lien « mot de passe oublié », ou lien envoyé à un client par un agent (valable 1 heure)."""
+
+    template_name = "accounts/auth/password_reset_confirm.html"
+    success_url = reverse_lazy("password_reset_complete")
+
+
+class AgentActivationView(PasswordChangedNoticeMixin, PasswordResetConfirmView):
+    """Lien d'invitation d'un agent (valable 7 jours), aussi renvoyé depuis la liste du personnel."""
+
+    template_name = "accounts/auth/activate_account.html"
+    success_url = reverse_lazy("password_reset_complete")
+    token_generator = agent_invitation_token_generator

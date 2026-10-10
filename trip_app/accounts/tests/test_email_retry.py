@@ -7,6 +7,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from accounts.models import EmailKind, EmailLog, EmailStatus
+from accounts.services.account_deletion import delete_account
 from accounts.services.email_retry import NOT_REBUILDABLE, OBSOLETE, retry_due_emails
 from accounts.services.privacy import purge_old_email_log
 
@@ -122,6 +123,8 @@ class ManualResendTests(TestCase):
 class AgentActivationResendTests(TestCase):
     def setUp(self):
         self.new_agent = create_agent(email="nouvel.agent@example.com")
+        self.new_agent.set_unusable_password()  # invité : pas encore de mot de passe
+        self.new_agent.save()
         self.log = pending_log(
             self.new_agent, attempts=3, minutes_ago=60, status=EmailStatus.FAILED, kind=EmailKind.AGENT_ACTIVATION
         )
@@ -140,6 +143,49 @@ class AgentActivationResendTests(TestCase):
         self.client.post(self.url)
 
         self.assertEqual(mail.outbox[0].to, ["nouvel.agent@example.com"])
+        # Lien neuf de l'invitation (7 jours), pas celui de « mot de passe oublié ».
+        self.assertRegex(mail.outbox[0].body, r"/activation/[\w-]+/[\w-]+/")
+
+
+class AccountEmailsRetryTests(TestCase):
+    def test_staff_password_link_resent_by_administrator_only(self):
+        agent = create_agent(email="luc@example.com")
+        log = pending_log(agent, attempts=3, minutes_ago=60, status=EmailStatus.FAILED, kind=EmailKind.STAFF_PASSWORD_LINK)
+        url = reverse("resend_email", args=[log.pk])
+
+        self.client.force_login(create_agent())
+        self.assertEqual(self.client.post(url).status_code, 403)
+
+        self.client.force_login(create_admin())
+        self.client.post(url)
+        self.assertEqual(mail.outbox[0].to, ["luc@example.com"])
+        self.assertRegex(mail.outbox[0].body, r"/activation/[\w-]+/[\w-]+/")
+
+    def test_password_changed_notice_retried(self):
+        log = pending_log(create_client(), attempts=1, minutes_ago=6, kind=EmailKind.PASSWORD_CHANGED)
+
+        retry_due_emails()
+
+        log.refresh_from_db()
+        self.assertEqual(log.status, EmailStatus.SENT)
+        self.assertIn("vient d'être modifié", mail.outbox[0].body)
+
+    def test_deletion_emails_never_resent_nor_listed(self):
+        kinds = [EmailKind.ACCOUNT_DELETED, EmailKind.UNCONFIRMED_ACCOUNT_DELETED, EmailKind.STAFF_ACCOUNT_DELETED]
+        for number, kind in enumerate(kinds):
+            user = create_client(email=f"parti{number}@example.com")
+            with SMTP_DOWN, self.assertLogs("accounts.services.emails", level="ERROR"):
+                with self.captureOnCommitCallbacks(execute=True):
+                    delete_account(user, kind)
+
+        retry_due_emails(now=timezone.now() + timedelta(minutes=6))
+
+        self.assertEqual(
+            set(EmailLog.objects.values_list("recipient", "status", "last_error")),
+            {("", EmailStatus.FAILED, NOT_REBUILDABLE)},
+        )
+        self.client.force_login(create_admin())
+        self.assertNotContains(self.client.get(reverse("email_failure_list")), "Votre compte a été supprimé")
 
 
 class AddressToCheckTests(TestCase):

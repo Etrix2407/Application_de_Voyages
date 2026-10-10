@@ -12,7 +12,7 @@ from django.urls import reverse
 from accounts.models import EmailKind, EmailLog, User
 from accounts.services.email_retry import RebuiltEmail, rebuilder
 from accounts.services.emails import site_url
-from accounts.services.password_links import password_link_path, password_token
+from accounts.services.password_links import password_link_path, password_token, staff_link_path
 from accounts.services.sign_up import make_confirmation_token, notification_context
 
 
@@ -79,6 +79,30 @@ def _client_password_link(log: EmailLog) -> RebuiltEmail | None:
 @rebuilder(EmailKind.AGENT_ACTIVATION)
 def _agent_activation(log: EmailLog) -> RebuiltEmail | None:
     user = _account_at_recipient(log)
-    if user is None or not user.is_staff_member or not user.is_active:
+    # Invitation : sans objet si l'agent a déjà choisi son mot de passe. Lien neuf de 7 jours.
+    if user is None or not user.is_staff_member or not user.is_active or user.has_usable_password():
         return None
-    return RebuiltEmail("accounts/emails/agent_activation.txt", {"user": user, "link": site_url(password_link_path(user))})
+    return RebuiltEmail("accounts/emails/agent_activation.txt", {"user": user, "link": site_url(staff_link_path(user))})
+
+
+@rebuilder(EmailKind.STAFF_PASSWORD_LINK)
+def _staff_password_link(log: EmailLog) -> RebuiltEmail | None:
+    user = _account_at_recipient(log)
+    # Membre qui a déjà un mot de passe (sinon c'est une invitation). Lien neuf de 7 jours.
+    if user is None or not user.is_staff_member or not user.is_active or not user.has_usable_password():
+        return None
+    return RebuiltEmail("accounts/emails/staff_password.txt", {"user": user, "link": site_url(staff_link_path(user))})
+
+
+@rebuilder(EmailKind.PASSWORD_CHANGED)
+def _password_changed(log: EmailLog) -> RebuiltEmail | None:
+    # Alerte sans lien, destinée à l'adresse d'alors (elle a pu changer depuis).
+    if log.user is None:
+        return None
+    return RebuiltEmail("accounts/emails/password_changed.txt", {"user": log.user})
+
+
+# ACCOUNT_DELETED, UNCONFIRMED_ACCOUNT_DELETED et STAFF_ACCOUNT_DELETED ne sont volontairement pas
+# reconstruits : l'adresse est effacée du journal à la suppression du compte (RGPD).
+
+

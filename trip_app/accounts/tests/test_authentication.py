@@ -1,6 +1,7 @@
 import importlib
 import re
 from datetime import timedelta
+from io import StringIO
 from unittest import mock
 
 from django.apps import apps as django_apps
@@ -8,13 +9,14 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core import mail
 from django.core.cache import cache
-from django.test import TestCase
+from django.core.management import call_command
+from django.test import TestCase, TransactionTestCase
 from django.urls import reverse
 from django.utils import timezone
 
 from accounts.services.sign_up import purge_unconfirmed
 from accounts.services.throttling import confirmation_emails, login_failures, password_reset_requests
-from accounts.models import Role
+from accounts.models import EmailLog, Role
 
 from .email_delivery import SendEmailsImmediately
 from .factories import PASSWORD, create_agent, create_client
@@ -267,6 +269,25 @@ class PurgeUnconfirmedTests(TestCase):
         self.assertEqual(list(User.objects.all()), [confirmed])
 
 
+class PurgeUnconfirmedEmailTests(TransactionTestCase):
+    """Commande planifiée, hors requête et sans transaction de test : l'e-mail part vraiment après validation."""
+
+    def test_purged_account_receives_last_email(self):
+        create_client(
+            email="jamais@example.com", email_confirmed_at=None, date_joined=timezone.now() - timedelta(days=31)
+        )
+
+        call_command("purge_unconfirmed", stdout=StringIO())
+
+        self.assertFalse(User.objects.exists())
+        self.assertEqual(
+            [(message.to, message.subject) for message in mail.outbox],
+            [(["jamais@example.com"], "Votre compte a été supprimé")],
+        )
+        self.assertIn("jamais été confirmée", mail.outbox[0].body)
+        self.assertEqual(EmailLog.objects.get().recipient, "")
+
+
 class LoginTests(TestCase):
     url = reverse("login")
 
@@ -386,6 +407,11 @@ class PasswordResetTests(SendEmailsImmediately, TestCase):
         self.assertRedirects(response, reverse("password_reset_complete"))
         client.refresh_from_db()
         self.assertTrue(client.check_password(new_password))
+        # Alerte de sécurité « mot de passe modifié ».
+        self.assertEqual(
+            (len(mail.outbox), mail.outbox[-1].to, mail.outbox[-1].subject),
+            (2, ["client@example.com"], "Votre mot de passe a été modifié"),
+        )
 
     def test_unknown_email_neutral_message(self):
         response = self.client.post(self.url, {"email": "inconnu@example.com"})

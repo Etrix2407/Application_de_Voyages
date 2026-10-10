@@ -1,6 +1,6 @@
 {% autoescape off %}Bonjour {{ user.first_name }},
 
-Merci pour votre inscription. Pour confirmer votre adresse e-mail, ouvrez ce lien (valable 48 heures) :
+Bienvenue chez Horizons Lointains, et merci pour votre inscription. Pour confirmer votre adresse e-mail, ouvrez ce lien (valable 48 heures) :
 
 {{ confirmation_link }}
 

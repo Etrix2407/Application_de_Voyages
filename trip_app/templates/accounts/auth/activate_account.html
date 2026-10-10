@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block title %}Choisir votre mot de passe{% endblock %}
+
+{% block content %}
+    <h1>Choisir votre mot de passe</h1>
+
+    {% if validlink %}
+        <form method="post" novalidate>
+            {% csrf_token %}
+            {{ form }}
+            <button type="submit">Enregistrer le mot de passe</button>
+        </form>
+    {% else %}
+        <p>Ce lien n'est plus valable : il a déjà été utilisé ou a expiré.</p>
+        <p>Demandez à l'administrateur de vous en envoyer un nouveau.</p>
+    {% endif %}
+{% endblock %}

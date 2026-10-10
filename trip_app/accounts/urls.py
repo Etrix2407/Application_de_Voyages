@@ -71,12 +71,10 @@ urlpatterns = [
     ),
     path(
         "reinitialisation/<uidb64>/<token>/",
-        auth_views.PasswordResetConfirmView.as_view(
-            template_name="accounts/auth/password_reset_confirm.html",
-            success_url=reverse_lazy("password_reset_complete"),
-        ),
+        auth.AccountPasswordResetConfirmView.as_view(),
         name="password_reset_confirm",
     ),
+    path("activation/<uidb64>/<token>/", auth.AgentActivationView.as_view(), name="activate_account"),
     path(
         "reinitialisation/terminee/",
         auth_views.PasswordResetCompleteView.as_view(
