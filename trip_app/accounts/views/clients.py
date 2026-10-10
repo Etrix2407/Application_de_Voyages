@@ -8,6 +8,7 @@ from django.views.decorators.http import require_POST
 from accounts.decorators import staff_required
 from accounts.forms import ClientCorrectionForm
 from accounts.models import EmailKind, Role, User
+from accounts.services.address_check import with_address_to_check
 from accounts.services.client_search import client_matches, search_words
 from accounts.services.password_links import send_password_link
 
@@ -22,7 +23,7 @@ def _get_client(pk: int) -> User:
 @staff_required
 def client_list(request):
     query = request.GET.get("q", "").strip()
-    clients = User.objects.filter(role=Role.CLIENT).order_by("last_name", "first_name", "pk")
+    clients = with_address_to_check(User.objects.filter(role=Role.CLIENT)).order_by("last_name", "first_name", "pk")
     words = search_words(query)
     if words:
         # Filtre en Python (~1 000 clients) : voir client_matches.
