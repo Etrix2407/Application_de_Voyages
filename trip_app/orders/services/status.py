@@ -61,13 +61,19 @@ def confirm_by_staff(order: Order, staff_member) -> None:
     note = "" if quote.price == order.estimated_price else (
         f"Prix recalculé aux tarifs du jour : {euros(order.estimated_price)} → {euros(quote.price)}."
     )
+    updates = {
+        "confirmed_price": quote.price,
+        "confirmed_discount": quote.discount,
+        # Destination déjà chargée par le recalcul : c'est le prix du séjour réellement compté.
+        "confirmed_destination_price": order.destination.price_from,
+        "has_confirmed_destination_price": True,
+    }
     _change_status(
         order, CONFIRMABLE, Status.CONFIRMED, staff_member, staff_member.get_full_name(), note,
-        "Seule une demande en attente peut être confirmée.",
-        updates={"confirmed_price": quote.price, "confirmed_discount": quote.discount},
+        "Seule une demande en attente peut être confirmée.", updates=updates,
     )
-    order.confirmed_price = quote.price
-    order.confirmed_discount = quote.discount
+    for field, value in updates.items():
+        setattr(order, field, value)
 
 
 def cancel_by_staff(order: Order, staff_member, reason: str) -> None:

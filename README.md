@@ -1,6 +1,6 @@
 # Application_de_Voyages
 
-Application web (Python 3, Django 5.2) pour une agence de voyage. Elle gère les comptes des clients et du personnel, et propose un catalogue de pays, destinations et activités. Le cahier des charges est résumé dans [Recap.md](Recap.md) (v1 : comptes et catalogue), [Recap_2.md](Recap_2.md) (v2 : demandes de voyage), [Recap_3.md](Recap_3.md) (v3 : avis clients) et [Recap_4.md](Recap_4.md) (v4 : promotions, en cours de développement). Les énoncés ne sont jamais modifiés : les décisions prises ensuite avec la cliente sont décrites dans ce README.
+Application web (Python 3, Django 5.2) pour une agence de voyage. Elle gère les comptes des clients et du personnel, et propose un catalogue de pays, destinations et activités. Le cahier des charges est résumé dans [Recap.md](Recap.md) (v1 : comptes et catalogue), [Recap_2.md](Recap_2.md) (v2 : demandes de voyage), [Recap_3.md](Recap_3.md) (v3 : avis clients) et [Recap_4.md](Recap_4.md) (v4 : promotions). Les énoncés ne sont jamais modifiés : les décisions prises ensuite avec la cliente sont décrites dans ce README.
 
 ## Sommaire
 
@@ -30,7 +30,7 @@ Ouvrez ensuite http://127.0.0.1:8000/ et connectez-vous avec le compte administr
 
 ### Le fichier `.env` (réglages et secrets)
 
-Les réglages se trouvent dans le fichier **`.env`**, à la racine du dépôt, créé à partir du modèle [.env.example](.env.example) où chaque réglage est expliqué. Il contient des secrets : il **n'est jamais commité** (protégé par `.gitignore`) et ne doit pas être partagé. Au minimum, renseignez `DJANGO_SECRET_KEY` (commande de génération indiquée dans le modèle). Les variables d'environnement définies dans Windows ou sur le serveur restent prioritaires sur ce fichier.
+Les réglages se trouvent dans le fichier **`.env`**, à la racine du dépôt, créé à partir du modèle [.env.example](.env.example) où chaque réglage est expliqué. Il contient des secrets : il **n'est jamais commité** (protégé par `.gitignore`) et ne doit pas être partagé. Le site refuse de démarrer sans `DJANGO_SECRET_KEY`, même en développement, et sans `DJANGO_PASSWORD_PEPPER` en production : renseignez-les (commande de génération indiquée dans le modèle). Le modèle est réglé pour la production (`DJANGO_DEBUG=0`) : sur votre ordinateur, passez `DJANGO_DEBUG=1`. Les variables d'environnement définies dans Windows ou sur le serveur restent prioritaires sur ce fichier.
 
 Pour **recevoir vraiment les e-mails** (Outlook / Hotmail) : dans `.env`, renseignez `DJANGO_EMAIL_HOST_USER`, `DJANGO_EMAIL_HOST_PASSWORD` (mot de passe d'application si la validation en deux étapes est activée) et `DJANGO_DEFAULT_FROM_EMAIL` (même adresse), puis passez `DJANGO_EMAIL_BACKEND` sur `django.core.mail.backends.smtp.EmailBackend`. Vérifiez avec `python manage.py sendtestemail votre@adresse`.
 
@@ -168,7 +168,7 @@ Limites par adresse IP, contre les robots : 20 échecs de connexion par 15 minut
 - Un nom de pays est unique, sans tenir compte des majuscules ni des accents (« Perou » = « Pérou »).
 - **Avis vérifiés (v3)** : un avis ne peut être laissé que pour une demande de voyage **confirmée par l'agence** dont la **date de retour est passée** : seuls les clients réellement partis donnent leur avis. Un seul avis par demande (garanti par la base). Si l'agence annule ensuite ce voyage, l'avis est retiré automatiquement (« Refusé », motif « Voyage annulé »).
 - Avis : seule la **destination** est notée ; les activités réalisées ne sont pas notées (option « souhaitable » du Recap 3 écartée par la cliente). Limites : titre 100 caractères, commentaire 1 000, réponse de l'agence 1 000, précision d'un refus 500.
-- Avis et **compte supprimé** : les avis restent publiés, signés « Voyageur anonyme », sans lien avec la personne (le personnel voit « Client supprimé »), et comptent toujours dans les notes. Avis et **destination ou pays désactivé** : les avis restent en base mais ne sont plus visibles ni comptés ; ils réapparaissent à la réactivation.
+- Avis et **compte supprimé** : les avis restent publiés, signés « Voyageur anonyme », sans lien avec la personne (signature « Julie D. » effacée en base ; le personnel voit « Client supprimé »), et comptent toujours dans les notes. Avis et **destination ou pays désactivé** : les avis restent en base mais ne sont plus visibles ni comptés ; ils réapparaissent à la réactivation.
 - **Promotion d'une demande** : son nom et la remise sont figés dans la demande ; modifier ou désactiver la promotion ne change rien aux demandes existantes. À la confirmation, la remise est ré-appliquée au prix recalculé. Une promotion déjà utilisée ne change plus que de nom, de description et de date de fin, et ne peut plus être supprimée. Une demande annulée rend l'utilisation (limites par client et au total).
 - Une demande de voyage garde les **noms** (pays, destination, activités) et l'**estimation** du jour où elle a été envoyée : un renommage ou un changement de tarif dans le catalogue ne les modifie pas. À la **confirmation**, le prix est **recalculé aux tarifs du jour** (le prix peut varier entre la demande et la confirmation) ; l'estimation de départ reste affichée, et un changement de prix est noté dans l'historique.
 - Un client ne voit jamais les données d'un autre client ni celles du personnel. Les agents ne voient pas les favoris des clients.
@@ -178,16 +178,16 @@ Limites par adresse IP, contre les robots : 20 échecs de connexion par 15 minut
 
 ## Promotions (v4) : décisions validées
 
-En cours de développement. Le [Recap_4.md](Recap_4.md) décrit les promotions ; voici les réponses de la cliente à ses questions ouvertes et aux cas qu'il ne couvrait pas. La « commande » du Recap est la **demande de voyage** de l'application.
+Version terminée. Le [Recap_4.md](Recap_4.md) décrit les promotions ; voici les réponses de la cliente à ses questions ouvertes et aux cas qu'il ne couvrait pas. La « commande » du Recap est la **demande de voyage** de l'application.
 
 - **Calcul** :
   - la remise s'applique **après** le demi-tarif enfant ;
-  - un montant fixe est **plafonné** à son assiette (-100 € « sur les activités » pour 60 € d'activités = 60 € de remise) ;
+  - un montant fixe est **plafonné** à son assiette (-100,00 € « sur les activités » pour 60 € d'activités = 60 € de remise) ;
   - une promotion qui donnerait 0 € (ex. « sur les activités » sans activité, « sur le séjour » pour une destination sur devis) est **non applicable** et n'est pas comptée comme utilisée.
 - **Confirmation** : quand l'agent recalcule le prix aux tarifs du jour, la promotion figée dans la demande est **ré-appliquée** (un pourcentage reste un pourcentage, un montant fixe reste le même montant).
 - **Meilleure promotion** :
   - en cas d'égalité, la promotion **créée le plus récemment** l'emporte ;
-  - si une promotion automatique bat le code saisi, le client lit « Une offre plus avantageuse s'applique déjà : -150 € » et son code **n'est pas consommé**.
+  - si une promotion automatique bat le code saisi, le client lit « Une offre plus avantageuse s'applique déjà : -150,00 € » et son code **n'est pas consommé**.
 - **Messages du code promo**, en plus des cinq du Recap :
   - « Ce code ne s'applique pas à ces dates de départ » (départ hors de la période autorisée) ;
   - un code dont la promotion n'a pas encore commencé donne « Code invalide », pour ne pas révéler les offres à venir.
@@ -223,7 +223,7 @@ Réglez ces variables dans le `.env` du serveur, ou directement comme variables 
 | Variable | Rôle | Défaut |
 |---|---|---|
 | `DJANGO_DEBUG` | `1` en développement, `0` en production | `0` (désactivé si absent) |
-| `DJANGO_SECRET_KEY` | Clé secrète longue et aléatoire (obligatoire si `DJANGO_DEBUG=0`) | clé de développement |
+| `DJANGO_SECRET_KEY` | Clé secrète longue et aléatoire (obligatoire, même en développement) | aucun |
 | `DJANGO_PASSWORD_PEPPER` | « Poivre » des mots de passe, long et aléatoire (obligatoire si `DJANGO_DEBUG=0`). **Ne jamais le perdre ni le changer** : tous les mots de passe deviendraient inutilisables | vide |
 | `DJANGO_ALLOWED_HOSTS` | Noms de domaine autorisés, séparés par des virgules | vide |
 | `DJANGO_EMAIL_BACKEND` | `django.core.mail.backends.smtp.EmailBackend` pour envoyer de vrais e-mails | console |
@@ -289,7 +289,7 @@ trip_app/
 ├── reviews/                # avis clients (v3) : modèle, avis vérifiés, lien avec les demandes
 │   ├── views/              # client (donner, modifier, supprimer), manage (modération)
 │   ├── services/           # eligibility, writing (client), moderation, responses, filtering (personnel),
-│   │                       # ratings (notes publiques), order_events
+│   │                       # ratings (notes publiques), order_events, privacy (effacement RGPD des signatures)
 │   ├── models.py · forms.py · signals.py · urls.py · context_processors.py (compteur du menu)
 │   └── tests/
 ├── templates/

@@ -88,8 +88,6 @@ def place_order(
     en 24 heures, lève DailyLimitReached. Si la limite de la promotion est atteinte au moment
     de l'enregistrement (dernière utilisation prise entre-temps), lève PromotionUnavailable.
     """
-    if daily_limit_reached(client):
-        raise DailyLimitReached
     try:
         return _create_order(client, destination, data, offer, submission_token)
     except IntegrityError:
@@ -103,6 +101,8 @@ def place_order(
 def _create_order(client, destination: Destination, data: dict, offer: Offer | None, submission_token) -> Order:
     # Limites revérifiées dans la transaction, qui détient déjà le verrou d'écriture (réglage
     # « IMMEDIATE » de settings.py) : de deux envois simultanés, le second voit le premier.
+    if daily_limit_reached(client):
+        raise DailyLimitReached
     if offer and limit_problem(offer.promotion, client):
         raise PromotionUnavailable
     activities = list(data["activities"])

@@ -9,7 +9,7 @@ Le client ressaisit son mot de passe (formulaire), puis :
 from datetime import timedelta
 
 from django.core import signing
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.urls import reverse
 
 from accounts.models import Role, User, normalize_email_address
@@ -51,12 +51,21 @@ def pending_email_change(token: str) -> tuple[User, str] | None:
     return user, data["new"]
 
 
-@transaction.atomic
-def apply_email_change(user: User, new_email: str) -> None:
-    """Applique un changement obtenu par pending_email_change (lien déjà vérifié)."""
+def apply_email_change(user: User, new_email: str) -> bool:
+    """Applique un changement obtenu par pending_email_change (lien déjà vérifié).
+
+    Renvoie False, sans rien modifier, si l'adresse a été prise depuis la vérification du lien.
+    """
+    old_email = user.email
     user.email = new_email
-    user.save(update_fields=["email"])
-    email_changed.send(sender=User, user=user)
+    try:
+        with transaction.atomic():
+            user.save(update_fields=["email"])
+    except IntegrityError:
+        # La base garantit l'unicité : l'adresse a été prise au même instant.
+        user.email = old_email
+        return False
+    return True
 
 
 def _notify_current_address(user: User) -> None:

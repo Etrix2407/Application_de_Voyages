@@ -12,8 +12,8 @@
         </p>
     {% endif %}
 
-    {% if choice.code_applied %}
-        <p class="message message-success" role="status">Code appliqué : -{{ quote.discount }} €</p>
+    {% if choice.code_message %}
+        <p class="message message-success" role="status">{{ choice.code_message }}</p>
     {% elif choice.code_note %}
         <p class="message" role="status">{{ choice.code_note }}. Votre code n'est pas utilisé : vous pourrez le garder pour une autre demande.</p>
     {% endif %}
