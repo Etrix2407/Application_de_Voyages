@@ -182,12 +182,12 @@ Version terminée. Le [Recap_4.md](Recap_4.md) décrit les promotions ; voici le
 
 - **Calcul** :
   - la remise s'applique **après** le demi-tarif enfant ;
-  - un montant fixe est **plafonné** à son assiette (-100 € « sur les activités » pour 60 € d'activités = 60 € de remise) ;
+  - un montant fixe est **plafonné** à son assiette (-100,00 € « sur les activités » pour 60 € d'activités = 60 € de remise) ;
   - une promotion qui donnerait 0 € (ex. « sur les activités » sans activité, « sur le séjour » pour une destination sur devis) est **non applicable** et n'est pas comptée comme utilisée.
 - **Confirmation** : quand l'agent recalcule le prix aux tarifs du jour, la promotion figée dans la demande est **ré-appliquée** (un pourcentage reste un pourcentage, un montant fixe reste le même montant).
 - **Meilleure promotion** :
   - en cas d'égalité, la promotion **créée le plus récemment** l'emporte ;
-  - si une promotion automatique bat le code saisi, le client lit « Une offre plus avantageuse s'applique déjà : -150 € » et son code **n'est pas consommé**.
+  - si une promotion automatique bat le code saisi, le client lit « Une offre plus avantageuse s'applique déjà : -150,00 € » et son code **n'est pas consommé**.
 - **Messages du code promo**, en plus des cinq du Recap :
   - « Ce code ne s'applique pas à ces dates de départ » (départ hors de la période autorisée) ;
   - un code dont la promotion n'a pas encore commencé donne « Code invalide », pour ne pas révéler les offres à venir.
