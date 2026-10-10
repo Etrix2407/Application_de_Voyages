@@ -8,6 +8,7 @@ from django.conf import settings
 from django.test import TestCase
 from django.urls import URLResolver, get_resolver, reverse
 
+from accounts.models import EmailKind, EmailLog, EmailStatus
 from accounts.tests.factories import create_admin, create_agent, create_client
 from catalog.tests.factories import create_activity, create_country, create_destination
 from orders.tests.factories import create_order
@@ -68,6 +69,8 @@ ACCESS = {
     "client_list": STAFF,
     "edit_client": STAFF,
     "send_client_link": STAFF,
+    "email_failure_list": STAFF,
+    "resend_email": STAFF,
     "manage_country_list": STAFF,
     "manage_create_country": STAFF,
     "manage_country": STAFF,
@@ -128,12 +131,16 @@ class AccessMatrixTests(TestCase):
         cls.trip_to_review = create_trip_done(cls.client_user, cls.destination)
         cls.review = create_review(create_trip_done(cls.client_user, cls.destination))
         cls.promotion = create_promotion()
+        cls.failed_email = EmailLog.objects.create(
+            recipient=cls.client_user.email, kind=EmailKind.CLIENT_PASSWORD_LINK, subject="Objet", status=EmailStatus.FAILED
+        )
 
     def url_kwargs(self, name):
         member = self.other_agent.pk
         return {
             "edit_client": {"pk": self.client_user.pk},
             "send_client_link": {"pk": self.client_user.pk},
+            "resend_email": {"pk": self.failed_email.pk},
             "edit_staff_member": {"pk": member},
             "deactivate_staff_member": {"pk": member},
             "reactivate_staff_member": {"pk": member},

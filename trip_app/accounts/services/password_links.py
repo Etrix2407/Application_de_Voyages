@@ -43,26 +43,34 @@ class AgentInvitationTokenGenerator(PasswordResetTokenGenerator):
 agent_invitation_token_generator = AgentInvitationTokenGenerator()
 
 
+def password_token(user: User) -> dict:
+    """Identifiant et jeton du lien (valable 1 heure, PASSWORD_RESET_TIMEOUT)."""
+    return {"uidb64": urlsafe_base64_encode(force_bytes(user.pk)), "token": default_token_generator.make_token(user)}
+
+
+def password_link_path(user: User) -> str:
+    """Chemin du lien pour choisir un mot de passe, valable 1 heure (à rendre absolu)."""
+    return reverse("password_reset_confirm", kwargs=password_token(user))
+
+
+def staff_link_path(member: User) -> str:
+    """Chemin du lien envoyé à un membre du personnel, valable 7 jours (à rendre absolu)."""
+    return reverse(
+        "activate_account",
+        kwargs={
+            "uidb64": urlsafe_base64_encode(force_bytes(member.pk)),
+            "token": agent_invitation_token_generator.make_token(member),
+        },
+    )
+
+
 def send_password_link(request, user: User, kind: EmailKind, template_name: str) -> bool:
     """Envoie un lien valable 1 heure (PASSWORD_RESET_TIMEOUT) ; personne d'autre ne voit le mot de passe."""
-    return _send_link(request, user, kind, template_name, "password_reset_confirm", default_token_generator)
+    link = request.build_absolute_uri(password_link_path(user))
+    return send_email(user.email, kind, template_name, {"user": user, "link": link}, user=user)
 
 
 def send_staff_link(request, member: User, kind: EmailKind, template_name: str) -> bool:
     """Envoie à un membre du personnel un lien valable 7 jours pour choisir son mot de passe (pas de mot de passe provisoire)."""
-    return _send_link(request, member, kind, template_name, "activate_account", agent_invitation_token_generator)
-
-
-def _send_link(
-    request, user: User, kind: EmailKind, template_name: str, url_name: str, token_generator
-) -> bool:
-    link = request.build_absolute_uri(
-        reverse(
-            url_name,
-            kwargs={
-                "uidb64": urlsafe_base64_encode(force_bytes(user.pk)),
-                "token": token_generator.make_token(user),
-            },
-        )
-    )
-    return send_email(user.email, kind, template_name, {"user": user, "link": link}, user=user)
+    link = request.build_absolute_uri(staff_link_path(member))
+    return send_email(member.email, kind, template_name, {"user": member, "link": link}, user=member)

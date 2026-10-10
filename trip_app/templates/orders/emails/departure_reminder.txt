@@ -1,0 +1,15 @@
+{% autoescape off %}Bonjour {{ user.first_name }},
+
+Votre voyage approche : départ pour {{ order.destination_name }} ({{ order.country_name }}) le {{ order.departure_date|date:"j F Y" }}, retour le {{ order.return_date|date:"j F Y" }} (demande n° {{ order.pk }}).
+
+Quelques rappels pour bien préparer votre départ :
+
+- {% if passport_required %}Un passeport valide est obligatoire pour ce pays.{% else %}Une carte d'identité valide suffit pour ce pays.{% endif %}
+- Visa pour les Belges : {{ visa }}
+{% if time_offset %}- Décalage horaire le jour du départ : {{ time_offset }}
+{% endif %}- Monnaie : {{ currency }}
+
+Le détail de votre demande :
+{{ order_link }}
+
+Nous vous souhaitons un excellent voyage.{% endautoescape %}

@@ -12,6 +12,7 @@ La page de confirmation affiche les données du compte et demande un clic sur un
 la propriétaire de l'adresse ne confirme pas sans le savoir un compte créé par un tiers.
 """
 
+from collections.abc import Callable
 from datetime import timedelta
 
 from django.core import signing
@@ -61,6 +62,7 @@ def request_sign_up(request, form) -> None:
     user = User(email=email, role=Role.CLIENT, consent_date=timezone.now())
     for field in _PERSONAL_FIELDS:
         setattr(user, field, form.cleaned_data.get(field))
+    user.set_promotional_emails_consent(form.cleaned_data.get("promotional_emails", False))
     user.set_password(form.cleaned_data["password1"])
     with transaction.atomic():
         if existing:
@@ -108,15 +110,20 @@ def purge_unconfirmed(now=None) -> int:
     return deleted
 
 
+def notification_context(user: User, absolute_url: Callable[[str], str]) -> dict:
+    """Variables communes aux e-mails d'inscription ; `absolute_url` rend un chemin absolu
+    (request.build_absolute_uri pendant une requête, site_url hors requête)."""
+    return {
+        "user": user,
+        "login_link": absolute_url(reverse("login")),
+        "password_reset_link": absolute_url(reverse("password_reset")),
+    }
+
+
 def _notify(request, user: User, kind: EmailKind, template_name: str, extra: dict | None = None) -> bool:
     # Limite par adresse : on ne peut pas se servir du site pour inonder une boîte e-mail.
     if confirmation_emails.is_locked(user.email):
         return False
     confirmation_emails.record(user.email)
-    context = {
-        "user": user,
-        "login_link": request.build_absolute_uri(reverse("login")),
-        "password_reset_link": request.build_absolute_uri(reverse("password_reset")),
-        **(extra or {}),
-    }
+    context = {**notification_context(user, request.build_absolute_uri), **(extra or {})}
     return send_email(user.email, kind, template_name, context, user=user)

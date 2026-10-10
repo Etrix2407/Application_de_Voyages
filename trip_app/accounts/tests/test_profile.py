@@ -5,6 +5,7 @@ from django.core import mail
 from django.test import TestCase
 from django.urls import reverse
 
+from accounts.forms import ClientCorrectionForm
 from accounts.models import Role
 
 from .email_delivery import SendEmailsImmediately
@@ -78,6 +79,28 @@ class ProfileEditTests(TestCase):
 
         self.user.refresh_from_db()
         self.assertEqual(self.user.role, Role.CLIENT)
+
+    def test_promotional_emails_consent_given_kept_then_withdrawn(self):
+        self.client.post(self.url, self.data(promotional_emails="on"))
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.accepts_promotional_emails)
+        consent_date = self.user.promotional_emails_choice_date
+        self.assertIsNotNone(consent_date)
+
+        # Réenregistrer sans toucher à la case garde la date d'origine (preuve du consentement).
+        self.assertTrue(self.client.get(self.url).context["form"]["promotional_emails"].value())
+        self.client.post(self.url, self.data(last_name="Martin", promotional_emails="on"))
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.promotional_emails_choice_date, consent_date)
+
+        # Le retrait est daté lui aussi : la trace du changement est gardée.
+        self.client.post(self.url, self.data())
+        self.user.refresh_from_db()
+        self.assertFalse(self.user.accepts_promotional_emails)
+        self.assertGreater(self.user.promotional_emails_choice_date, consent_date)
+
+    def test_agent_correction_cannot_change_promotional_emails_consent(self):
+        self.assertNotIn("promotional_emails", ClientCorrectionForm().fields)
 
     def test_birth_date_required(self):
         response = self.client.post(self.url, self.data(birth_date=""))

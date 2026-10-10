@@ -2,7 +2,7 @@ from django.contrib.auth import views as auth_views
 from django.urls import path, reverse_lazy
 
 from .forms import PasswordResetRequestForm
-from .views import auth, clients, data_export, profile, staff
+from .views import auth, clients, data_export, email_failures, profile, staff
 
 urlpatterns = [
     path("inscription/", auth.sign_up, name="sign_up"),
@@ -33,6 +33,8 @@ urlpatterns = [
         clients.send_client_link,
         name="send_client_link",
     ),
+    path("emails-en-echec/", email_failures.email_failure_list, name="email_failure_list"),
+    path("emails-en-echec/<int:pk>/renvoyer/", email_failures.resend_email, name="resend_email"),
     path("personnel/", staff.staff_list, name="staff_list"),
     path("personnel/nouveau/", staff.create_agent, name="create_agent"),
     path("personnel/<int:pk>/modifier/", staff.edit_staff_member, name="edit_staff_member"),
