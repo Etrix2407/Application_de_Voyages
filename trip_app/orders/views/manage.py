@@ -45,6 +45,7 @@ def order_detail(request, pk):
     if context["can_confirm"]:
         # Prix qui sera enregistré si l'agent confirme maintenant.
         context["price_if_confirmed"] = price_at_current_rates(order)
+        context["destination_on_quote_now"] = order.destination.price_from is None
     return render(request, "orders/manage/detail.html", context)
 
 
