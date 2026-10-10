@@ -1,4 +1,5 @@
 import re
+from unittest import mock
 
 from django.core import mail, signing
 from django.core.cache import cache
@@ -6,6 +7,7 @@ from django.test import TestCase
 from django.urls import reverse
 
 from accounts.models import User
+from accounts.services.email_change import apply_email_change
 
 from .factories import PASSWORD, create_agent, create_client
 
@@ -76,6 +78,22 @@ class EmailChangeTests(TestCase):
         create_client(email="nouvelle@example.com")
 
         response = self.client.get(link)
+
+        self.assertContains(response, "plus valable")
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.email, "client@example.com")
+
+    def test_address_taken_while_confirming_shows_same_page(self):
+        self.request_change("nouvelle@example.com")
+        link = self.link_sent_to("nouvelle@example.com")
+
+        def taken_then_apply(*args, **kwargs):
+            # Un autre compte prend l'adresse entre la vérification du lien et l'enregistrement.
+            create_client(email="nouvelle@example.com")
+            return apply_email_change(*args, **kwargs)
+
+        with mock.patch("accounts.views.profile.apply_email_change", side_effect=taken_then_apply):
+            response = self.client.post(link)
 
         self.assertContains(response, "plus valable")
         self.user.refresh_from_db()
