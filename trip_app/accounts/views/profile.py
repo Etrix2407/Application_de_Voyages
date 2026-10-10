@@ -10,7 +10,9 @@ from django.urls import reverse_lazy
 
 from accounts.decorators import client_required
 from accounts.forms import AccountDeletionForm, AccountPasswordChangeForm, ClientProfileForm, EmailChangeForm
+from accounts.services.account_deletion import delete_account as delete_account_and_notify
 from accounts.services.email_change import apply_email_change, pending_email_change, request_email_change
+from accounts.services.password_notice import send_password_changed_notice
 
 
 @login_required
@@ -34,6 +36,11 @@ class AccountPasswordChangeView(SuccessMessageMixin, PasswordChangeView):
     success_url = reverse_lazy("profile")
     success_message = "Votre mot de passe a été modifié."
 
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        send_password_changed_notice(form.user)
+        return response
+
 
 @client_required
 def delete_account(request):
@@ -41,7 +48,7 @@ def delete_account(request):
     if request.method == "POST" and form.is_valid():
         user = request.user
         logout(request)
-        user.delete()
+        delete_account_and_notify(user)
         messages.success(request, "Votre compte et vos données ont été supprimés.")
         return redirect("home")
     return render(request, "accounts/profile/delete.html", {"form": form})

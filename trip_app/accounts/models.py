@@ -175,6 +175,11 @@ class EmailKind(models.TextChoices):
     PASSWORD_RESET = "password_reset", "Mot de passe oublié"
     CLIENT_PASSWORD_LINK = "client_password_link", "Lien de mot de passe envoyé par un agent"
     AGENT_ACTIVATION = "agent_activation", "Activation d'un compte agent"
+    PASSWORD_CHANGED = "password_changed", "Mot de passe modifié"
+    ACCOUNT_DELETED = "account_deleted", "Compte supprimé"
+    UNCONFIRMED_ACCOUNT_DELETED = "unconfirmed_account_deleted", "Compte jamais confirmé supprimé"
+    STAFF_ACCOUNT_DELETED = "staff_account_deleted", "Compte du personnel supprimé"
+    STAFF_PASSWORD_LINK = "staff_password_link", "Lien de mot de passe envoyé à un membre du personnel"
 
 
 class EmailStatus(models.TextChoices):

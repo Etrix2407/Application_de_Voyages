@@ -7,7 +7,8 @@ from django.views.decorators.http import require_POST
 
 from accounts.decorators import administrator_required
 from accounts.forms import AgentCreationForm, StaffMemberForm
-from accounts.models import STAFF_ROLES, User
+from accounts.models import STAFF_ROLES, EmailKind, User
+from accounts.services.account_deletion import delete_account
 from accounts.services.staff_rules import check_not_self, send_activation_link
 
 
@@ -91,7 +92,7 @@ def delete_staff_member(request, pk):
         messages.error(request, error.messages[0])
         return redirect("staff_list")
     if request.method == "POST":
-        member.delete()
+        delete_account(member, EmailKind.STAFF_ACCOUNT_DELETED)
         messages.success(request, f"Le compte de {member.get_full_name()} a été supprimé.")
         return redirect("staff_list")
     return render(request, "accounts/staff/delete.html", {"member": member})

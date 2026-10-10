@@ -73,12 +73,12 @@ C'est le **mode test**, actif par défaut dès que `DJANGO_DEBUG=1` (jamais en p
 
 1. Créez le compte de la gérante avec `python manage.py createsuperuser` (e-mail, nom, prénom, mot de passe).
 2. Connectez-vous, puis ouvrez le menu **Personnel** et cliquez sur **Créer un agent**.
-3. L'agent reçoit un e-mail avec un lien valable 1 heure pour choisir son mot de passe. S'il a expiré, utilisez **Envoyer un lien de mot de passe** dans la liste du personnel.
+3. L'agent reçoit un e-mail avec un lien valable 7 jours pour choisir son mot de passe (pas de mot de passe provisoire). S'il a expiré, utilisez **Envoyer un lien de mot de passe** dans la liste du personnel : le nouveau lien est lui aussi valable 7 jours. Le même bouton sert à un membre qui a oublié son mot de passe : il reçoit alors un e-mail « Choisissez un nouveau mot de passe », et son mot de passe actuel reste valable tant qu'il n'utilise pas le lien.
 4. Depuis **Personnel**, l'administrateur peut aussi :
    - modifier un membre ;
    - le promouvoir administrateur ou le rétrograder ;
    - le désactiver (il est déconnecté immédiatement) ou le réactiver ;
-   - le supprimer.
+   - le supprimer (il reçoit un dernier e-mail qui l'annonce).
 
    Il ne peut jamais faire ces actions sur son propre compte.
 
@@ -157,11 +157,13 @@ Formats à respecter :
    **Mes demandes** (menu) : liste de vos demandes (destination, dates, état, prix estimé), détail avec l'historique (les actions du personnel y apparaissent sous le nom « Agence »). Tant qu'une demande est « En attente », vous pouvez l'annuler (motif facultatif) ; une demande confirmée s'annule en appelant l'agence.
 5. **Favoris** : le bouton « Ajouter à mes favoris » se trouve sur la page d'une destination ou d'une activité. Retrouvez-les dans **Mes favoris**. Un favori devenu indisponible y reste signalé et peut être retiré.
 6. **Mes avis** (menu) : après un voyage **confirmé par l'agence**, une fois rentré, « Donner mon avis » (sur la demande ou dans « Mes avis ») : note de 1 à 5 étoiles, titre, commentaire (obligatoire pour 1 ou 2 étoiles), signature « Prénom N. » ou « Voyageur anonyme ». L'avis est publié après validation par l'agence ; son état et, le cas échéant, le motif du refus sont visibles dans « Mes avis ». Il reste **modifiable 30 jours** après sa création ; une modification le renvoie en validation (masqué en attendant). Il peut être **supprimé à tout moment**, mais ce voyage ne pourra alors plus recevoir d'avis. La signature (« Julie D. ») est fixée à l'envoi de l'avis : changer son nom ensuite ne modifie pas un avis publié.
-7. **Mon profil** : modifier ses informations, changer son mot de passe, **changer son adresse e-mail** (mot de passe demandé, puis lien de confirmation envoyé à la nouvelle adresse ; l'ancienne est prévenue ; si l'adresse du compte n'était pas encore confirmée, confirmer la nouvelle adresse confirme aussi le compte) ou **supprimer son compte**. La suppression est définitive et efface aussi les favoris. **Télécharger mes données** fournit un fichier JSON avec ses informations de compte (sans le mot de passe), ses demandes de voyage, ses avis (avec la réponse de l'agence), ses favoris et la liste des e-mails reçus (sans leur contenu).
+7. **Mon profil** : modifier ses informations, changer son mot de passe, **changer son adresse e-mail** (mot de passe demandé, puis lien de confirmation envoyé à la nouvelle adresse ; l'ancienne est prévenue ; si l'adresse du compte n'était pas encore confirmée, confirmer la nouvelle adresse confirme aussi le compte) ou **supprimer son compte**. La suppression est définitive et efface aussi les favoris ; un dernier e-mail confirme que le compte est supprimé et les données effacées, puis plus aucun e-mail n'est envoyé. **Télécharger mes données** fournit un fichier JSON avec ses informations de compte (sans le mot de passe), ses demandes de voyage, ses avis (avec la réponse de l'agence), ses favoris et la liste des e-mails reçus (sans leur contenu).
 
 ### Mot de passe oublié
 
 Sur la page de connexion, **Mot de passe oublié ?** envoie un lien valable 1 heure (3 demandes par heure au plus pour une même adresse, contre les envois en masse).
+
+Après chaque changement de mot de passe (depuis le profil, par « Mot de passe oublié » ou par un lien envoyé par l'agence), un e-mail de sécurité prévient le titulaire du compte, client ou membre du personnel : « Si ce n'est pas vous, contactez-nous ». Il n'est pas envoyé quand un agent invité choisit son tout premier mot de passe.
 
 Limites par adresse IP, contre les robots : 20 échecs de connexion par 15 minutes, 5 inscriptions, 10 demandes de lien et 30 codes promo faux par heure ; et, dans l'heure qui suit une inscription depuis cette IP, 3 échecs de connexion suffisent à la bloquer 15 minutes. Elles sont volontairement larges, car un bureau ou un wifi partage souvent une même IP. Après 5 tentatives de connexion échouées, la connexion est bloquée 15 minutes pour cette adresse e-mail.
 
@@ -300,7 +302,7 @@ HSTS (en-tête `Strict-Transport-Security`) demande aux navigateurs de n'utilise
 
 Points d'attention :
 
-- Planifiez chaque jour `python manage.py purge_unconfirmed` (tâche planifiée Windows ou cron) : elle efface les comptes clients dont l'adresse n'a pas été confirmée dans les 30 jours (RGPD).
+- Planifiez chaque jour `python manage.py purge_unconfirmed` (tâche planifiée Windows ou cron) : elle efface les comptes clients dont l'adresse n'a pas été confirmée dans les 30 jours (RGPD) ; chacun reçoit un dernier e-mail qui l'annonce.
 - **Ne committez jamais** la clé secrète ni les identifiants SMTP.
 - Les limites anti-abus (5 échecs de connexion, 3 liens « mot de passe oublié » par heure, 5 essais quand le mot de passe est redemandé, etc.) sont stockées dans le dossier `trip_app/cache/` (créé automatiquement, jamais commité) : elles sont partagées par tous les processus du serveur et conservées au redémarrage. Ce dossier doit être accessible en écriture par le serveur. Les adresses IPv6 sont comptées par réseau /64.
 - SQLite suffit pour le volume prévu (environ 1 000 clients).
@@ -319,7 +321,8 @@ trip_app/
 ├── accounts/               # comptes : utilisateurs, rôles, RGPD ; journal des e-mails (v5)
 │   ├── views/              # auth, profile, data_export, staff, clients (une responsabilité par module)
 │   ├── services/           # inscription, changement d'e-mail, emails (envoi de tous les e-mails du site
-│   │                       # et journal), password_links (liens de mot de passe), règles du personnel,
+│   │                       # et journal), password_links (liens de mot de passe), password_notice (alerte
+│   │                       # « mot de passe modifié »), account_deletion (suppression du compte), règles du personnel,
 │   │                       # recherche de client, limites anti-abus, privacy (effacement RGPD du journal)
 │   ├── models.py · forms.py · validators.py · decorators.py · urls.py
 │   └── tests/

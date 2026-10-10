@@ -3,7 +3,7 @@
 from django.core.exceptions import ValidationError
 
 from accounts.models import EmailKind, User
-from accounts.services.password_links import send_password_link
+from accounts.services.password_links import send_staff_link
 
 
 def check_not_self(target: User, actor: User) -> None:
@@ -20,7 +20,13 @@ def check_not_self(target: User, actor: User) -> None:
 
 
 def send_activation_link(request, agent: User) -> bool:
-    """Envoie à l'agent un lien pour choisir son mot de passe ; False si l'envoi a échoué."""
-    return send_password_link(
-        request, agent, EmailKind.AGENT_ACTIVATION, "accounts/emails/agent_activation.txt"
-    )
+    """Envoie à l'agent un lien (7 jours) pour choisir son mot de passe ; False si l'envoi a échoué.
+
+    Sert à la création du compte comme au renvoi depuis la liste du personnel. Un membre qui a
+    déjà un mot de passe reçoit un autre texte que l'invitation (« nouveau mot de passe »).
+    """
+    if agent.has_usable_password():
+        return send_staff_link(
+            request, agent, EmailKind.STAFF_PASSWORD_LINK, "accounts/emails/staff_password.txt"
+        )
+    return send_staff_link(request, agent, EmailKind.AGENT_ACTIVATION, "accounts/emails/agent_activation.txt")

@@ -1,8 +1,10 @@
 from decimal import Decimal
 
+from django.core import mail
 from django.test import TestCase
 from django.urls import reverse
 
+from accounts.models import EmailKind, EmailLog, EmailStatus
 from accounts.tests.factories import PASSWORD, create_agent, create_client
 from catalog.tests.factories import create_activity, create_country, create_destination
 from orders.models import Order, Status, StatusChange
@@ -167,3 +169,25 @@ class PendingOrdersOfDeletedAccountTests(TestCase):
         self.pending.refresh_from_db()
         self.assertEqual(self.pending.status, Status.CANCELLED)
         self.assertEqual(self.pending.history.get().internal_reason, ACCOUNT_DELETED_REASON)
+
+
+class AccountDeletionEmailTests(TestCase):
+    def test_only_the_deletion_email_is_sent_to_the_former_address(self):
+        marie = create_client()
+        pending = create_order(marie, create_destination(create_country()))
+        self.client.force_login(marie)
+
+        # Comme sur le site : l'e-mail part après la validation, donc après la suppression du compte.
+        with self.captureOnCommitCallbacks(execute=True):
+            self.client.post(reverse("delete_account"), {"password": PASSWORD})
+
+        pending.refresh_from_db()
+        self.assertEqual(pending.status, Status.CANCELLED)
+        # Aucun e-mail pour l'annulation de la demande : seulement le dernier message.
+        self.assertEqual(
+            [(message.to, message.subject) for message in mail.outbox],
+            [(["client@example.com"], "Votre compte a été supprimé")],
+        )
+        # Le journal garde la ligne, sans l'adresse (RGPD), avec le résultat de l'envoi.
+        log = EmailLog.objects.get(kind=EmailKind.ACCOUNT_DELETED)
+        self.assertEqual((log.recipient, log.status), ("", EmailStatus.SENT))

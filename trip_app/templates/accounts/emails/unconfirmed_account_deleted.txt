@@ -1,0 +1,7 @@
+{% autoescape off %}Bonjour {{ user.first_name }},
+
+Un compte a été créé sur notre site avec cette adresse e-mail il y a plus de 30 jours, mais l'adresse n'a jamais été confirmée. Comme annoncé lors de l'inscription, ce compte a été supprimé et ses données ont été effacées.
+
+Si vous souhaitez voyager avec nous, vous pouvez créer un nouveau compte à tout moment.
+
+Ce message est le dernier que vous recevrez de notre part.{% endautoescape %}

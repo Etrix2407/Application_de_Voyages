@@ -30,6 +30,11 @@ SUBJECTS = {
     EmailKind.PASSWORD_RESET: "Changement de votre mot de passe",
     EmailKind.CLIENT_PASSWORD_LINK: "Changement de votre mot de passe",
     EmailKind.AGENT_ACTIVATION: "Activation de votre compte",
+    EmailKind.PASSWORD_CHANGED: "Votre mot de passe a été modifié",
+    EmailKind.ACCOUNT_DELETED: "Votre compte a été supprimé",
+    EmailKind.UNCONFIRMED_ACCOUNT_DELETED: "Votre compte a été supprimé",
+    EmailKind.STAFF_ACCOUNT_DELETED: "Votre compte a été supprimé",
+    EmailKind.STAFF_PASSWORD_LINK: "Choisissez un nouveau mot de passe",
 }
 
 
