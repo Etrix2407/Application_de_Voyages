@@ -46,6 +46,13 @@ La commande crée :
 
 - 3 pays **fictifs** dont le nom commence par « Exemple — ». Leurs langue, monnaie et description sont inventées : ce ne sont **pas** de vraies informations de voyage. L'un des pays est désactivé, pour montrer ce que voient les clients.
 - Un compte client `client.demo@example.com` et un compte agent `agent.demo@example.com`. Leurs mots de passe sont générés au hasard et **affichés dans le terminal** : notez-les.
+- 2 promotions « Exemple — », en cours pendant 180 jours à partir du jour de la commande : une **automatique** (-10 % sur le total, pour « Exemple — Pays des Lacs ») et une **sur code** (`EXEMPLE10`, -10,00 € sur le total, tout le catalogue). Elles n'ont pas d'historique ni d'auteur (« Créée par — ») : la commande ne crée pas de compte administrateur.
+- 4 demandes de voyage du client démo, créées comme depuis le site (prix figés, promotion, historique), une par état :
+  - « En attente », avec la promotion automatique ;
+  - « Confirmée » par l'agent démo, avec le code `EXEMPLE10` ;
+  - « Annulée » par le client ;
+  - « Confirmée », au voyage **terminé** (départ il y a environ un mois) : ses dates et son historique sont reculés de 60 jours, car le site n'accepte que des départs à venir.
+- 1 avis à 5 étoiles du client démo sur ce voyage terminé, **publié**.
 
 La commande refuse de s'exécuter en production (`DJANGO_DEBUG=0`). Elle peut être relancée sans créer de doublons.
 
@@ -279,7 +286,6 @@ trip_app/
 ├── catalog/                # catalogue : pays, destinations, activités, favoris
 │   ├── views/              # browse, search, favorites, manage
 │   ├── services/           # recherche et filtres, favoris, nettoyage des photos
-│   ├── management/commands/load_demo.py
 │   ├── models.py · forms.py · validators.py · urls.py
 │   └── tests/
 ├── promotions/             # promotions (v4) : modèle, règles, historique
@@ -299,6 +305,7 @@ trip_app/
 │   ├── views/              # client (donner, modifier, supprimer), manage (modération)
 │   ├── services/           # eligibility, writing (client), moderation, responses, filtering (personnel),
 │   │                       # ratings (notes publiques), order_events, privacy (effacement RGPD des signatures)
+│   ├── management/commands/load_demo.py  # données de démonstration de toutes les versions
 │   ├── models.py · forms.py · signals.py · urls.py · context_processors.py (compteur du menu)
 │   └── tests/
 ├── templates/
