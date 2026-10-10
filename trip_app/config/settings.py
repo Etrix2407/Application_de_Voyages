@@ -189,6 +189,9 @@ EMAIL_HOST_PASSWORD = os.environ.get("DJANGO_EMAIL_HOST_PASSWORD", "")
 EMAIL_USE_TLS = os.environ.get("DJANGO_EMAIL_USE_TLS", "1") == "1"
 # Délai maximal d'attente du serveur SMTP, en secondes : un serveur lent ne bloque pas la page.
 EMAIL_TIMEOUT = int(os.environ.get("DJANGO_EMAIL_TIMEOUT") or "10")
+# Adresse commune du personnel qui reçoit l'alerte « Nouvelle demande de voyage » (Recap 5).
+# Une ligne vide dans .env garde l'adresse par défaut.
+RESERVATIONS_EMAIL = os.environ.get("DJANGO_RESERVATIONS_EMAIL", "").strip() or "reservations@horizons-lointains.be"
 
 # Adresse du site (ex. https://horizons-lointains.be), pour les liens absolus des e-mails
 # envoyés hors d'une requête (commandes planifiées) et pour le logo. Obligatoire en production.

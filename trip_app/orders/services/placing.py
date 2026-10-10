@@ -8,6 +8,7 @@ from django.utils import timezone
 
 from catalog.models import Destination
 from orders.models import Order, OrderActivity, Status, StatusChange, client_fingerprint
+from orders.services.emails import send_new_order_alert, send_order_placed
 from orders.services.pricing import Quote, estimate_price, price_parts
 from orders.services.promotions import limit_problem
 from promotions.services.discounts import Offer, PriceParts, discount_amount
@@ -92,16 +93,20 @@ def place_order(
     en 24 heures, lève DailyLimitReached. Si la limite de la promotion est atteinte au moment
     de l'enregistrement (dernière utilisation prise entre-temps), lève PromotionUnavailable.
     Un client dont l'adresse e-mail n'est pas confirmée lève EmailNotConfirmed.
+    Une fois la demande enregistrée, le client reçoit un accusé de réception et le personnel une alerte.
     """
     if client.is_awaiting_confirmation:
         raise EmailNotConfirmed
     try:
-        return _create_order(client, destination, data, offer, submission_token)
+        order = _create_order(client, destination, data, offer, submission_token)
     except IntegrityError:
         existing = Order.objects.filter(submission_token=submission_token).first() if submission_token else None
         if existing is None:
             raise
         raise AlreadySubmitted(existing) from None
+    send_order_placed(order)
+    send_new_order_alert(order)
+    return order
 
 
 @transaction.atomic

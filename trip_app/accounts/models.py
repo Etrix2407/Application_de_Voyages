@@ -175,6 +175,11 @@ class EmailKind(models.TextChoices):
     PASSWORD_RESET = "password_reset", "Mot de passe oublié"
     CLIENT_PASSWORD_LINK = "client_password_link", "Lien de mot de passe envoyé par un agent"
     AGENT_ACTIVATION = "agent_activation", "Activation d'un compte agent"
+    ORDER_PLACED = "order_placed", "Demande de voyage reçue"
+    ORDER_CONFIRMED = "order_confirmed", "Demande de voyage confirmée"
+    ORDER_CANCELLED_BY_CLIENT = "order_cancelled_by_client", "Demande de voyage annulée par le client"
+    ORDER_CANCELLED_BY_AGENCY = "order_cancelled_by_agency", "Demande de voyage annulée par l'agence"
+    NEW_ORDER_ALERT = "new_order_alert", "Alerte au personnel : nouvelle demande de voyage"
 
 
 class EmailStatus(models.TextChoices):
