@@ -243,6 +243,16 @@ python manage.py check --deploy
 python manage.py collectstatic
 ```
 
+### Activer HSTS
+
+HSTS (en-tête `Strict-Transport-Security`) demande aux navigateurs de n'utiliser que le HTTPS pour ce site pendant la durée indiquée dans `DJANGO_HSTS_SECONDS`. Il est désactivé par défaut (`0`), car une erreur de réglage peut rendre le site inaccessible.
+
+1. Activez-le seulement quand tout le site fonctionne en HTTPS avec un certificat valide.
+2. Commencez par une petite valeur pour tester, par exemple `DJANGO_HSTS_SECONDS=3600` (une heure).
+3. Si tout fonctionne, passez à `DJANGO_HSTS_SECONDS=31536000` (un an), la valeur retenue pour ce site.
+
+**Attention** : une fois l'en-tête reçu, les navigateurs refusent le HTTP pour ce site pendant toute la durée choisie, même si vous remettez ensuite `0` ou si le certificat expire. N'activez `DJANGO_HSTS_INCLUDE_SUBDOMAINS` que si tous les sous-domaines sont eux aussi en HTTPS : la même règle s'applique alors à eux.
+
 Points d'attention :
 
 - Planifiez chaque jour `python manage.py purge_unconfirmed` (tâche planifiée Windows ou cron) : elle efface les inscriptions non confirmées depuis plus de 7 jours (RGPD).
