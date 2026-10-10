@@ -9,7 +9,7 @@ from django.views.decorators.http import require_POST
 from accounts.decorators import administrator_required, staff_required
 from orders.services.promotion_statistics import promotion_statistics
 from promotions.forms import PromotionForm
-from promotions.models import Promotion, State
+from promotions.models import Action, Promotion, State
 from promotions.services.management import (
     PromotionInUse,
     create_promotion,
@@ -47,10 +47,14 @@ def promotion_detail(request, pk):
     promotion = get_object_or_404(_promotions(), pk=pk)
     state = promotion.state()
     used = _is_used(promotion)
+    history = list(promotion.history.all())
+    # Auteur lu dans l'historique déjà chargé : évite la requête de Promotion.created_by_name.
+    creation = next((change for change in history if change.action == Action.CREATED), None)
     context = {
         "promotion": promotion,
         "state": state,
-        "history": promotion.history.all(),
+        "history": history,
+        "created_by": creation.author_name if creation else "",
         "can_manage": request.user.is_administrator,
         "can_disable": state != State.DISABLED,
         "used": used,
