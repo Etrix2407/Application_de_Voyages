@@ -9,6 +9,7 @@ from django.urls import reverse
 from accounts.models import Role
 from accounts.views.clients import CLIENTS_PER_PAGE
 
+from .email_delivery import SendEmailsImmediately
 from .factories import PASSWORD, create_agent, create_client
 
 
@@ -115,7 +116,7 @@ class ClientCorrectionTests(TestCase):
         self.assertEqual(self.marie.phone, "")
 
 
-class ClientPasswordLinkTests(TestCase):
+class ClientPasswordLinkTests(SendEmailsImmediately, TestCase):
     def test_send_link_to_client(self):
         self.client.force_login(create_agent())
         client = create_client()
@@ -145,7 +146,7 @@ class ClientPasswordLinkTests(TestCase):
             self.client.get(reverse("send_client_link", args=[client.pk])).status_code, 405
         )
 
-    @mock.patch("accounts.services.emails.send_mail", side_effect=OSError("serveur SMTP injoignable"))
+    @mock.patch("accounts.services.emails.EmailMultiAlternatives.send", side_effect=OSError("serveur SMTP injoignable"))
     def test_email_failure_is_reported(self, _send_mail):
         self.client.force_login(create_agent())
         client = create_client()

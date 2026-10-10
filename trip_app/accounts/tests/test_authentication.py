@@ -14,6 +14,7 @@ from accounts.services.sign_up import UNCONFIRMED_RETENTION, purge_unconfirmed
 from accounts.services.throttling import confirmation_emails, login_failures, password_reset_requests
 from accounts.models import Role
 
+from .email_delivery import SendEmailsImmediately
 from .factories import PASSWORD, create_client
 
 User = get_user_model()
@@ -36,7 +37,7 @@ def link_in_last_email() -> str:
     return re.search(r"https?://[^/]+(/\S+)", mail.outbox[-1].body).group(1)
 
 
-class SignUpTests(TestCase):
+class SignUpTests(SendEmailsImmediately, TestCase):
     url = reverse("sign_up")
 
     def setUp(self):
@@ -172,7 +173,7 @@ class SignUpTests(TestCase):
         self.assertRedirects(self.client.get(self.url), reverse("home"))
 
 
-class ConfirmationLinkTests(TestCase):
+class ConfirmationLinkTests(SendEmailsImmediately, TestCase):
     def setUp(self):
         cache.clear()
         self.client.post(reverse("sign_up"), sign_up_data())
@@ -295,7 +296,7 @@ class LoginTests(TestCase):
         self.assertNotIn("_auth_user_id", self.client.session)
 
 
-class PasswordResetTests(TestCase):
+class PasswordResetTests(SendEmailsImmediately, TestCase):
     url = reverse("password_reset")
 
     def setUp(self):

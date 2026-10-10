@@ -163,3 +163,55 @@ class User(AbstractBaseUser):
         )
         next_number = int(last.removeprefix(EMPLOYEE_NUMBER_PREFIX)) + 1 if last else 1
         return f"{EMPLOYEE_NUMBER_PREFIX}{next_number:04d}"
+
+
+class EmailKind(models.TextChoices):
+    """Type de chaque e-mail : clé stable, qui servira à rendre son texte modifiable par l'administrateur."""
+
+    SIGN_UP_CONFIRMATION = "sign_up_confirmation", "Confirmation d'inscription"
+    SIGN_UP_EXISTING = "sign_up_existing", "Inscription avec une adresse déjà utilisée"
+    EMAIL_CHANGE_CONFIRMATION = "email_change_confirmation", "Confirmation d'une nouvelle adresse e-mail"
+    EMAIL_CHANGE_NOTICE = "email_change_notice", "Alerte de changement d'adresse e-mail"
+    PASSWORD_RESET = "password_reset", "Mot de passe oublié"
+    CLIENT_PASSWORD_LINK = "client_password_link", "Lien de mot de passe envoyé par un agent"
+    AGENT_ACTIVATION = "agent_activation", "Activation d'un compte agent"
+
+
+class EmailStatus(models.TextChoices):
+    PENDING = "pending", "En attente"
+    SENT = "sent", "Envoyé"
+    FAILED = "failed", "Échec"
+
+
+class EmailLog(models.Model):
+    """Journal des envois (Recap 5) : une ligne par e-mail, sans son contenu ni ses liens de sécurité.
+
+    Un envoi « en attente » peut être repris plus tard : son type, son destinataire et le compte
+    ou la demande liés suffisent à reconstruire le message (avec un lien de sécurité neuf).
+    """
+
+    created_at = models.DateTimeField("date", default=timezone.now)
+    # Vidé à la suppression du compte (RGPD) : la ligne reste pour les statistiques anonymes.
+    recipient = models.EmailField("destinataire", blank=True)
+    kind = models.CharField("type", max_length=40, choices=EmailKind.choices)
+    subject = models.CharField("objet", max_length=200)
+    status = models.CharField(
+        "état", max_length=20, choices=EmailStatus.choices, default=EmailStatus.PENDING, db_index=True
+    )
+    attempts = models.PositiveSmallIntegerField("nombre de tentatives", default=0)
+    last_attempt_at = models.DateTimeField("date de la dernière tentative", null=True, blank=True)
+    last_error = models.CharField("raison du dernier échec", max_length=500, blank=True)
+    user = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True, related_name="email_logs", verbose_name="compte lié"
+    )
+    # Numéro de la demande de voyage liée, sans clé étrangère : accounts ne dépend pas de orders
+    # (ordre des applications). L'application orders retrouve la demande par ce numéro.
+    order_number = models.PositiveBigIntegerField("demande de voyage liée", null=True, blank=True)
+
+    class Meta:
+        verbose_name = "envoi d'e-mail"
+        verbose_name_plural = "journal des e-mails"
+        ordering = ["-created_at", "-pk"]
+
+    def __str__(self) -> str:
+        return f"{self.get_kind_display()} — {self.get_status_display()}"

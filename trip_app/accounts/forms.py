@@ -4,7 +4,8 @@ from django import forms
 from django.contrib.auth.forms import AuthenticationForm, PasswordChangeForm, PasswordResetForm
 from django.core.exceptions import ValidationError
 
-from .models import STAFF_ROLES, Role, User, normalize_email_address
+from .models import STAFF_ROLES, EmailKind, Role, User, normalize_email_address
+from .services.emails import send_email
 from .services.throttling import (
     get_client_ip,
     login_failures,
@@ -104,6 +105,12 @@ class PasswordResetRequestForm(PasswordResetForm):
         password_reset_requests.record(email)
         password_reset_requests_by_ip.record(ip)
         super().save(*args, request=request, **kwargs)
+
+    def send_mail(
+        self, subject_template_name, email_template_name, context, from_email, to_email, html_email_template_name=None
+    ) -> None:
+        # Envoi par le service commun (journal, HTML, mode test) ; l'objet vient du type d'e-mail.
+        send_email(to_email, EmailKind.PASSWORD_RESET, email_template_name, context, user=context["user"])
 
 
 class ClientProfileForm(forms.ModelForm):
