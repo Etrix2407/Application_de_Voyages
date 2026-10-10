@@ -5,9 +5,12 @@ matrice de test_access.py.
 """
 
 import json
+from datetime import datetime
+from datetime import timezone as dt_timezone
 
 from django.test import TestCase
 from django.urls import reverse
+from django.utils.dateparse import parse_datetime
 
 from accounts.models import EmailKind, EmailLog
 from accounts.tests.factories import create_agent, create_client
@@ -57,6 +60,16 @@ class DownloadMyDataTests(TestCase):
             self.assertNotIn(other_data, content)
         self.assertNotIn("password", content)
         self.assertNotIn(marie.password, content)
+
+    def test_file_contains_promotional_emails_consent(self):
+        consent_date = datetime(2026, 3, 2, 10, 30, tzinfo=dt_timezone.utc)
+        marie = create_client(accepts_promotional_emails=True, promotional_emails_choice_date=consent_date)
+        self.client.force_login(marie)
+
+        profile = self.client.get(reverse("download_my_data")).json()["profile"]
+
+        self.assertIs(profile["accepts_promotional_emails"], True)
+        self.assertEqual(parse_datetime(profile["promotional_emails_choice_date"]), consent_date)
 
     def test_staff_member_gets_own_profile_only(self):
         agent = create_agent()

@@ -60,6 +60,7 @@ def request_sign_up(request, form) -> None:
     user = User(email=email, role=Role.CLIENT, consent_date=timezone.now())
     for field in _PERSONAL_FIELDS:
         setattr(user, field, form.cleaned_data.get(field))
+    user.set_promotional_emails_consent(form.cleaned_data.get("promotional_emails", False))
     user.set_password(form.cleaned_data["password1"])
     with transaction.atomic():
         if existing:
