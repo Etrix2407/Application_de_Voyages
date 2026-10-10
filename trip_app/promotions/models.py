@@ -14,6 +14,7 @@ from django.db import models
 from django.utils import timezone
 
 from catalog.models import Country, Destination
+from common.text import euros
 
 MIN_PERCENT = Decimal("1")
 MAX_PERCENT = Decimal("50")
@@ -141,11 +142,10 @@ class Promotion(models.Model):
 
     @property
     def discount_label(self) -> str:
-        """« -15 % », « -12,5 % », « -100 € » ou « -99,50 € »."""
+        """« -15 % », « -12,5 % », « -100,00 € » ou « -99,50 € »."""
         if self.kind == Kind.PERCENT:
             return f"-{self.value.normalize():f} %".replace(".", ",")
-        whole = self.value == self.value.to_integral_value()
-        return f"-{self.value:.0f} €" if whole else f"-{self.value:.2f} €".replace(".", ",")
+        return f"-{euros(self.value)}"
 
     @property
     def base_label(self) -> str:
