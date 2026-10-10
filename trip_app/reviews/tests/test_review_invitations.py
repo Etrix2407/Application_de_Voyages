@@ -1,12 +1,14 @@
 from datetime import timedelta
 from io import StringIO
+from unittest import mock
 
 from django.core import mail
 from django.core.management import call_command
 from django.test import TestCase, override_settings
 from django.utils import timezone
 
-from accounts.models import EmailKind, EmailLog
+from accounts.models import EmailKind, EmailLog, EmailStatus
+from accounts.services.email_retry import retry_due_emails
 from accounts.tests.email_delivery import SendEmailsImmediately
 from accounts.tests.factories import create_client
 from catalog.tests.factories import create_country, create_destination
@@ -43,4 +45,18 @@ class ReviewInvitationTests(SendEmailsImmediately, TestCase):
 
         self.run_command()
 
+        self.assertEqual(len(mail.outbox), 0)
+
+    def test_retry_not_sent_once_reviewed(self):
+        order = create_trip_done(self.marie, self.kyoto)
+        with mock.patch(
+            "accounts.services.emails.EmailMultiAlternatives.send", side_effect=OSError("serveur injoignable")
+        ):
+            self.run_command()
+        create_review(order)
+        EmailLog.objects.update(last_attempt_at=timezone.now() - timedelta(minutes=6))
+
+        retry_due_emails()
+
+        self.assertEqual(EmailLog.objects.get().status, EmailStatus.FAILED)
         self.assertEqual(len(mail.outbox), 0)

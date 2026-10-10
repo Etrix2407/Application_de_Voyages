@@ -18,6 +18,8 @@ def profile_data(user: User) -> dict:
                 "birth_date": user.birth_date,
                 "consent_date": user.consent_date,
                 "email_confirmed_at": user.email_confirmed_at,
+                "accepts_promotional_emails": user.accepts_promotional_emails,
+                "promotional_emails_choice_date": user.promotional_emails_choice_date,
             }
         )
     else:

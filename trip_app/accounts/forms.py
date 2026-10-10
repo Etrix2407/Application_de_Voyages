@@ -31,6 +31,15 @@ CLIENT_WIDGETS = {
     "phone": forms.TextInput(attrs={"autocomplete": "tel", "inputmode": "tel"}),
 }
 CLIENT_HELP_TEXTS = {"phone": "Facultatif. Exemple : 0470 12 34 56, ou +33 6 12 34 56 78 depuis l'étranger."}
+PROMOTIONAL_EMAILS_LABEL = (
+    "J'accepte de recevoir par e-mail les offres et promotions d'Horizons Lointains. "
+    "Je peux me désinscrire à tout moment."
+)
+
+
+def promotional_emails_field() -> forms.BooleanField:
+    """Case facultative, non cochée par défaut (consentement libre, RGPD)."""
+    return forms.BooleanField(label=PROMOTIONAL_EMAILS_LABEL, required=False)
 
 
 class SignUpForm(BaseUserCreationForm):
@@ -40,6 +49,7 @@ class SignUpForm(BaseUserCreationForm):
         label="J'ai lu et j'accepte la politique de confidentialité.",
         error_messages={"required": "Vous devez accepter la politique de confidentialité."},
     )
+    promotional_emails = promotional_emails_field()
 
     class Meta:
         model = User
@@ -127,7 +137,7 @@ class PasswordResetRequestForm(PasswordResetForm):
         send_email(to_email, EmailKind.PASSWORD_RESET, email_template_name, context, user=context["user"])
 
 
-class ClientProfileForm(forms.ModelForm):
+class ClientDataForm(forms.ModelForm):
     """L'e-mail se change à part (mot de passe + lien de confirmation) : voir EmailChangeForm."""
 
     class Meta:
@@ -141,8 +151,23 @@ class ClientProfileForm(forms.ModelForm):
         self.fields["birth_date"].required = True
 
 
-class ClientCorrectionForm(ClientProfileForm):
-    """Correction par un agent : ni mot de passe ni e-mail (identifiant géré par le client)."""
+class ClientProfileForm(ClientDataForm):
+    """Profil modifié par le client lui-même, avec son choix pour les e-mails promotionnels."""
+
+    promotional_emails = promotional_emails_field()
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["promotional_emails"].initial = self.instance.accepts_promotional_emails
+
+    def save(self, commit: bool = True) -> User:
+        self.instance.set_promotional_emails_consent(self.cleaned_data["promotional_emails"])
+        return super().save(commit)
+
+
+class ClientCorrectionForm(ClientDataForm):
+    """Correction par un agent : ni mot de passe ni e-mail (identifiant géré par le client),
+    ni consentement aux e-mails promotionnels (choix du client seul)."""
 
 
 TOO_MANY_PASSWORD_ATTEMPTS = "Trop d'essais. Pour votre sécurité, réessayez dans 15 minutes."

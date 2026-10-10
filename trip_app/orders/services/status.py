@@ -8,6 +8,7 @@
 | cancel_after_account_deletion | En attente        | automatique (« Client »)  | interne, fixé |
 
 Le motif (champ reason) est visible par le client ; le motif interne, par le personnel seulement.
+Le client est prévenu par e-mail de chaque action, sauf de l'annulation automatique (compte supprimé).
 """
 
 from django.db import transaction
@@ -15,6 +16,7 @@ from django.utils import timezone
 
 from common.text import euros
 from orders.models import Order, Status, StatusChange
+from orders.services.emails import send_order_cancelled_by_agency, send_order_cancelled_by_client, send_order_confirmed
 from orders.services.placing import price_at_current_rates
 from orders.services.reminders import send_departure_reminders
 
@@ -51,6 +53,7 @@ def cancel_by_client(order: Order, reason: str = "") -> None:
         order, CLIENT_CANCELLABLE, Status.CANCELLED, order.client, StatusChange.CLIENT_AUTHOR, reason,
         "Seule une demande en attente peut être annulée par le client.", by_client=True,
     )
+    send_order_cancelled_by_client(order)
 
 
 def confirm_by_staff(order: Order, staff_member) -> None:
@@ -77,6 +80,7 @@ def confirm_by_staff(order: Order, staff_member) -> None:
     )
     for field, value in updates.items():
         setattr(order, field, value)
+    send_order_confirmed(order, staff_member)
     # Départ dans 7 jours ou moins : le rappel part dès la confirmation (sinon, la commande quotidienne).
     send_departure_reminders(order_pk=order.pk)
 
@@ -92,6 +96,7 @@ def cancel_by_staff(order: Order, staff_member, internal_reason: str, explanatio
         order, STAFF_CANCELLABLE, Status.CANCELLED, staff_member, staff_member.get_full_name(),
         explanation, "Cette demande est déjà annulée.", internal_reason=internal_reason,
     )
+    send_order_cancelled_by_agency(order, explanation)
 
 
 # Motif interne (personnel) : plus personne à rappeler pour cette demande.

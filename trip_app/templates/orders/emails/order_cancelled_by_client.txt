@@ -1,0 +1,5 @@
+{% autoescape off %}Bonjour {{ client.first_name }},
+
+Nous avons bien enregistré l'annulation de votre demande de voyage n° {{ order.pk }} : {{ order.destination_name }} ({{ order.country_name }}), {{ dates }}.
+
+Nous espérons avoir le plaisir de vous accompagner pour un prochain voyage.{% endautoescape %}

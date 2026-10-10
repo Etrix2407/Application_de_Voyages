@@ -1,0 +1,7 @@
+{% autoescape off %}Bonjour {{ client.first_name }},
+
+Merci pour votre demande de voyage : nous l'avons bien reçue. Un conseiller vous rappellera sous 48 h pour en parler avec vous.
+
+Récapitulatif de votre demande :
+{% include "orders/emails/_summary.txt" %}
+{% endautoescape %}

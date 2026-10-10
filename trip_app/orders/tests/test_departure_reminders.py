@@ -1,12 +1,17 @@
+from datetime import timedelta
+from unittest import mock
+
 from django.core import mail
 from django.test import TestCase
+from django.utils import timezone
 
-from accounts.models import EmailKind, EmailLog
+from accounts.models import EmailKind, EmailLog, EmailStatus
+from accounts.services.email_retry import retry_due_emails
 from accounts.tests.email_delivery import SendEmailsImmediately
 from accounts.tests.factories import create_agent, create_client
 from catalog.models import Visa
 from catalog.tests.factories import create_country, create_destination
-from orders.models import Status
+from orders.models import Order, Status
 from orders.services.reminders import send_departure_reminders
 from orders.services.status import confirm_by_staff
 
@@ -90,6 +95,28 @@ class DepartureReminderTests(SendEmailsImmediately, TestCase):
         confirm_by_staff(soon, agent)
         confirm_by_staff(later, agent)
 
-        self.assertEqual([log.order_number for log in EmailLog.objects.all()], [soon.pk])
+        # « Demande confirmée » d'abord, puis le rappel ; rien d'autre pour le départ lointain.
+        sent = list(EmailLog.objects.order_by("pk").values_list("order_number", "kind"))
+        self.assertEqual(sent, [
+            (soon.pk, EmailKind.ORDER_CONFIRMED),
+            (soon.pk, EmailKind.DEPARTURE_REMINDER),
+            (later.pk, EmailKind.ORDER_CONFIRMED),
+        ])
         self.run_command()
-        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(EmailLog.objects.filter(kind=EmailKind.DEPARTURE_REMINDER).count(), 1)
+
+    def test_retry_rebuilds_reminder_unless_cancelled(self):
+        kept = self.confirmed_order(5)
+        cancelled = self.confirmed_order(5)
+        with mock.patch(
+            "accounts.services.emails.EmailMultiAlternatives.send", side_effect=OSError("serveur injoignable")
+        ):
+            self.run_command()
+        Order.objects.filter(pk=cancelled.pk).update(status=Status.CANCELLED)
+        EmailLog.objects.update(last_attempt_at=timezone.now() - timedelta(minutes=6))
+
+        retry_due_emails()
+
+        statuses = dict(EmailLog.objects.values_list("order_number", "status"))
+        self.assertEqual(statuses, {kept.pk: EmailStatus.SENT, cancelled.pk: EmailStatus.FAILED})
+        self.assertIn("Monnaie : yen", mail.outbox[0].body)

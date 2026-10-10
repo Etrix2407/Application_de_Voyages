@@ -182,3 +182,16 @@ class NormalizationOnSaveTests(TestCase):
 
         client.refresh_from_db()
         self.assertEqual(client.phone, "0470123456")
+
+
+class PromotionRecipientsTests(TestCase):
+    """Destinataires des promotions : consentement, adresse confirmée et compte actif, tous requis."""
+
+    def test_only_consenting_confirmed_active_clients(self):
+        recipient = create_client(email="oui@example.com", accepts_promotional_emails=True)
+        create_client(email="sans-consentement@example.com")
+        create_client(email="non-confirme@example.com", accepts_promotional_emails=True, email_confirmed_at=None)
+        create_client(email="inactif@example.com", accepts_promotional_emails=True, is_active=False)
+        create_agent(accepts_promotional_emails=True)
+
+        self.assertEqual(list(User.objects.promotion_recipients()), [recipient])
