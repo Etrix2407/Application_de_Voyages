@@ -31,6 +31,15 @@
             <li><a class="button" href="{% url 'change_email' %}">Changer mon adresse e-mail</a></li>
         {% endif %}
         <li><a class="button" href="{% url 'change_password' %}">Changer mon mot de passe</a></li>
+        <li>
+            <a class="button" href="{% url 'download_my_data' %}">Télécharger mes données</a>
+            {# Le personnel n'a que son profil : ni demandes, ni avis, ni favoris. #}
+            {% if user.is_client %}
+                <p>Fichier contenant vos informations, vos demandes de voyage, vos avis et vos favoris.</p>
+            {% else %}
+                <p>Fichier contenant vos informations de compte.</p>
+            {% endif %}
+        </li>
         {% if user.is_client %}
             <li><a class="button button-danger" href="{% url 'delete_account' %}">Supprimer mon compte</a></li>
         {% endif %}

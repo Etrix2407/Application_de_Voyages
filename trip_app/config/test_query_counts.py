@@ -71,6 +71,19 @@ class QueryCountTests(TestCase):
 
         self.assert_constant_queries(reverse("favorite_list"), add_favorites)
 
+    def test_download_my_data(self):
+        self.client.force_login(self.marie)
+
+        def add_data():
+            destination = create_destination(self.country, self.unique("Ville"))
+            activity = create_activity(self.country, self.unique("Visite"), destination=destination)
+            create_order(self.marie, destination, [activity])
+            create_review(create_trip_done(self.marie, destination))
+            FavoriteDestination.objects.create(client=self.marie, destination=destination)
+            FavoriteActivity.objects.create(client=self.marie, activity=activity)
+
+        self.assert_constant_queries(reverse("download_my_data"), add_data)
+
     def test_country_detail(self):
         self.client.force_login(self.marie)
 
