@@ -69,6 +69,26 @@ class SignUpTests(SendEmailsImmediately, TestCase):
         self.assertEqual(mail.outbox[-1].to, ["marie@example.com"])
         self.assertIn("48 heures", mail.outbox[-1].body)
 
+    def test_promotional_emails_box_unchecked_by_default(self):
+        response = self.client.get(self.url)
+
+        self.assertFalse(response.context["form"]["promotional_emails"].value())
+        self.assertInHTML(
+            '<input type="checkbox" name="promotional_emails" id="id_promotional_emails">',
+            response.content.decode(),
+        )
+
+    def test_promotional_emails_consent_recorded_only_if_box_checked(self):
+        self.client.post(self.url, sign_up_data())
+        self.client.post(self.url, sign_up_data(email="julie@example.com", promotional_emails="on"))
+
+        without = User.objects.get(email="marie@example.com")
+        self.assertFalse(without.accepts_promotional_emails)
+        self.assertIsNone(without.promotional_emails_choice_date)
+        with_consent = User.objects.get(email="julie@example.com")
+        self.assertTrue(with_consent.accepts_promotional_emails)
+        self.assertIsNotNone(with_consent.promotional_emails_choice_date)
+
     def test_can_log_in_before_confirmation(self):
         self.client.post(self.url, sign_up_data())
 

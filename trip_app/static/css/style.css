@@ -373,7 +373,8 @@ td {
     color: #444444;
 }
 
-.badge-negative {
+.badge-negative,
+.badge-warning {
     display: inline-block;
     padding: 0.1rem 0.5rem;
     font-weight: bold;

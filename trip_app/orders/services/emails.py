@@ -3,6 +3,8 @@
 Tous passent par accounts.services.emails.send_email, avec le numéro de la demande pour le journal.
 Le motif interne d'une annulation n'apparaît jamais dans un e-mail au client.
 Une demande dont le client a supprimé son compte n'a plus de destinataire : aucun e-mail client.
+Les fonctions *_context servent aussi à reconstruire un message pour une nouvelle tentative
+(voir orders/services/email_rebuilders.py).
 """
 
 from django.conf import settings
@@ -16,55 +18,75 @@ from orders.models import Order
 
 QUOTE_NOTE = "Le prix de la destination sera donné sur devis par votre conseiller."
 
+PLACED_TEMPLATE = "orders/emails/order_placed.txt"
+CONFIRMED_TEMPLATE = "orders/emails/order_confirmed.txt"
+CANCELLED_BY_CLIENT_TEMPLATE = "orders/emails/order_cancelled_by_client.txt"
+CANCELLED_BY_AGENCY_TEMPLATE = "orders/emails/order_cancelled_by_agency.txt"
+NEW_ORDER_ALERT_TEMPLATE = "orders/emails/new_order_alert.txt"
+
 
 def send_order_placed(order: Order) -> None:
     """Accusé de réception au client, avec le récapitulatif et le prix estimé."""
-    _send_to_client(
-        order, EmailKind.ORDER_PLACED, "orders/emails/order_placed.txt",
-        {"summary": _summary(order) + _estimated_price_lines(order)},
-    )
+    _send_to_client(order, EmailKind.ORDER_PLACED, PLACED_TEMPLATE, placed_context(order))
 
 
 def send_order_confirmed(order: Order, staff_member) -> None:
     """Confirmation au client : récapitulatif au prix confirmé et nom du conseiller."""
-    _send_to_client(
-        order, EmailKind.ORDER_CONFIRMED, "orders/emails/order_confirmed.txt",
-        {"summary": _summary(order) + _confirmed_price_lines(order), "advisor": staff_member.get_full_name()},
-    )
+    context = confirmed_context(order, staff_member.get_full_name())
+    _send_to_client(order, EmailKind.ORDER_CONFIRMED, CONFIRMED_TEMPLATE, context)
 
 
 def send_order_cancelled_by_client(order: Order) -> None:
     """Accusé de réception de l'annulation faite par le client."""
-    _send_to_client(order, EmailKind.ORDER_CANCELLED_BY_CLIENT, "orders/emails/order_cancelled_by_client.txt", {})
+    _send_to_client(order, EmailKind.ORDER_CANCELLED_BY_CLIENT, CANCELLED_BY_CLIENT_TEMPLATE, client_context(order))
 
 
 def send_order_cancelled_by_agency(order: Order, explanation: str) -> None:
     """Annulation par l'agence : l'explication pour le client, s'il y en a une, et un mot d'excuse."""
-    _send_to_client(
-        order, EmailKind.ORDER_CANCELLED_BY_AGENCY, "orders/emails/order_cancelled_by_agency.txt",
-        {"explanation": explanation.strip()},
-    )
+    context = cancelled_by_agency_context(order, explanation)
+    _send_to_client(order, EmailKind.ORDER_CANCELLED_BY_AGENCY, CANCELLED_BY_AGENCY_TEMPLATE, context)
 
 
 def send_new_order_alert(order: Order) -> None:
     """Alerte à l'adresse commune du personnel, sans le téléphone ni l'e-mail du client."""
-    context = {
+    send_email(
+        settings.RESERVATIONS_EMAIL, EmailKind.NEW_ORDER_ALERT, NEW_ORDER_ALERT_TEMPLATE, new_order_alert_context(order),
+        order_number=order.pk,
+    )
+
+
+def client_context(order: Order) -> dict:
+    """Variables communes aux e-mails du client (la demande doit avoir un client)."""
+    return {"order": order, "client": order.client, "dates": _dates(order)}
+
+
+def placed_context(order: Order) -> dict:
+    return {**client_context(order), "summary": _summary(order) + _estimated_price_lines(order)}
+
+
+def confirmed_context(order: Order, advisor: str) -> dict:
+    """`advisor` : prénom et nom de l'agent qui a confirmé."""
+    return {**client_context(order), "summary": _summary(order) + _confirmed_price_lines(order), "advisor": advisor}
+
+
+def cancelled_by_agency_context(order: Order, explanation: str) -> dict:
+    """`explanation` : explication pour le client (jamais le motif interne) ; vide = message neutre."""
+    return {**client_context(order), "explanation": explanation.strip()}
+
+
+def new_order_alert_context(order: Order) -> dict:
+    return {
         "order": order,
         "dates": _dates(order),
         "client_name": order.client.get_full_name(),
         "link": site_url(reverse("manage_order_detail", args=[order.pk])),
     }
-    send_email(
-        settings.RESERVATIONS_EMAIL, EmailKind.NEW_ORDER_ALERT, "orders/emails/new_order_alert.txt", context,
-        order_number=order.pk,
-    )
 
 
 def _send_to_client(order: Order, kind: EmailKind, template_name: str, context: dict) -> None:
     client = order.client
     if client is None:
         return
-    context = {"order": order, "client": client, "dates": _dates(order), **context}
     send_email(client.email, kind, template_name, context, user=client, order_number=order.pk)
 
 

@@ -49,6 +49,15 @@ class UserManager(BaseUserManager):
             raise ValueError("Un superutilisateur doit avoir le rôle administrateur.")
         return self.create_user(email, password, **fields)
 
+    def promotion_recipients(self):
+        """Clients pouvant recevoir les promotions : consentement, adresse confirmée et compte actif."""
+        return self.filter(
+            role=Role.CLIENT,
+            is_active=True,
+            accepts_promotional_emails=True,
+            email_confirmed_at__isnull=False,
+        )
+
 
 # Les droits dépendent uniquement du rôle (voir decorators.py) : pas de permissions Django.
 class User(AbstractBaseUser):
@@ -75,6 +84,13 @@ class User(AbstractBaseUser):
     )
     # Inscription client : pas de demande de voyage tant que l'adresse n'est pas confirmée.
     email_confirmed_at = models.DateTimeField("date de confirmation de l'adresse", null=True, blank=True)
+    # Consentement aux e-mails promotionnels (clients), distinct de consent_date ci-dessus.
+    # Preuve (RGPD) : date du dernier changement du choix, posée à l'accord comme au retrait.
+    # Choix accepté : c'est la date de l'accord ; refusé : celle du retrait (vide si jamais accepté).
+    accepts_promotional_emails = models.BooleanField("accepte les e-mails promotionnels", default=False)
+    promotional_emails_choice_date = models.DateTimeField(
+        "date du dernier changement du choix pour les e-mails promotionnels", null=True, blank=True
+    )
 
     objects = UserManager()
 
@@ -105,6 +121,17 @@ class User(AbstractBaseUser):
     def is_awaiting_confirmation(self) -> bool:
         """Compte client dont l'adresse e-mail n'est pas encore confirmée."""
         return self.is_client and self.email_confirmed_at is None
+
+    def set_promotional_emails_consent(self, accepted: bool) -> None:
+        """Enregistre le choix du client (sans sauvegarder).
+
+        La date ne change que si le choix change : réenregistrer son profil sans toucher
+        à la case garde la date de l'accord d'origine. Un retrait est daté lui aussi.
+        """
+        if accepted == self.accepts_promotional_emails:
+            return
+        self.accepts_promotional_emails = accepted
+        self.promotional_emails_choice_date = timezone.now()
 
     def get_full_name(self) -> str:
         return f"{self.first_name} {self.last_name}"
@@ -175,6 +202,9 @@ class EmailKind(models.TextChoices):
     PASSWORD_RESET = "password_reset", "Mot de passe oublié"
     CLIENT_PASSWORD_LINK = "client_password_link", "Lien de mot de passe envoyé par un agent"
     AGENT_ACTIVATION = "agent_activation", "Activation d'un compte agent"
+    REVIEW_PUBLISHED = "review_published", "Avis publié"
+    REVIEW_REFUSED = "review_refused", "Avis refusé ou retiré"
+    REVIEW_RESPONSE = "review_response", "Réponse de l'agence à un avis"
     ORDER_PLACED = "order_placed", "Demande de voyage reçue"
     ORDER_CONFIRMED = "order_confirmed", "Demande de voyage confirmée"
     ORDER_CANCELLED_BY_CLIENT = "order_cancelled_by_client", "Demande de voyage annulée par le client"

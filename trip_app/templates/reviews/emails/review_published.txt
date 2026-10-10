@@ -1,0 +1,7 @@
+{% autoescape off %}Bonjour {{ client.first_name }},
+
+Merci, votre avis « {{ review.title }} » ({{ review.order.destination_name }}, {{ review.order.country_name }}) est en ligne.
+{% if destination_link %}
+Vous pouvez le lire sur la page de la destination :
+
+{{ destination_link }}{% endif %}{% endautoescape %}

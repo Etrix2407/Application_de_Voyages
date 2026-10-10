@@ -1,11 +1,14 @@
 from datetime import timedelta
 from decimal import Decimal
+from unittest import mock
 
 from django.core import mail
 from django.test import TestCase
 from django.urls import reverse
+from django.utils import timezone
 
-from accounts.models import EmailKind, EmailLog
+from accounts.models import EmailKind, EmailLog, EmailStatus
+from accounts.services.email_retry import retry_due_emails
 from accounts.tests.email_delivery import SendEmailsImmediately
 from accounts.tests.factories import PASSWORD, create_agent, create_client
 from catalog.tests.factories import create_country, create_destination
@@ -102,3 +105,18 @@ class OrderEmailsTests(SendEmailsImmediately, TestCase):
         order.refresh_from_db()
         self.assertEqual(order.status, Status.CANCELLED)
         self.assertFalse(EmailLog.objects.filter(kind__startswith="order_").exists())
+
+    def test_failed_email_rebuilt_by_retry(self):
+        order = create_order(self.marie, self.destination)
+        with mock.patch(
+            "accounts.services.emails.EmailMultiAlternatives.send", side_effect=OSError("serveur injoignable")
+        ):
+            cancel_by_staff(order, self.agent, "Client agressif au téléphone.", "Plus de places disponibles.")
+        EmailLog.objects.update(last_attempt_at=timezone.now() - timedelta(minutes=6))
+
+        self.assertEqual(retry_due_emails(), 1)
+
+        self.assertEqual(EmailLog.objects.get().status, EmailStatus.SENT)
+        (email,) = mail.outbox
+        self.assertIn("Plus de places disponibles.", email.body)
+        self.assertNotIn("agressif", email.body)

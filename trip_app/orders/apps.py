@@ -11,3 +11,5 @@ class OrdersConfig(AppConfig):
     def ready(self):
         # Branche l'anonymisation RGPD des demandes à la suppression d'un compte.
         import_module("orders.signals")
+        # Déclare la reconstruction des e-mails des demandes (nouvelles tentatives, renvoi manuel).
+        import_module("orders.services.email_rebuilders")
