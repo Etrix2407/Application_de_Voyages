@@ -53,6 +53,11 @@ class PromotionChoice:
     def code_applied(self) -> bool:
         return self.offer is not None and not self.offer.promotion.is_automatic
 
+    @property
+    def code_message(self) -> str:
+        """« Code appliqué : -100,00 € », au même format que la note sur une offre plus avantageuse."""
+        return f"Code appliqué : -{euros(self.offer.discount)}" if self.code_applied else ""
+
 
 def uses(promotion: Promotion, client=None) -> int:
     """Demandes non annulées qui ont utilisé la promotion (toutes, ou celles du client)."""
