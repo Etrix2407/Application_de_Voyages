@@ -30,7 +30,7 @@ Ouvrez ensuite http://127.0.0.1:8000/ et connectez-vous avec le compte administr
 
 ### Le fichier `.env` (réglages et secrets)
 
-Les réglages se trouvent dans le fichier **`.env`**, à la racine du dépôt, créé à partir du modèle [.env.example](.env.example) où chaque réglage est expliqué. Il contient des secrets : il **n'est jamais commité** (protégé par `.gitignore`) et ne doit pas être partagé. Au minimum, renseignez `DJANGO_SECRET_KEY` (commande de génération indiquée dans le modèle). Les variables d'environnement définies dans Windows ou sur le serveur restent prioritaires sur ce fichier.
+Les réglages se trouvent dans le fichier **`.env`**, à la racine du dépôt, créé à partir du modèle [.env.example](.env.example) où chaque réglage est expliqué. Il contient des secrets : il **n'est jamais commité** (protégé par `.gitignore`) et ne doit pas être partagé. Le site refuse de démarrer sans `DJANGO_SECRET_KEY`, même en développement, et sans `DJANGO_PASSWORD_PEPPER` en production : renseignez-les (commande de génération indiquée dans le modèle). Le modèle est réglé pour la production (`DJANGO_DEBUG=0`) : sur votre ordinateur, passez `DJANGO_DEBUG=1`. Les variables d'environnement définies dans Windows ou sur le serveur restent prioritaires sur ce fichier.
 
 Pour **recevoir vraiment les e-mails** (Outlook / Hotmail) : dans `.env`, renseignez `DJANGO_EMAIL_HOST_USER`, `DJANGO_EMAIL_HOST_PASSWORD` (mot de passe d'application si la validation en deux étapes est activée) et `DJANGO_DEFAULT_FROM_EMAIL` (même adresse), puis passez `DJANGO_EMAIL_BACKEND` sur `django.core.mail.backends.smtp.EmailBackend`. Vérifiez avec `python manage.py sendtestemail votre@adresse`.
 
@@ -222,7 +222,7 @@ Réglez ces variables dans le `.env` du serveur, ou directement comme variables 
 | Variable | Rôle | Défaut |
 |---|---|---|
 | `DJANGO_DEBUG` | `1` en développement, `0` en production | `0` (désactivé si absent) |
-| `DJANGO_SECRET_KEY` | Clé secrète longue et aléatoire (obligatoire si `DJANGO_DEBUG=0`) | clé de développement |
+| `DJANGO_SECRET_KEY` | Clé secrète longue et aléatoire (obligatoire, même en développement) | aucun |
 | `DJANGO_PASSWORD_PEPPER` | « Poivre » des mots de passe, long et aléatoire (obligatoire si `DJANGO_DEBUG=0`). **Ne jamais le perdre ni le changer** : tous les mots de passe deviendraient inutilisables | vide |
 | `DJANGO_ALLOWED_HOSTS` | Noms de domaine autorisés, séparés par des virgules | vide |
 | `DJANGO_EMAIL_BACKEND` | `django.core.mail.backends.smtp.EmailBackend` pour envoyer de vrais e-mails | console |
