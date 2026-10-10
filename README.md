@@ -168,7 +168,7 @@ Limites par adresse IP, contre les robots : 20 échecs de connexion par 15 minut
 - Un nom de pays est unique, sans tenir compte des majuscules ni des accents (« Perou » = « Pérou »).
 - **Avis vérifiés (v3)** : un avis ne peut être laissé que pour une demande de voyage **confirmée par l'agence** dont la **date de retour est passée** : seuls les clients réellement partis donnent leur avis. Un seul avis par demande (garanti par la base). Si l'agence annule ensuite ce voyage, l'avis est retiré automatiquement (« Refusé », motif « Voyage annulé »).
 - Avis : seule la **destination** est notée ; les activités réalisées ne sont pas notées (option « souhaitable » du Recap 3 écartée par la cliente). Limites : titre 100 caractères, commentaire 1 000, réponse de l'agence 1 000, précision d'un refus 500.
-- Avis et **compte supprimé** : les avis restent publiés, signés « Voyageur anonyme », sans lien avec la personne (le personnel voit « Client supprimé »), et comptent toujours dans les notes. Avis et **destination ou pays désactivé** : les avis restent en base mais ne sont plus visibles ni comptés ; ils réapparaissent à la réactivation.
+- Avis et **compte supprimé** : les avis restent publiés, signés « Voyageur anonyme », sans lien avec la personne (signature « Julie D. » effacée en base ; le personnel voit « Client supprimé »), et comptent toujours dans les notes. Avis et **destination ou pays désactivé** : les avis restent en base mais ne sont plus visibles ni comptés ; ils réapparaissent à la réactivation.
 - **Promotion d'une demande** : son nom et la remise sont figés dans la demande ; modifier ou désactiver la promotion ne change rien aux demandes existantes. À la confirmation, la remise est ré-appliquée au prix recalculé. Une promotion déjà utilisée ne change plus que de nom, de description et de date de fin, et ne peut plus être supprimée. Une demande annulée rend l'utilisation (limites par client et au total).
 - Une demande de voyage garde les **noms** (pays, destination, activités) et l'**estimation** du jour où elle a été envoyée : un renommage ou un changement de tarif dans le catalogue ne les modifie pas. À la **confirmation**, le prix est **recalculé aux tarifs du jour** (le prix peut varier entre la demande et la confirmation) ; l'estimation de départ reste affichée, et un changement de prix est noté dans l'historique.
 - Un client ne voit jamais les données d'un autre client ni celles du personnel. Les agents ne voient pas les favoris des clients.
@@ -288,7 +288,7 @@ trip_app/
 ├── reviews/                # avis clients (v3) : modèle, avis vérifiés, lien avec les demandes
 │   ├── views/              # client (donner, modifier, supprimer), manage (modération)
 │   ├── services/           # eligibility, writing (client), moderation, responses, filtering (personnel),
-│   │                       # ratings (notes publiques), order_events
+│   │                       # ratings (notes publiques), order_events, privacy (effacement RGPD des signatures)
 │   ├── models.py · forms.py · signals.py · urls.py · context_processors.py (compteur du menu)
 │   └── tests/
 ├── templates/
