@@ -7,6 +7,7 @@ from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
+from accounts.services.email_change import apply_email_change
 from accounts.tests.factories import create_admin, create_agent, create_client
 from catalog.tests.factories import create_country, create_destination
 from orders.models import Order, Status
@@ -76,6 +77,14 @@ class ChoosePromotionTests(TestCase):
         order.status = Status.CANCELLED
         order.save()
         self.assertTrue(self.choose("unefois").code_applied)
+
+    def test_limit_per_client_follows_email_change(self):
+        promotion = create_promotion(code="UNEFOIS", max_uses_per_client=1)
+        create_order(self.marie, self.kyoto, promotion=promotion)
+
+        apply_email_change(self.marie, "nouvelle.adresse@example.com")
+
+        self.assertEqual(self.choose("UNEFOIS").code_error, messages.ALREADY_USED)
 
     def test_total_limit(self):
         promotion = create_promotion(code="CINQUANTE", max_uses=1)
@@ -179,6 +188,33 @@ class OrderWithPromotionTests(TestCase):
         self.assertTemplateUsed(response, "orders/create.html")
         self.assertContains(response, "Vous avez déjà utilisé ce code")
         self.assertEqual(Order.objects.count(), 1)
+
+    def use_code_once(self):
+        """Marie envoie une demande avec un code limité à une fois par client."""
+        create_promotion(code="UNEFOIS", max_uses_per_client=1)
+        submit_order(self.client, self.url, {**self.data, "promo_code": "UNEFOIS"})
+
+    def try_code_again_as(self, email):
+        self.client.force_login(create_client(email=email))
+        return self.client.post(self.url, {**self.data, "promo_code": "UNEFOIS"})
+
+    def test_limit_per_client_survives_account_deletion_and_new_sign_up(self):
+        self.use_code_once()
+        # Confirmée : elle reste comptée (une demande en attente est annulée si le compte est supprimé).
+        Order.objects.update(status=Status.CONFIRMED)
+        self.marie.delete()
+
+        response = self.try_code_again_as(self.marie.email)
+
+        self.assertContains(response, "Vous avez déjà utilisé ce code")
+
+    def test_limit_per_client_applies_to_plus_aliases(self):
+        self.use_code_once()
+        local, domain = self.marie.email.split("@")
+
+        response = self.try_code_again_as(f"{local.upper()}+promo@{domain}")
+
+        self.assertContains(response, "Vous avez déjà utilisé ce code")
 
 
 class PublicOffersTests(TestCase):

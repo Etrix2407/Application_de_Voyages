@@ -14,6 +14,7 @@ from django.urls import reverse
 
 from accounts.models import Role, User, normalize_email_address
 from accounts.services.emails import send_email
+from accounts.signals import email_changed
 from accounts.services.throttling import confirmation_emails
 
 LINK_MAX_AGE = timedelta(hours=24)

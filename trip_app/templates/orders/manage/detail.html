@@ -19,7 +19,7 @@
             <dd><a href="mailto:{{ order.client.email }}">{{ order.client.email }}</a></dd>
         </dl>
     {% else %}
-        <p>Le client a supprimé son compte : cette demande est anonymisée.</p>
+        <p>Le client a supprimé son compte : cette demande n'est plus liée à lui (seule une empreinte de son adresse est gardée pour les limites des promotions).</p>
     {% endif %}
 
     {% if can_confirm or can_cancel %}

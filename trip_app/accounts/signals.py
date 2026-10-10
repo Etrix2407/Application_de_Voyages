@@ -1,9 +1,13 @@
-"""Réactions aux événements de connexion."""
+"""Réactions aux événements de connexion, et signaux émis par les comptes."""
 
 from datetime import timedelta
 
 from django.contrib.auth.signals import user_logged_in
-from django.dispatch import receiver
+from django.dispatch import Signal, receiver
+
+# Émis quand un client change d'adresse e-mail (argument : user), dans la même transaction.
+# Les autres applications y réagissent sans que accounts dépende d'elles.
+email_changed = Signal()
 
 # Le personnel travaille souvent sur un poste partagé à l'agence : sa connexion expire
 # après une journée de travail. Les clients gardent la durée par défaut (2 semaines).
