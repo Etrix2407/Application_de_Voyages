@@ -241,7 +241,11 @@ class StatusChange(models.Model):
     author = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="+"
     )
-    reason = models.TextField("motif", blank=True)
+    # Texte montré au client dans l'historique : son propre motif, la note de prix recalculé,
+    # ou l'explication de l'agence quand elle annule.
+    reason = models.TextField("motif visible par le client", blank=True)
+    # Annulation par l'agence : motif réservé au personnel, jamais montré au client.
+    internal_reason = models.TextField("motif interne", blank=True)
     # Action du client lui-même (sinon : le personnel). Ne dépend pas du libellé affiché.
     by_client = models.BooleanField("par le client", default=False)
 
