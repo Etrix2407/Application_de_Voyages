@@ -35,7 +35,10 @@
                     {% for client in page.object_list %}
                         <tr>
                             <td>{{ client.last_name }} {{ client.first_name }}</td>
-                            <td>{{ client.email }}</td>
+                            <td>
+                                {{ client.email }}
+                                {% if client.address_to_check %}<br><span class="badge-warning">Adresse à vérifier</span>{% endif %}
+                            </td>
                             <td>{{ client.phone|default:"—" }}</td>
                             <td>{{ client.date_joined|date:"j F Y" }}</td>
                             <td><a href="{% url 'edit_client' client.pk %}">Corriger</a></td>

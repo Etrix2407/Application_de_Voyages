@@ -106,6 +106,12 @@ Formats à respecter :
 1. Menu **Clients** : liste par pages de 25, avec recherche par nom, prénom ou e-mail (sans tenir compte des accents).
 2. **Corriger** permet de modifier le prénom, le nom, le téléphone et la date de naissance. L'e-mail et le mot de passe restent gérés par le client.
 3. **Envoyer un lien de mot de passe** : le client reçoit un lien valable 1 heure pour choisir un nouveau mot de passe. L'agent ne voit jamais le mot de passe.
+4. Le badge **Adresse à vérifier** sous l'e-mail d'un client signale que 3 messages différents n'ont pas pu lui être envoyés : vérifiez l'adresse avec lui (par téléphone). Le badge disparaît au prochain e-mail bien parti vers lui, ou quand il change d'adresse.
+
+### E-mails en échec (agent ou administrateur)
+
+1. Menu **E-mails en échec** : les e-mails qui n'ont pas pu partir et peuvent encore être renvoyés, les plus récents d'abord, par pages de 25, avec le destinataire, le compte et la demande de voyage liés, le type, l'objet, le nombre de tentatives et la raison de l'échec.
+2. **Renvoyer** : le message est refait à neuf (avec un nouveau lien s'il en contient un) et envoyé tout de suite. S'il échoue encore, de nouvelles tentatives automatiques ont lieu 5 puis 15 minutes plus tard. Un message devenu sans objet (par exemple un lien de confirmation pour une adresse déjà confirmée, ou un lien de mot de passe pour une adresse qui a changé) n'est pas renvoyé : la raison est affichée et il disparaît de la liste. L'invitation d'un agent ne peut être renvoyée que par l'administrateur.
 
 ### Traiter les demandes de voyage (agent ou administrateur)
 
@@ -171,7 +177,7 @@ Limites par adresse IP, contre les robots : 20 échecs de connexion par 15 minut
 |---|---|
 | Visiteur | Catalogue complet (pays, destinations, activités) ; page « Destinations » avec les notes ; lecture des avis vérifiés ; recherche et filtres ; inscription ; connexion |
 | Client | Détail des pays, destinations et activités ; recherche et filtres ; favoris ; demandes de voyage (faire une demande une fois l'adresse e-mail confirmée, suivre et annuler ses demandes en attente) ; avis sur ses voyages terminés (donner, modifier 30 jours, supprimer) ; profil (modifier, changer le mot de passe ou l'adresse e-mail, télécharger ses données, supprimer le compte) |
-| Agent | Consultation et recherche ; gestion du catalogue ; liste des clients, correction de leurs informations (sauf e-mail et mot de passe), envoi d'un lien de mot de passe ; traitement des demandes de voyage (filtrer, confirmer, annuler avec motif) ; modération des avis (publier, refuser ou masquer avec motif), réponse de l'agence, liste filtrée de tous les avis ; consultation des promotions ; profil (consultation, changement du mot de passe, téléchargement de ses informations de compte et de la liste des e-mails reçus au format JSON) |
+| Agent | Consultation et recherche ; gestion du catalogue ; liste des clients (avec le badge « Adresse à vérifier »), correction de leurs informations (sauf e-mail et mot de passe), envoi d'un lien de mot de passe ; liste des e-mails en échec et renvoi ; traitement des demandes de voyage (filtrer, confirmer, annuler avec motif) ; modération des avis (publier, refuser ou masquer avec motif), réponse de l'agence, liste filtrée de tous les avis ; consultation des promotions ; profil (consultation, changement du mot de passe, téléchargement de ses informations de compte et de la liste des e-mails reçus au format JSON) |
 | Administrateur | Droits de l'agent + gestion du personnel + gestion des promotions (créer, modifier, désactiver, supprimer si jamais utilisée) |
 
 ## Règles de gestion appliquées
@@ -246,6 +252,17 @@ Fonctionnement :
 - **Consentement aux e-mails promotionnels** (clients) : case facultative, **non cochée par défaut**, à l'inscription et dans « Modifier mes informations » (un agent ne peut pas la changer). Enregistré dans `accepts_promotional_emails` avec la date du dernier changement du choix (`promotional_emails_choice_date`, posée à l'accord comme au retrait : date de l'accord si le choix est accepté, du retrait sinon ; vide si le client n'a jamais accepté), à ne pas confondre avec `consent_date` (politique de confidentialité). Les comptes existants n'ont pas consenti. Les destinataires d'un envoi promotionnel sont donnés par `User.objects.promotion_recipients()` : clients actifs, consentants, à l'adresse confirmée. Le fichier « Télécharger mes données » contient ce choix et sa date.
 - **Compte supprimé** : les lignes du journal restent (statistiques anonymes), sans adresse ni lien vers le compte (`accounts/signals.py`, quel que soit le chemin de suppression).
 
+### Fiabilité et journal
+
+- **Nouvelles tentatives** : la commande planifiée `process_emails` (toutes les 5 minutes, voir [Tâches planifiées](#tâches-planifiées)) reprend les envois en attente. La 1re tentative a lieu tout de suite ; la 2e au moins 5 minutes après, la 3e au moins 15 minutes après la 2e. Après la 3e en échec, l'e-mail passe à l'état « échec » avec la raison. Un envoi jamais tenté (serveur arrêté juste après l'action) est repris au bout de 5 minutes.
+- **Message reconstruit** : le journal ne garde ni le contenu ni les liens. Pour une nouvelle tentative ou un renvoi, le message est refait à partir de son type, de son destinataire et du compte ou de la demande liés, avec un **lien de sécurité neuf** (`accounts/services/email_retry.py`). Chaque type d'e-mail déclare sa reconstruction avec `@rebuilder(EmailKind.…)`, dans un module importé par le `ready()` de son application (pour les comptes : `accounts/services/email_rebuilders.py`). Un type sans reconstruction passe en « échec » dès sa première tentative ratée.
+  - Un message avec un lien de sécurité ne part qu'à l'**adresse actuelle** du compte, jamais à une ancienne adresse.
+  - Un message devenu sans objet n'est pas renvoyé et passe en « échec » avec la raison : compte supprimé, adresse déjà confirmée, adresse changée depuis, compte désactivé…
+  - Confirmation d'une nouvelle adresse e-mail : jamais reconstruite (l'ancienne adresse, qui fait partie du lien, n'est pas conservée). En cas d'échec, elle passe en « échec » et le client refait sa demande.
+- **Renvoi manuel** (menu **E-mails en échec**, personnel ; l'invitation d'un agent ne peut être renvoyée que par l'administrateur) : la liste ne montre que les e-mails qui peuvent encore être renvoyés (les messages sans objet ou impossibles à refaire restent au journal avec leur raison). La **même ligne** du journal est remise en attente, son nombre de tentatives repart de zéro, et l'envoi est tenté tout de suite. Une ligne par message : un message renvoyé plusieurs fois ne compte qu'une fois pour « adresse à vérifier ».
+- **Adresse à vérifier** : calculée à partir du journal (`accounts/services/address_check.py`), sans champ à tenir à jour. Un client est marqué quand 3 messages différents envoyés à son adresse actuelle sont arrivés à l'état « échec » après leurs 3 tentatives, sans envoi réussi vers cette adresse depuis.
+- **Conservation** : les lignes du journal de plus d'**un an** sont effacées par la même commande `process_emails`.
+
 ## Tests
 
 ```bash
@@ -299,9 +316,31 @@ HSTS (en-tête `Strict-Transport-Security`) demande aux navigateurs de n'utilise
 
 **Attention** : une fois l'en-tête reçu, les navigateurs refusent le HTTP pour ce site pendant toute la durée choisie, même si vous remettez ensuite `0` ou si le certificat expire. N'activez `DJANGO_HSTS_INCLUDE_SUBDOMAINS` que si tous les sous-domaines sont eux aussi en HTTPS : la même règle s'applique alors à eux.
 
+### Tâches planifiées
+
+Deux commandes doivent tourner seules sur le serveur (tâche planifiée Windows ou cron), depuis le dossier `trip_app`, avec le Python où l'application est installée :
+
+| Commande | Fréquence | Rôle |
+|---|---|---|
+| `python manage.py process_emails` | Toutes les 5 minutes | Retente les e-mails en attente (5 puis 15 minutes après l'échec précédent) et efface les lignes du journal des e-mails de plus d'un an |
+| `python manage.py purge_unconfirmed` | Une fois par jour | Efface les comptes clients dont l'adresse n'a pas été confirmée dans les 30 jours (RGPD) |
+
+Exemples (remplacez `C:\chemin` ou `/chemin` par l'emplacement réel ; l'heure quotidienne est au choix) :
+
+```bat
+schtasks /Create /TN "Horizons Lointains - e-mails" /SC MINUTE /MO 5 /TR "C:\chemin\venv\Scripts\python.exe C:\chemin\trip_app\manage.py process_emails"
+schtasks /Create /TN "Horizons Lointains - comptes non confirmes" /SC DAILY /ST 03:00 /TR "C:\chemin\venv\Scripts\python.exe C:\chemin\trip_app\manage.py purge_unconfirmed"
+```
+
+```cron
+*/5 * * * * cd /chemin/trip_app && /chemin/venv/bin/python manage.py process_emails
+0 3 * * *   cd /chemin/trip_app && /chemin/venv/bin/python manage.py purge_unconfirmed
+```
+
+Les liens des e-mails envoyés par ces commandes utilisent `DJANGO_SITE_URL` : réglez-le. Si deux reprises des e-mails tournent en même temps, chaque message n'est pris que par une seule.
+
 Points d'attention :
 
-- Planifiez chaque jour `python manage.py purge_unconfirmed` (tâche planifiée Windows ou cron) : elle efface les comptes clients dont l'adresse n'a pas été confirmée dans les 30 jours (RGPD).
 - **Ne committez jamais** la clé secrète ni les identifiants SMTP.
 - Les limites anti-abus (5 échecs de connexion, 3 liens « mot de passe oublié » par heure, 5 essais quand le mot de passe est redemandé, etc.) sont stockées dans le dossier `trip_app/cache/` (créé automatiquement, jamais commité) : elles sont partagées par tous les processus du serveur et conservées au redémarrage. Ce dossier doit être accessible en écriture par le serveur. Les adresses IPv6 sont comptées par réseau /64.
 - SQLite suffit pour le volume prévu (environ 1 000 clients).
@@ -318,10 +357,13 @@ trip_app/
 ├── config/                 # paramètres, routes et page d'accueil (views.py) du projet ; tests transversaux (droits d'accès, nombre de requêtes)
 ├── common/                 # outils partagés entre applications (normalisation du texte)
 ├── accounts/               # comptes : utilisateurs, rôles, RGPD ; journal des e-mails (v5)
-│   ├── views/              # auth, profile, data_export, staff, clients (une responsabilité par module)
+│   ├── views/              # auth, profile, data_export, staff, clients, email_failures (une responsabilité par module)
 │   ├── services/           # inscription, changement d'e-mail, emails (envoi de tous les e-mails du site
-│   │                       # et journal), password_links (liens de mot de passe), règles du personnel,
-│   │                       # recherche de client, limites anti-abus, privacy (effacement RGPD du journal)
+│   │                       # et journal), email_retry (nouvelles tentatives, renvoi), email_rebuilders
+│   │                       # (reconstruction des e-mails des comptes), address_check (« adresse à vérifier »),
+│   │                       # password_links (liens de mot de passe), règles du personnel, recherche de client,
+│   │                       # limites anti-abus, privacy (effacement RGPD et conservation du journal)
+│   ├── management/commands/ # process_emails (toutes les 5 minutes), purge_unconfirmed (chaque jour)
 │   ├── models.py · forms.py · validators.py · decorators.py · urls.py
 │   └── tests/
 ├── catalog/                # catalogue : pays, destinations, activités, favoris
@@ -352,7 +394,7 @@ trip_app/
 ├── templates/
 │   ├── base.html · home.html · privacy.html · 403/404/500.html
 │   ├── emails/             # base.html : mise en page HTML commune à tous les e-mails
-│   ├── accounts/           # auth/ · profile/ · staff/ · clients/ · emails/ (textes des e-mails)
+│   ├── accounts/           # auth/ · profile/ · staff/ · clients/ · email_failures/ · emails/ (textes des e-mails)
 │   ├── catalog/            # pages publiques, fragments _*.html, manage/
 │   ├── orders/             # demandes côté client, fragments _*.html, manage/
 │   ├── promotions/         # offers.html (offres du moment), fragment _offer_terms.html, manage/ (gestion)
