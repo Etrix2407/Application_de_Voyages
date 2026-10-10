@@ -2,8 +2,8 @@
 
 from django.core.exceptions import ValidationError
 
-from accounts.models import User
-from accounts.services.emails import send_password_link
+from accounts.models import EmailKind, User
+from accounts.services.password_links import send_password_link
 
 
 def check_not_self(target: User, actor: User) -> None:
@@ -22,5 +22,5 @@ def check_not_self(target: User, actor: User) -> None:
 def send_activation_link(request, agent: User) -> bool:
     """Envoie à l'agent un lien pour choisir son mot de passe ; False si l'envoi a échoué."""
     return send_password_link(
-        request, agent, "Activation de votre compte", "accounts/emails/agent_activation.txt"
+        request, agent, EmailKind.AGENT_ACTIVATION, "accounts/emails/agent_activation.txt"
     )

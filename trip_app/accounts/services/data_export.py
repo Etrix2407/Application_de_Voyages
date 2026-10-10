@@ -1,6 +1,6 @@
 """RGPD (portabilité) : informations du compte d'un utilisateur, prêtes à être exportées."""
 
-from accounts.models import User
+from accounts.models import EmailLog, User
 
 
 def profile_data(user: User) -> dict:
@@ -23,3 +23,16 @@ def profile_data(user: User) -> dict:
     else:
         data["employee_number"] = user.employee_number
     return data
+
+
+def emails_data(user: User) -> list[dict]:
+    """E-mails envoyés à l'utilisateur, d'après le journal : ni contenu ni lien (jamais conservés)."""
+    return [
+        {
+            "created_at": log.created_at,
+            "kind": log.get_kind_display(),
+            "subject": log.subject,
+            "status": log.get_status_display(),
+        }
+        for log in EmailLog.objects.filter(user=user)
+    ]

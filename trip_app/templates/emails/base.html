@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+{% comment %}
+Mise en page commune des e-mails (version HTML). Le texte (body) est celui de la version texte :
+les liens deviennent cliquables et les paragraphes sont conservés. Styles en ligne : les
+messageries ignorent souvent les feuilles de style. Gros caractères et fort contraste.
+Signature : « L'équipe … » toujours, puis les coordonnées de l'agence si elles sont réglées ;
+le logo ne s'affiche que s'il est réglé (voir config/settings.py).
+{% endcomment %}
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ subject }}</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f4f4f4;">
+  <div style="max-width: 600px; margin: 0 auto; padding: 24px 16px; background-color: #ffffff; color: #1a1a1a; font-family: Arial, Helvetica, sans-serif; font-size: 18px; line-height: 1.6;">
+    <div style="padding-bottom: 16px; margin-bottom: 24px; border-bottom: 2px solid #1a1a1a;">
+      {% if logo_url %}
+        <img src="{{ logo_url }}" alt="{{ site_name }}" style="max-width: 240px; height: auto; border: 0;">
+      {% else %}
+        <span style="font-size: 24px; font-weight: bold;">{{ site_name }}</span>
+      {% endif %}
+    </div>
+    <div style="word-break: break-word;">
+      {{ body|urlize|linebreaks }}
+    </div>
+    <div style="margin-top: 32px; padding-top: 16px; border-top: 1px solid #767676;">
+      {% for line in signature %}
+        <p style="margin: 0;{% if forloop.first %} font-weight: bold;{% endif %}">{{ line }}</p>
+      {% endfor %}
+    </div>
+  </div>
+</body>
+</html>

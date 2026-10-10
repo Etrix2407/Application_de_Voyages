@@ -9,6 +9,7 @@ import json
 from django.test import TestCase
 from django.urls import reverse
 
+from accounts.models import EmailKind, EmailLog
 from accounts.tests.factories import create_agent, create_client
 from catalog.models import FavoriteDestination
 from catalog.tests.factories import create_activity, create_country, create_destination
@@ -29,6 +30,12 @@ class DownloadMyDataTests(TestCase):
         create_order(other, osaka, remarks="Remarque du voisin")
         create_review(create_trip_done(other, osaka), title="Avis du voisin")
         FavoriteDestination.objects.create(client=other, destination=osaka)
+        EmailLog.objects.create(
+            recipient=marie.email, kind=EmailKind.PASSWORD_RESET, subject="Changement de votre mot de passe", user=marie
+        )
+        EmailLog.objects.create(
+            recipient=other.email, kind=EmailKind.PASSWORD_RESET, subject="Objet du voisin", user=other
+        )
         self.client.force_login(marie)
 
         response = self.client.get(reverse("download_my_data"))
@@ -42,7 +49,11 @@ class DownloadMyDataTests(TestCase):
         self.assertIn("Cérémonie du thé", content)
         self.assertEqual([review["title"] for review in data["reviews"]], ["Séjour inoubliable"])
         self.assertEqual([favorite["name"] for favorite in data["favorites"]["destinations"]], ["Kyoto"])
-        for other_data in ("voisin@example.com", "Remarque du voisin", "Avis du voisin", "Osaka"):
+        self.assertEqual(
+            [(email["kind"], email["subject"], email["status"]) for email in data["emails"]],
+            [("Mot de passe oublié", "Changement de votre mot de passe", "En attente")],
+        )
+        for other_data in ("voisin@example.com", "Remarque du voisin", "Avis du voisin", "Osaka", "Objet du voisin"):
             self.assertNotIn(other_data, content)
         self.assertNotIn("password", content)
         self.assertNotIn(marie.password, content)
@@ -54,6 +65,6 @@ class DownloadMyDataTests(TestCase):
 
         data = self.client.get(reverse("download_my_data")).json()
 
-        self.assertEqual(list(data), ["profile"])
+        self.assertEqual(list(data), ["profile", "emails"])
         self.assertEqual(data["profile"]["email"], "agent@example.com")
         self.assertEqual(data["profile"]["employee_number"], "AG0001")

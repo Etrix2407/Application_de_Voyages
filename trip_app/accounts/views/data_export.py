@@ -2,13 +2,13 @@
 
 Chaque application fournit ses propres données (services data_export) : la vue les
 assemble, comme le permet l'ordre des dépendances entre applications (voir README).
-Le personnel n'a que son profil : ni demandes, ni avis, ni favoris.
+Le personnel n'a que son profil et ses e-mails : ni demandes, ni avis, ni favoris.
 """
 
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 
-from accounts.services.data_export import profile_data
+from accounts.services.data_export import emails_data, profile_data
 from catalog.services.data_export import favorites_data
 from orders.services.data_export import orders_data
 from reviews.services.data_export import reviews_data
@@ -20,7 +20,7 @@ FILE_NAME = "donnees-horizons-lointains.json"
 def download_my_data(request):
     """Lecture seule (GET), comme toute page qui ne modifie rien ; chacun ne voit que ses données."""
     user = request.user
-    data = {"profile": profile_data(user)}
+    data = {"profile": profile_data(user), "emails": emails_data(user)}
     if user.is_client:
         data.update(
             {

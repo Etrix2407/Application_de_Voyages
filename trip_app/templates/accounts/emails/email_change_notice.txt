@@ -1,5 +1,5 @@
-Bonjour {{ user.first_name }},
+{% autoescape off %}Bonjour {{ user.first_name }},
 
 Une demande de changement de l'adresse e-mail de votre compte vient d'être faite. L'adresse ne changera que si la nouvelle adresse est confirmée.
 
-Si ce n'est pas vous, changez dès maintenant votre mot de passe depuis votre profil, ou utilisez « Mot de passe oublié ».
+Si ce n'est pas vous, changez dès maintenant votre mot de passe depuis votre profil, ou utilisez « Mot de passe oublié ».{% endautoescape %}

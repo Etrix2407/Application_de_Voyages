@@ -9,6 +9,7 @@ Application web (Python 3, Django 5.2) pour une agence de voyage. Elle gère les
 - [Fonctionnalités par rôle](#fonctionnalités-par-rôle)
 - [Règles de gestion appliquées](#règles-de-gestion-appliquées)
 - [Promotions (v4) : décisions validées](#promotions-v4--décisions-validées)
+- [E-mails (v5) : socle d'envoi](#e-mails-v5--socle-denvoi)
 - [Tests](#tests)
 - [Mise en production](#mise-en-production)
 - [Structure du code](#structure-du-code)
@@ -32,7 +33,7 @@ Ouvrez ensuite http://127.0.0.1:8000/ et connectez-vous avec le compte administr
 
 Les réglages se trouvent dans le fichier **`.env`**, à la racine du dépôt, créé à partir du modèle [.env.example](.env.example) où chaque réglage est expliqué. Il contient des secrets : il **n'est jamais commité** (protégé par `.gitignore`) et ne doit pas être partagé. Le site refuse de démarrer sans `DJANGO_SECRET_KEY`, même en développement, et sans `DJANGO_PASSWORD_PEPPER` en production : renseignez-les (commande de génération indiquée dans le modèle). Le modèle est réglé pour la production (`DJANGO_DEBUG=0`) : sur votre ordinateur, passez `DJANGO_DEBUG=1`. Les variables d'environnement définies dans Windows ou sur le serveur restent prioritaires sur ce fichier.
 
-Pour **recevoir vraiment les e-mails** (Outlook / Hotmail) : dans `.env`, renseignez `DJANGO_EMAIL_HOST_USER`, `DJANGO_EMAIL_HOST_PASSWORD` (mot de passe d'application si la validation en deux étapes est activée) et `DJANGO_DEFAULT_FROM_EMAIL` (même adresse), puis passez `DJANGO_EMAIL_BACKEND` sur `django.core.mail.backends.smtp.EmailBackend`. Vérifiez avec `python manage.py sendtestemail votre@adresse`.
+Pour **recevoir vraiment les e-mails** (Outlook / Hotmail) : dans `.env`, renseignez `DJANGO_EMAIL_HOST_USER`, `DJANGO_EMAIL_HOST_PASSWORD` (mot de passe d'application si la validation en deux étapes est activée) et `DJANGO_DEFAULT_FROM_EMAIL` (même adresse), puis passez `DJANGO_EMAIL_BACKEND` sur `django.core.mail.backends.smtp.EmailBackend`. Vérifiez avec `python manage.py sendtestemail votre@adresse`. L'expéditeur prévu, `Horizons Lointains <noreply@horizons-lointains.be>` (utilisé si `DJANGO_DEFAULT_FROM_EMAIL` est vide), ne fonctionnera qu'avec le serveur d'envoi du domaine, qui n'existe pas encore : avec Outlook, l'expéditeur doit rester l'adresse Outlook. En développement (`DJANGO_DEBUG=1`), le **mode test** est actif : renseignez aussi `DJANGO_EMAIL_TEST_RECIPIENT` (votre adresse) pour recevoir tous les e-mails, sinon ils restent affichés dans le terminal (voir [E-mails en développement](#e-mails-en-développement)).
 
 ### Données de démonstration (facultatif)
 
@@ -59,6 +60,12 @@ La commande refuse de s'exécuter en production (`DJANGO_DEBUG=0`). Elle peut ê
 ### E-mails en développement
 
 En développement, aucun e-mail n'est réellement envoyé : il s'affiche dans le terminal où tourne `runserver`. C'est le cas des liens « mot de passe oublié » et des liens d'activation des agents. Copiez le lien affiché dans le navigateur.
+
+C'est le **mode test**, actif par défaut dès que `DJANGO_DEBUG=1` (jamais en production) :
+
+- `DJANGO_EMAIL_TEST_RECIPIENT` vide : les e-mails s'affichent dans le terminal, même si un serveur SMTP est réglé ;
+- `DJANGO_EMAIL_TEST_RECIPIENT=votre@adresse` (avec le serveur SMTP réglé) : **tous** les e-mails partent à cette adresse, et l'objet commence par l'adresse d'origine (« [Test : marie@example.com] Confirmez votre inscription ») ;
+- `DJANGO_EMAIL_TEST_MODE=0` : mode test désactivé, les e-mails partent aux vrais destinataires.
 
 ## Guide d'utilisation
 
@@ -150,7 +157,7 @@ Formats à respecter :
    **Mes demandes** (menu) : liste de vos demandes (destination, dates, état, prix estimé), détail avec l'historique (les actions du personnel y apparaissent sous le nom « Agence »). Tant qu'une demande est « En attente », vous pouvez l'annuler (motif facultatif) ; une demande confirmée s'annule en appelant l'agence.
 5. **Favoris** : le bouton « Ajouter à mes favoris » se trouve sur la page d'une destination ou d'une activité. Retrouvez-les dans **Mes favoris**. Un favori devenu indisponible y reste signalé et peut être retiré.
 6. **Mes avis** (menu) : après un voyage **confirmé par l'agence**, une fois rentré, « Donner mon avis » (sur la demande ou dans « Mes avis ») : note de 1 à 5 étoiles, titre, commentaire (obligatoire pour 1 ou 2 étoiles), signature « Prénom N. » ou « Voyageur anonyme ». L'avis est publié après validation par l'agence ; son état et, le cas échéant, le motif du refus sont visibles dans « Mes avis ». Il reste **modifiable 30 jours** après sa création ; une modification le renvoie en validation (masqué en attendant). Il peut être **supprimé à tout moment**, mais ce voyage ne pourra alors plus recevoir d'avis. La signature (« Julie D. ») est fixée à l'envoi de l'avis : changer son nom ensuite ne modifie pas un avis publié.
-7. **Mon profil** : modifier ses informations, changer son mot de passe, **changer son adresse e-mail** (mot de passe demandé, puis lien de confirmation envoyé à la nouvelle adresse ; l'ancienne est prévenue ; si l'adresse du compte n'était pas encore confirmée, confirmer la nouvelle adresse confirme aussi le compte) ou **supprimer son compte**. La suppression est définitive et efface aussi les favoris. **Télécharger mes données** fournit un fichier JSON avec ses informations de compte (sans le mot de passe), ses demandes de voyage, ses avis (avec la réponse de l'agence) et ses favoris.
+7. **Mon profil** : modifier ses informations, changer son mot de passe, **changer son adresse e-mail** (mot de passe demandé, puis lien de confirmation envoyé à la nouvelle adresse ; l'ancienne est prévenue ; si l'adresse du compte n'était pas encore confirmée, confirmer la nouvelle adresse confirme aussi le compte) ou **supprimer son compte**. La suppression est définitive et efface aussi les favoris. **Télécharger mes données** fournit un fichier JSON avec ses informations de compte (sans le mot de passe), ses demandes de voyage, ses avis (avec la réponse de l'agence), ses favoris et la liste des e-mails reçus (sans leur contenu).
 
 ### Mot de passe oublié
 
@@ -164,7 +171,7 @@ Limites par adresse IP, contre les robots : 20 échecs de connexion par 15 minut
 |---|---|
 | Visiteur | Catalogue complet (pays, destinations, activités) ; page « Destinations » avec les notes ; lecture des avis vérifiés ; recherche et filtres ; inscription ; connexion |
 | Client | Détail des pays, destinations et activités ; recherche et filtres ; favoris ; demandes de voyage (faire une demande une fois l'adresse e-mail confirmée, suivre et annuler ses demandes en attente) ; avis sur ses voyages terminés (donner, modifier 30 jours, supprimer) ; profil (modifier, changer le mot de passe ou l'adresse e-mail, télécharger ses données, supprimer le compte) |
-| Agent | Consultation et recherche ; gestion du catalogue ; liste des clients, correction de leurs informations (sauf e-mail et mot de passe), envoi d'un lien de mot de passe ; traitement des demandes de voyage (filtrer, confirmer, annuler avec motif) ; modération des avis (publier, refuser ou masquer avec motif), réponse de l'agence, liste filtrée de tous les avis ; consultation des promotions ; profil (consultation, changement du mot de passe, téléchargement de ses informations de compte au format JSON) |
+| Agent | Consultation et recherche ; gestion du catalogue ; liste des clients, correction de leurs informations (sauf e-mail et mot de passe), envoi d'un lien de mot de passe ; traitement des demandes de voyage (filtrer, confirmer, annuler avec motif) ; modération des avis (publier, refuser ou masquer avec motif), réponse de l'agence, liste filtrée de tous les avis ; consultation des promotions ; profil (consultation, changement du mot de passe, téléchargement de ses informations de compte et de la liste des e-mails reçus au format JSON) |
 | Administrateur | Droits de l'agent + gestion du personnel + gestion des promotions (créer, modifier, désactiver, supprimer si jamais utilisée) |
 
 ## Règles de gestion appliquées
@@ -215,6 +222,28 @@ Version terminée. Le [Recap_4.md](Recap_4.md) décrit les promotions ; voici le
 
 > **Avant la mise en ligne :** dans la politique de confidentialité, remplacez l'adresse e-mail **fictive** `vie-privee@horizons-lointains.example` par la vraie adresse de contact et ajoutez l'adresse postale de l'agence (rappel en commentaire dans `trip_app/templates/privacy.html`).
 
+## E-mails (v5) : socle d'envoi
+
+Tous les e-mails du site passent par un seul service, `accounts/services/emails.py` (dans `accounts`, la première application : toutes les autres peuvent l'utiliser) :
+
+```python
+send_email(to, kind, template_name, context, *, user=None, order_number=None) -> bool
+```
+
+- `kind` : type de l'e-mail (`EmailKind`, dans `accounts/models.py`), clé stable qui fixe l'objet ; elle servira à rendre les textes modifiables par l'administrateur. Chaque nouvel e-mail ajoute son type et son objet (`SUBJECTS`).
+- `template_name` : gabarit du **texte**, qui commence par `{% autoescape off %}`. La version **HTML** est construite à partir de ce texte, dans la mise en page commune `templates/emails/base.html` (liens cliquables, gros caractères) : un seul texte à écrire par e-mail.
+- `context` : variables du gabarit. Les liens sont absolus : `request.build_absolute_uri(...)` pendant une requête, `site_url(reverse(...))` dans une commande planifiée (réglage `DJANGO_SITE_URL`).
+- `user`, `order_number` : compte et demande de voyage concernés, notés dans le journal.
+
+Fonctionnement :
+
+- L'e-mail part **après la validation de la transaction** en cours (immédiatement hors transaction). Un échec d'envoi ne bloque **jamais** l'action : il est noté dans le journal et dans les logs. La fonction renvoie `False` seulement si l'envoi immédiat a échoué (le personnel voit alors « Le lien n'a pas pu être envoyé »).
+- Expéditeur `DJANGO_DEFAULT_FROM_EMAIL`, réponses vers `DJANGO_EMAIL_REPLY_TO` (défaut : info@horizons-lointains.be), délai SMTP `DJANGO_EMAIL_TIMEOUT` (10 secondes).
+- Chaque e-mail (texte et HTML) se termine par la signature « L'équipe Horizons Lointains ». Logo et coordonnées de l'agence (ajoutées sous la signature) : réglages `EMAIL_LOGO_STATIC_PATH` et `EMAIL_SIGNATURE_LINES` de `config/settings.py`, **vides** tant qu'ils ne sont pas fournis (la mise en page ne les affiche pas). Le logo est un fichier de `static/`, affiché par son adresse complète (`DJANGO_SITE_URL` + chemin) : rien n'est joint au message, et si la messagerie bloque les images, le nom de l'agence s'affiche à la place.
+- **Journal** (`EmailLog`) : une ligne par e-mail avec la date, le destinataire, le type, l'objet, l'état (en attente / envoyé / échec), le nombre de tentatives, la raison du dernier échec, le compte et la demande de voyage liés. Le **contenu** des messages et leurs **liens de sécurité** ne sont **jamais** conservés. Un envoi qui échoue reste « en attente » jusqu'à la 3e tentative, puis passe en « échec ». La demande est liée par son numéro, sans clé étrangère : `accounts` ne dépend pas de `orders`.
+- **Télécharger mes données** : le fichier JSON contient aussi la liste des e-mails reçus (`emails` : date, type, objet, état), pour les clients comme pour le personnel.
+- **Compte supprimé** : les lignes du journal restent (statistiques anonymes), sans adresse ni lien vers le compte (`accounts/signals.py`, quel que soit le chemin de suppression).
+
 ## Tests
 
 ```bash
@@ -223,6 +252,8 @@ python manage.py test
 ```
 
 Les tests utilisent un hachage de mot de passe rapide pour aller plus vite. L'application, elle, garde un hachage sécurisé (PBKDF2).
+
+Un `TestCase` ne valide jamais sa transaction : les e-mails, envoyés après validation, n'y partent pas d'eux-mêmes. Une classe de tests qui vérifie des e-mails hérite de `SendEmailsImmediately` (`accounts/tests/email_delivery.py`), ou entoure l'action de `self.captureOnCommitCallbacks(execute=True)`.
 
 ## Mise en production
 
@@ -238,7 +269,12 @@ Réglez ces variables dans le `.env` du serveur, ou directement comme variables 
 | `DJANGO_EMAIL_HOST` / `DJANGO_EMAIL_PORT` | Serveur SMTP | `localhost` / `587` |
 | `DJANGO_EMAIL_HOST_USER` / `DJANGO_EMAIL_HOST_PASSWORD` | Identifiants SMTP | vides |
 | `DJANGO_EMAIL_USE_TLS` | `1` pour chiffrer la connexion SMTP | `1` |
-| `DJANGO_DEFAULT_FROM_EMAIL` | Expéditeur des e-mails | `ne-pas-repondre@localhost` |
+| `DJANGO_DEFAULT_FROM_EMAIL` | Expéditeur des e-mails (avec Outlook : l'adresse Outlook) | `Horizons Lointains <noreply@horizons-lointains.be>` |
+| `DJANGO_EMAIL_REPLY_TO` | Adresse des réponses (en-tête Reply-To) ; vide = pas d'en-tête | `info@horizons-lointains.be` |
+| `DJANGO_EMAIL_TIMEOUT` | Délai maximal d'attente du serveur SMTP, en secondes | `10` |
+| `DJANGO_SITE_URL` | Adresse du site (ex. `https://horizons-lointains.be`), pour les liens et le logo des e-mails envoyés hors d'une requête. **Obligatoire en production** | `http://127.0.0.1:8000` en développement, vide en production |
+| `DJANGO_EMAIL_TEST_MODE` | `0` pour désactiver le mode test en développement (toujours désactivé si `DJANGO_DEBUG=0`) | `1` |
+| `DJANGO_EMAIL_TEST_RECIPIENT` | Mode test : adresse qui reçoit tous les e-mails ; vide = affichage dans le terminal | vide |
 | `DJANGO_SECURE_SSL_REDIRECT` | `1` pour rediriger HTTP vers HTTPS | `1` |
 | `DJANGO_HSTS_SECONDS` | Durée HSTS en secondes (ex. `31536000`), à activer une fois le HTTPS validé | `0` |
 | `DJANGO_HSTS_INCLUDE_SUBDOMAINS` | `1` pour appliquer HSTS aux sous-domaines (seulement s'ils sont tous en HTTPS) | `0` |
@@ -279,10 +315,11 @@ Le code (identifiants, fichiers, routes internes) est en anglais ; l'interface, 
 trip_app/
 ├── config/                 # paramètres, routes et page d'accueil (views.py) du projet ; tests transversaux (droits d'accès, nombre de requêtes)
 ├── common/                 # outils partagés entre applications (normalisation du texte)
-├── accounts/               # comptes : utilisateurs, rôles, RGPD
+├── accounts/               # comptes : utilisateurs, rôles, RGPD ; journal des e-mails (v5)
 │   ├── views/              # auth, profile, data_export, staff, clients (une responsabilité par module)
-│   ├── services/           # inscription, changement d'e-mail, e-mails de lien, règles du personnel,
-│   │                       # recherche de client, limites anti-abus
+│   ├── services/           # inscription, changement d'e-mail, emails (envoi de tous les e-mails du site
+│   │                       # et journal), password_links (liens de mot de passe), règles du personnel,
+│   │                       # recherche de client, limites anti-abus, privacy (effacement RGPD du journal)
 │   ├── models.py · forms.py · validators.py · decorators.py · urls.py
 │   └── tests/
 ├── catalog/                # catalogue : pays, destinations, activités, favoris
@@ -312,7 +349,8 @@ trip_app/
 │   └── tests/
 ├── templates/
 │   ├── base.html · home.html · privacy.html · 403/404/500.html
-│   ├── accounts/           # auth/ · profile/ · staff/ · clients/ · emails/
+│   ├── emails/             # base.html : mise en page HTML commune à tous les e-mails
+│   ├── accounts/           # auth/ · profile/ · staff/ · clients/ · emails/ (textes des e-mails)
 │   ├── catalog/            # pages publiques, fragments _*.html, manage/
 │   ├── orders/             # demandes côté client, fragments _*.html, manage/
 │   ├── promotions/         # offers.html (offres du moment), fragment _offer_terms.html, manage/ (gestion)

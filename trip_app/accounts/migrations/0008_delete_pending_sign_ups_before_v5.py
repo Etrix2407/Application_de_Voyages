@@ -22,7 +22,7 @@ def delete_pending_sign_ups(apps, schema_editor):
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("accounts", "0006_active_clients_confirmed"),
+        ("accounts", "0007_active_clients_confirmed"),
     ]
 
     operations = [

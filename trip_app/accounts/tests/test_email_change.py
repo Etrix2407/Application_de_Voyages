@@ -9,10 +9,11 @@ from django.urls import reverse
 from accounts.models import User
 from accounts.services.email_change import apply_email_change
 
+from .email_delivery import SendEmailsImmediately
 from .factories import PASSWORD, create_agent, create_client
 
 
-class EmailChangeTests(TestCase):
+class EmailChangeTests(SendEmailsImmediately, TestCase):
     url = reverse("change_email")
 
     def setUp(self):

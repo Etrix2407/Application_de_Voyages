@@ -7,9 +7,9 @@ from django.views.decorators.http import require_POST
 
 from accounts.decorators import staff_required
 from accounts.forms import ClientCorrectionForm
-from accounts.models import Role, User
+from accounts.models import EmailKind, Role, User
 from accounts.services.client_search import client_matches, search_words
-from accounts.services.emails import send_password_link
+from accounts.services.password_links import send_password_link
 
 CLIENTS_PER_PAGE = 25
 
@@ -47,7 +47,7 @@ def edit_client(request, pk):
 def send_client_link(request, pk):
     client = _get_client(pk)
     sent = send_password_link(
-        request, client, "Changement de votre mot de passe", "accounts/emails/client_password.txt"
+        request, client, EmailKind.CLIENT_PASSWORD_LINK, "accounts/emails/client_password.txt"
     )
     if sent:
         messages.success(request, f"Un lien pour choisir un nouveau mot de passe a été envoyé à {client.email}.")

@@ -8,6 +8,7 @@ from django.urls import reverse
 
 from accounts.models import Role
 
+from .email_delivery import SendEmailsImmediately
 from .factories import create_admin, create_agent, create_client
 
 User = get_user_model()
@@ -47,7 +48,7 @@ class StaffListTests(TestCase):
         self.assertNotContains(response, "client@example.com")
 
 
-class AgentCreationTests(TestCase):
+class AgentCreationTests(SendEmailsImmediately, TestCase):
     def setUp(self):
         self.client.force_login(create_admin())
 
@@ -144,7 +145,7 @@ class StaffMemberEditTests(TestCase):
         self.assertRedirects(self.edit(self.admin, last_name="Durand-Nouveau"), reverse("staff_list"))
 
 
-class ActivationTests(TestCase):
+class ActivationTests(SendEmailsImmediately, TestCase):
     def setUp(self):
         self.admin = create_admin()
         self.agent = create_agent()
@@ -207,8 +208,8 @@ class StaffMemberDeletionTests(TestCase):
         self.assertTrue(User.objects.filter(pk=self.admin.pk).exists())
 
 
-@mock.patch("accounts.services.emails.send_mail", side_effect=OSError("serveur SMTP injoignable"))
-class EmailFailureTests(TestCase):
+@mock.patch("accounts.services.emails.EmailMultiAlternatives.send", side_effect=OSError("serveur SMTP injoignable"))
+class EmailFailureTests(SendEmailsImmediately, TestCase):
     def setUp(self):
         self.client.force_login(create_admin())
 

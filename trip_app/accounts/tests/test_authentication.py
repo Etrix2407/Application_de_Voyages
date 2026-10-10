@@ -16,6 +16,7 @@ from accounts.services.sign_up import purge_unconfirmed
 from accounts.services.throttling import confirmation_emails, login_failures, password_reset_requests
 from accounts.models import Role
 
+from .email_delivery import SendEmailsImmediately
 from .factories import PASSWORD, create_agent, create_client
 
 User = get_user_model()
@@ -42,7 +43,7 @@ def link_in_last_email() -> str:
     return re.search(r"https?://[^/]+(/\S+)", mail.outbox[-1].body).group(1)
 
 
-class SignUpTests(TestCase):
+class SignUpTests(SendEmailsImmediately, TestCase):
     url = reverse("sign_up")
 
     def setUp(self):
@@ -145,7 +146,7 @@ class SignUpTests(TestCase):
         self.assertRedirects(self.client.get(self.url), reverse("home"))
 
 
-class ConfirmationLinkTests(TestCase):
+class ConfirmationLinkTests(SendEmailsImmediately, TestCase):
     def setUp(self):
         cache.clear()
         self.client.post(reverse("sign_up"), sign_up_data(first_name="Pirate"))
@@ -216,10 +217,10 @@ class ConfirmationLinkTests(TestCase):
 
 
 class DeletePendingSignUpsBeforeV5Tests(TestCase):
-    """Migration 0007 : seules les inscriptions clients d'avant la v5 sont supprimées."""
+    """Migration 0008 : seules les inscriptions clients d'avant la v5 sont supprimées."""
 
     def test_only_old_pending_client_sign_ups_deleted(self):
-        migration = importlib.import_module("accounts.migrations.0007_delete_pending_sign_ups_before_v5")
+        migration = importlib.import_module("accounts.migrations.0008_delete_pending_sign_ups_before_v5")
         # Avant la v5 : compte inactif, sans mot de passe utilisable.
         old_pending = create_client(email="ancien@example.com", is_active=False, email_confirmed_at=None)
         invited_agent = create_agent(email="invite@example.com")
@@ -314,7 +315,7 @@ class LoginTests(TestCase):
         self.assertNotIn("_auth_user_id", self.client.session)
 
 
-class PasswordResetTests(TestCase):
+class PasswordResetTests(SendEmailsImmediately, TestCase):
     url = reverse("password_reset")
 
     def setUp(self):
