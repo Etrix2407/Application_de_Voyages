@@ -211,6 +211,25 @@ class ConfirmationTests(TestCase):
         order.refresh_from_db()
         self.assertEqual((order.confirmed_price, order.confirmed_discount), (Decimal("1080.00"), Decimal("120.00")))
 
+    def test_stay_discount_not_applicable_once_destination_is_on_quote(self):
+        kyoto = create_destination(create_country(), "Kyoto", price_from=Decimal("1000"))
+        promotion = create_promotion(base=Base.STAY, value=Decimal("10"))
+        client = create_client()
+        order = create_order(client, kyoto, adults=1, promotion=promotion, promotion_name=promotion.name,
+                             estimated_price=Decimal("900"), discount=Decimal("100"))
+        kyoto.price_from = None
+        kyoto.save()
+        self.client.force_login(create_agent())
+        self.client.post(reverse("manage_confirm_order", args=[order.pk]))
+        self.client.force_login(client)
+
+        response = self.client.get(reverse("my_order_detail", args=[order.pk]))
+
+        self.assertContains(response, f"Remise « {promotion.name} » non applicable au prix recalculé")
+        self.assertNotContains(response, "ré-appliquée")
+        self.assertContains(response, "Le prix de la destination est donné sur devis par votre conseiller.")
+        self.assertContains(self.client.get(reverse("my_orders")), "+ destination sur devis")
+
 
 class UsedPromotionTests(TestCase):
     def setUp(self):

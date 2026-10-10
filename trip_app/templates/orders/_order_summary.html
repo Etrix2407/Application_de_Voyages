@@ -20,13 +20,17 @@
         <dt>Prix estimé à la demande{% if order.promotion_name %}, après remise{% endif %}</dt>
         <dd>
             <strong>{{ order.estimated_price }} €</strong> — estimation, non contractuel, calculée le {{ order.created_at|date:"j F Y" }}.
-            {% if order.is_quote_required %}<br>Le prix de la destination est donné sur devis par votre conseiller.{% endif %}
+            {% if order.shows_quote_note_on_estimate %}<br>Le prix de la destination est donné sur devis par votre conseiller.{% endif %}
         </dd>
         {% if order.confirmed_price is not None %}
             <dt>Prix à la confirmation</dt>
             <dd>
                 <strong>{{ order.confirmed_price }} €</strong> — recalculé aux tarifs du jour de la confirmation, non contractuel.
-                {% if order.promotion_name %}<br>Remise « {{ order.promotion_name }} » ré-appliquée : -{{ order.confirmed_discount }} € sur {{ order.confirmed_price_before_discount }} €.{% endif %}
+                {% if order.promotion_name %}
+                    {% if order.confirmed_discount_applies %}<br>Remise « {{ order.promotion_name }} » ré-appliquée : -{{ order.confirmed_discount }} € sur {{ order.confirmed_price_before_discount }} €.
+                    {% else %}<br>Remise « {{ order.promotion_name }} » non applicable au prix recalculé{% endif %}
+                {% endif %}
+                {% if order.is_confirmed_quote_required %}<br>Le prix de la destination est donné sur devis par votre conseiller.{% endif %}
             </dd>
         {% endif %}
         <dt>Demande faite le</dt>

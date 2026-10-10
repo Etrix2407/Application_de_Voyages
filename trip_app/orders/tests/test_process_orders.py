@@ -232,6 +232,22 @@ class PriceAtConfirmationTests(TestCase):
         self.assertContains(listing, "2320,00 €")
         self.assertNotContains(listing, "2100,00 €")
 
+    def test_price_set_after_quote_request_no_longer_shown_on_quote(self):
+        lisbon = create_destination(create_country("Portugal"), "Lisbonne")
+        order = create_order(self.marie, lisbon, adults=1)
+        lisbon.price_from = Decimal("800")
+        lisbon.save()
+        confirm_by_staff(order, self.agent)
+        self.client.force_login(self.marie)
+
+        detail = self.client.get(reverse("my_order_detail", args=[order.pk]))
+        listing = self.client.get(reverse("my_orders"))
+
+        self.assertContains(detail, "800,00 €")
+        self.assertNotContains(detail, "sur devis")
+        self.assertContains(listing, "800,00 €")
+        self.assertNotContains(listing, "sur devis")
+
 
 class DepartureDateTests(TestCase):
     """Décision de la cliente : une demande dont la date de départ est passée ne se confirme plus."""
