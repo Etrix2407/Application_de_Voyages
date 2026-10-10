@@ -121,10 +121,17 @@ class StaffOrderFilterForm(forms.Form):
 
 
 class StaffCancelForm(forms.Form):
-    reason = forms.CharField(
-        label="Motif de l'annulation",
+    internal_reason = forms.CharField(
+        label="Motif interne",
         max_length=1000,
         widget=forms.Textarea(attrs={"rows": 3}),
-        help_text="Obligatoire. Il apparaîtra dans l'historique de la demande, visible par le client.",
-        error_messages={"required": "Le motif est obligatoire."},
+        help_text="Obligatoire. Réservé au personnel : le client ne le voit pas.",
+        error_messages={"required": "Le motif interne est obligatoire."},
+    )
+    explanation = forms.CharField(
+        label="Explication pour le client (facultatif)",
+        required=False,
+        max_length=1000,
+        widget=forms.Textarea(attrs={"rows": 3}),
+        help_text="Elle apparaîtra dans l'historique de la demande, visible par le client.",
     )

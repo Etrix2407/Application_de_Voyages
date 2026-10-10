@@ -6,6 +6,7 @@ from django.urls import reverse
 from accounts.tests.factories import PASSWORD, create_agent, create_client
 from catalog.tests.factories import create_activity, create_country, create_destination
 from orders.models import Order, Status, StatusChange
+from orders.services.data_export import orders_data
 from orders.services.status import ACCOUNT_DELETED_REASON, cancel_by_staff, confirm_by_staff
 
 from .factories import create_order
@@ -32,7 +33,9 @@ class AccountDeletionAnonymizesOrdersTests(TestCase):
             by_client=True,
         )
         confirm_by_staff(self.order, self.agent)
-        cancel_by_staff(self.order, self.agent, "Mme Dupont hospitalisée, voyage reporté.")
+        cancel_by_staff(
+            self.order, self.agent, "Mme Dupont hospitalisée.", "Voyage reporté suite à votre hospitalisation."
+        )
 
     def delete_account_through_the_site(self):
         self.client.force_login(self.marie)
@@ -54,7 +57,7 @@ class AccountDeletionAnonymizesOrdersTests(TestCase):
 
         order = Order.objects.get(pk=self.order.pk)
         self.assertEqual(order.remarks, "")
-        self.assertEqual(set(order.history.values_list("reason", flat=True)), {""})
+        self.assertEqual(set(order.history.values_list("reason", "internal_reason")), {("", "")})
 
     def test_history_dates_and_agent_names_kept(self):
         self.delete_account_through_the_site()
@@ -105,6 +108,20 @@ class AccountDeletionAnonymizesOrdersTests(TestCase):
         self.assertContains(self.client.get(reverse("delete_account")), "sans votre nom ni vos coordonnées")
 
 
+class OrdersDataExportTests(TestCase):
+    def test_export_includes_internal_reason(self):
+        marie = create_client()
+        order = create_order(marie, create_destination(create_country()))
+        cancel_by_staff(order, create_agent(), "Hôtel partenaire en faillite.", "Destination fermée cette saison.")
+
+        (change,) = orders_data(marie)[0]["history"]
+
+        self.assertEqual(
+            (change["reason"], change["internal_reason"]),
+            ("Destination fermée cette saison.", "Hôtel partenaire en faillite."),
+        )
+
+
 class PendingOrdersOfDeletedAccountTests(TestCase):
     """Plus personne à rappeler : les demandes en attente sont annulées, le personnel le voit."""
 
@@ -123,7 +140,7 @@ class PendingOrdersOfDeletedAccountTests(TestCase):
         self.assertEqual(self.pending.remarks, "")
         change = self.pending.history.get()
         self.assertEqual(change.status, Status.CANCELLED)
-        self.assertEqual(change.reason, ACCOUNT_DELETED_REASON)
+        self.assertEqual((change.internal_reason, change.reason), (ACCOUNT_DELETED_REASON, ""))
         self.assertTrue(change.by_client)
         self.assertIsNone(change.author)
 
@@ -149,4 +166,4 @@ class PendingOrdersOfDeletedAccountTests(TestCase):
 
         self.pending.refresh_from_db()
         self.assertEqual(self.pending.status, Status.CANCELLED)
-        self.assertEqual(self.pending.history.get().reason, ACCOUNT_DELETED_REASON)
+        self.assertEqual(self.pending.history.get().internal_reason, ACCOUNT_DELETED_REASON)
