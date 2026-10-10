@@ -4,7 +4,8 @@
 - Un code saisi qui est battu par une promotion automatique n'est pas consommé.
 - Limites : seules les demandes non annulées comptent (une annulation rend l'utilisation).
 - Un code dont la promotion n'a pas encore commencé est « invalide » : les offres à venir
-  ne sont pas révélées. Les codes invalides sont limités (10 par heure et par client).
+  ne sont pas révélées. Les codes invalides sont limités (10 par heure et par client,
+  30 par heure et par adresse IP).
 """
 
 from dataclasses import dataclass
@@ -39,6 +40,8 @@ NO_LONGER_AVAILABLE = "Ce code n'est plus disponible"
 TOO_MANY_WRONG_CODES = "Trop de codes incorrects ont été essayés. Réessayez dans une heure, ou appelez l'agence."
 
 wrong_codes = Limiter("promo-codes", max_attempts=10, window_seconds=60 * 60)
+# Par adresse IP : empêche de contourner la limite en changeant de compte.
+wrong_codes_by_ip = Limiter("promo-codes-ip", max_attempts=30, window_seconds=60 * 60)
 
 
 @dataclass(frozen=True)
@@ -100,8 +103,15 @@ def limit_problem(promotion: Promotion, client) -> str:
 
 
 def choose_promotion(
-    client, destination: Destination, departure_date: date, prices: PriceParts, code: str = "", today=None
+    client,
+    destination: Destination,
+    departure_date: date,
+    prices: PriceParts,
+    code: str = "",
+    ip: str = "",
+    today=None,
 ) -> PromotionChoice:
+    """`ip` : adresse du client, telle que donnée par accounts.services.throttling.get_client_ip."""
     today = today or timezone.localdate()
     automatic = best_offer(
         offer_for(promotion, prices)
@@ -112,13 +122,14 @@ def choose_promotion(
         return PromotionChoice(automatic)
 
     attempts_key = str(client.pk)
-    if wrong_codes.is_locked(attempts_key):
+    if wrong_codes.is_locked(attempts_key) or wrong_codes_by_ip.is_locked(ip):
         return PromotionChoice(automatic, code_error=TOO_MANY_WRONG_CODES)
     promotion = Promotion.objects.filter(code=normalize_code(code)).first()
     problem = _code_problem(promotion, client, destination, departure_date, today)
     offer = None if problem else offer_for(promotion, prices)
     if problem == INVALID_CODE:
         wrong_codes.record(attempts_key)
+        wrong_codes_by_ip.record(ip)
     if offer is None:
         return PromotionChoice(automatic, code_error=problem or NOT_FOR_THIS_ORDER)
 

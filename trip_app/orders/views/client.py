@@ -7,6 +7,7 @@ from django.core.exceptions import ValidationError
 from django.shortcuts import get_object_or_404, redirect, render
 
 from accounts.decorators import client_required
+from accounts.services.throttling import get_client_ip
 from catalog.models import Destination
 from orders.forms import ClientCancelForm, OrderForm
 from orders.models import Order, Status
@@ -42,7 +43,7 @@ def create_order(request, destination_pk):
         return render(request, "orders/create.html", {"form": form, "destination": destination})
 
     data = form.cleaned_data
-    choice, quote = _price(request.user, destination, data)
+    choice, quote = _price(request, destination, data)
     if choice.code_error:
         return _code_refused(request, form, destination, choice)
     if "confirm" not in request.POST:
@@ -63,7 +64,7 @@ def create_order(request, destination_pk):
     except PromotionUnavailable:
         # Dernière utilisation de la promotion prise au même instant : rien n'a été enregistré.
         # Code : message sous le champ ; promotion automatique : récapitulatif au nouveau prix.
-        choice, quote = _price(request.user, destination, data)
+        choice, quote = _price(request, destination, data)
         if choice.code_error:
             return _code_refused(request, form, destination, choice)
         return _review(request, form, destination, quote, choice, price_changed=True)
@@ -76,12 +77,12 @@ def create_order(request, destination_pk):
     return redirect("my_order_detail", pk=order.pk)
 
 
-def _price(client, destination, data):
+def _price(request, destination, data):
     """Promotion retenue et prix de la demande, recalculés à chaque passage (vérification, envoi)."""
     activities, adults, children = data["activities"], data["adults"], data["children"]
     choice = choose_promotion(
-        client, destination, data["departure_date"], parts_for(destination, activities, adults, children),
-        data["promo_code"],
+        request.user, destination, data["departure_date"], parts_for(destination, activities, adults, children),
+        data["promo_code"], ip=get_client_ip(request),
     )
     discount = choice.offer.discount if choice.offer else NO_DISCOUNT
     return choice, quote_for(destination, activities, adults, children, discount)

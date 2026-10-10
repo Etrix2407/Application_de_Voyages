@@ -108,6 +108,18 @@ class ChoosePromotionTests(TestCase):
 
         self.assertEqual(self.choose("BIENVENUE15").code_error, messages.TOO_MANY_WRONG_CODES)
 
+    def test_wrong_codes_limited_by_ip_across_accounts(self):
+        create_promotion(code="BIENVENUE15")
+        prices = parts_for(self.kyoto, [], 1, 0)
+        for number in range(3):
+            client = create_client(email=f"client{number}@example.com")
+            for attempt in range(10):
+                choose_promotion(client, self.kyoto, self.departure, prices, f"FAUX{attempt}", ip="203.0.113.5")
+
+        choice = choose_promotion(self.marie, self.kyoto, self.departure, prices, "BIENVENUE15", ip="203.0.113.5")
+
+        self.assertEqual(choice.code_error, messages.TOO_MANY_WRONG_CODES)
+
 
 class OrderWithPromotionTests(TestCase):
     """Parcours réel du client : vérification, envoi, récapitulatif."""
