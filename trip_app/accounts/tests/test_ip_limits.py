@@ -11,6 +11,7 @@ from accounts.services.throttling import (
     sign_ups_by_ip,
 )
 
+from .email_delivery import SendEmailsImmediately
 from .factories import PASSWORD, create_client
 
 OFFICE_IP = "203.0.113.10"
@@ -123,7 +124,7 @@ class SignUpIpLimitTests(TestCase):
         self.assertEqual(self.sign_up(99, ip=OTHER_IP).status_code, 302)
 
 
-class PasswordResetIpLimitTests(TestCase):
+class PasswordResetIpLimitTests(SendEmailsImmediately, TestCase):
     def setUp(self):
         cache.clear()
 

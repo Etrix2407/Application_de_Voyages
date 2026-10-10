@@ -175,12 +175,38 @@ PASSWORD_RESET_TIMEOUT = 60 * 60
 EMAIL_BACKEND = os.environ.get(
     "DJANGO_EMAIL_BACKEND", "django.core.mail.backends.console.EmailBackend"
 )
-DEFAULT_FROM_EMAIL = os.environ.get("DJANGO_DEFAULT_FROM_EMAIL", "ne-pas-repondre@localhost")
+# Expéditeur et adresse des réponses (Recap 5). Une ligne vide dans .env garde l'expéditeur
+# par défaut ; avec Outlook, l'expéditeur doit être l'adresse Outlook (voir .env.example).
+DEFAULT_FROM_EMAIL = (
+    os.environ.get("DJANGO_DEFAULT_FROM_EMAIL") or "Horizons Lointains <noreply@horizons-lointains.be>"
+)
+# En-tête Reply-To des e-mails ; vide = pas d'en-tête (les réponses vont à l'expéditeur).
+EMAIL_REPLY_TO = os.environ.get("DJANGO_EMAIL_REPLY_TO", "info@horizons-lointains.be").strip()
 EMAIL_HOST = os.environ.get("DJANGO_EMAIL_HOST", "localhost")
 EMAIL_PORT = int(os.environ.get("DJANGO_EMAIL_PORT", "587"))
 EMAIL_HOST_USER = os.environ.get("DJANGO_EMAIL_HOST_USER", "")
 EMAIL_HOST_PASSWORD = os.environ.get("DJANGO_EMAIL_HOST_PASSWORD", "")
 EMAIL_USE_TLS = os.environ.get("DJANGO_EMAIL_USE_TLS", "1") == "1"
+# Délai maximal d'attente du serveur SMTP, en secondes : un serveur lent ne bloque pas la page.
+EMAIL_TIMEOUT = int(os.environ.get("DJANGO_EMAIL_TIMEOUT") or "10")
+
+# Adresse du site (ex. https://horizons-lointains.be), pour les liens absolus des e-mails
+# envoyés hors d'une requête (commandes planifiées) et pour le logo. Obligatoire en production.
+SITE_URL = (os.environ.get("DJANGO_SITE_URL") or ("http://127.0.0.1:8000" if DEBUG else "")).rstrip("/")
+
+# Mise en page des e-mails : logo (chemin d'un fichier static, ex. « img/logo-email.png ») et
+# coordonnées de l'agence, ajoutées sous la signature « L'équipe Horizons Lointains » (une ligne
+# par élément). Vides tant qu'ils ne sont pas fournis : la mise en page ne les affiche pas.
+EMAIL_LOGO_STATIC_PATH = ""
+EMAIL_SIGNATURE_LINES: list[str] = []
+
+# Mode test des e-mails (Recap 5) : activé par défaut hors production, toujours désactivé en
+# production (DJANGO_DEBUG=0). Avec DJANGO_EMAIL_TEST_RECIPIENT, tous les messages partent à
+# cette adresse (l'adresse d'origine est ajoutée dans l'objet) ; sinon ils s'affichent dans le terminal.
+EMAIL_TEST_MODE = DEBUG and os.environ.get("DJANGO_EMAIL_TEST_MODE", "1") == "1"
+EMAIL_TEST_RECIPIENT = "" if TESTING else os.environ.get("DJANGO_EMAIL_TEST_RECIPIENT", "").strip()
+if EMAIL_TEST_MODE and not EMAIL_TEST_RECIPIENT:
+    EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
 
 # Sécurité en production (site servi en HTTPS).

@@ -12,7 +12,7 @@ from django.core import signing
 from django.db import IntegrityError, transaction
 from django.urls import reverse
 
-from accounts.models import Role, User, normalize_email_address
+from accounts.models import EmailKind, Role, User, normalize_email_address
 from accounts.services.emails import send_email
 from accounts.signals import email_changed
 from accounts.services.throttling import confirmation_emails
@@ -30,10 +30,11 @@ def request_email_change(request, user: User, new_email: str) -> None:
     token = signing.dumps({"id": user.pk, "old": user.email, "new": new_email}, salt=_TOKEN_SALT)
     link = request.build_absolute_uri(reverse("confirm_email_change", args=[token]))
     send_email(
-        "Confirmez votre nouvelle adresse e-mail",
+        new_email,
+        EmailKind.EMAIL_CHANGE_CONFIRMATION,
         "accounts/emails/email_change_confirmation.txt",
         {"user": user, "link": link},
-        new_email,
+        user=user,
     )
 
 
@@ -72,8 +73,9 @@ def apply_email_change(user: User, new_email: str) -> bool:
 
 def _notify_current_address(user: User) -> None:
     send_email(
-        "Demande de changement de votre adresse e-mail",
+        user.email,
+        EmailKind.EMAIL_CHANGE_NOTICE,
         "accounts/emails/email_change_notice.txt",
         {"user": user},
-        user.email,
+        user=user,
     )

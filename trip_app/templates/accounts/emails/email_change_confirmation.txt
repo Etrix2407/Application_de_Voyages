@@ -1,7 +1,7 @@
-Bonjour {{ user.first_name }},
+{% autoescape off %}Bonjour {{ user.first_name }},
 
 Vous avez demandé à utiliser cette adresse e-mail pour votre compte. Pour confirmer, ouvrez ce lien (valable 24 heures) :
 
 {{ link }}
 
-Si vous n'êtes pas à l'origine de cette demande, ignorez cet e-mail : rien ne sera modifié.
+Si vous n'êtes pas à l'origine de cette demande, ignorez cet e-mail : rien ne sera modifié.{% endautoescape %}

@@ -15,7 +15,7 @@ from django.core import signing
 from django.urls import reverse
 from django.utils import timezone
 
-from accounts.models import Role, User, normalize_email_address
+from accounts.models import EmailKind, Role, User, normalize_email_address
 from accounts.services.emails import send_email
 from accounts.services.throttling import confirmation_emails
 
@@ -50,9 +50,7 @@ def request_sign_up(request, form) -> None:
     email = normalize_email_address(form.cleaned_data["email"])
     existing = User.objects.filter(email=email).first()
     if existing and not existing.is_awaiting_confirmation:
-        _notify(
-            request, existing, "Tentative d'inscription avec votre adresse", "accounts/emails/sign_up_existing.txt"
-        )
+        _notify(request, existing, EmailKind.SIGN_UP_EXISTING, "accounts/emails/sign_up_existing.txt")
         return
 
     # Nouvelle inscription, ou nouvelle tentative qui remplace une inscription en attente.
@@ -72,7 +70,7 @@ def send_confirmation(request, user: User) -> None:
     _notify(
         request,
         user,
-        "Confirmez votre inscription",
+        EmailKind.SIGN_UP_CONFIRMATION,
         "accounts/emails/sign_up_confirmation.txt",
         {"confirmation_link": link},
     )
@@ -102,7 +100,7 @@ def purge_unconfirmed(now=None) -> int:
     return deleted
 
 
-def _notify(request, user: User, subject: str, template_name: str, extra: dict | None = None) -> None:
+def _notify(request, user: User, kind: EmailKind, template_name: str, extra: dict | None = None) -> None:
     # Limite par adresse : on ne peut pas se servir du site pour inonder une boîte e-mail.
     if confirmation_emails.is_locked(user.email):
         return
@@ -113,4 +111,4 @@ def _notify(request, user: User, subject: str, template_name: str, extra: dict |
         "password_reset_link": request.build_absolute_uri(reverse("password_reset")),
         **(extra or {}),
     }
-    send_email(subject, template_name, context, user.email)
+    send_email(user.email, kind, template_name, context, user=user)

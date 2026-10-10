@@ -11,7 +11,7 @@ class AccountsConfig(AppConfig):
     name = 'accounts'
 
     def ready(self):
-        # Branche la durée de connexion réduite du personnel.
+        # Branche la durée de connexion réduite du personnel et l'effacement RGPD du journal des e-mails.
         import_module("accounts.signals")
         # Recherche de client sans accents faite par la base (voir matching_clients).
         connection_created.connect(register_sql_normalize, dispatch_uid="common.sql_normalize")
