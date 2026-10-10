@@ -73,7 +73,7 @@ class User(AbstractBaseUser):
     consent_date = models.DateTimeField(
         "date d'acceptation de la politique de confidentialité", null=True, blank=True
     )
-    # Inscription client : le compte reste inactif tant que l'adresse n'est pas confirmée.
+    # Inscription client : pas de demande de voyage tant que l'adresse n'est pas confirmée.
     email_confirmed_at = models.DateTimeField("date de confirmation de l'adresse", null=True, blank=True)
 
     objects = UserManager()
@@ -103,8 +103,8 @@ class User(AbstractBaseUser):
 
     @property
     def is_awaiting_confirmation(self) -> bool:
-        """Inscription client commencée, adresse e-mail pas encore confirmée."""
-        return self.is_client and not self.is_active and self.email_confirmed_at is None
+        """Compte client dont l'adresse e-mail n'est pas encore confirmée."""
+        return self.is_client and self.email_confirmed_at is None
 
     def get_full_name(self) -> str:
         return f"{self.first_name} {self.last_name}"

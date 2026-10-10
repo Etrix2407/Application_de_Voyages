@@ -9,6 +9,7 @@ from django.test import TestCase
 from django.utils import timezone
 from django.urls import reverse
 
+from accounts.services.sign_up import confirm
 from accounts.tests.factories import create_agent, create_client
 from catalog.tests.factories import create_activity, create_country, create_destination
 from orders.models import (
@@ -389,3 +390,40 @@ class PlaceOrderServiceValidationTests(TestCase):
 
     def test_inactive_activity_refused(self):
         self.assert_refused(self.data(activities=[create_activity(self.country, active=False)]))
+
+
+class EmailConfirmationRequiredTests(TestCase):
+    """Adresse e-mail non confirmée : pas de demande de voyage (vue et service)."""
+
+    def setUp(self):
+        self.marie = create_client(email_confirmed_at=None)
+        self.destination = create_destination(create_country(), "Kyoto")
+        self.data = {
+            "departure_date": departure_in(),
+            "return_date": departure_in() + timedelta(days=7),
+            "adults": 2,
+            "children": 0,
+            "remarks": "",
+            "activities": [],
+        }
+
+    def test_view_refuses_and_offers_new_link(self):
+        self.client.force_login(self.marie)
+        url = reverse("create_order", args=[self.destination.pk])
+
+        response = self.client.post(url, {**self.data, "confirm": ""}, follow=True)
+
+        self.assertRedirects(response, reverse("resend_confirmation"))
+        self.assertContains(response, "confirmez d&#x27;abord votre adresse e-mail")
+        self.assertContains(response, "Renvoyer le lien")
+        self.assertFalse(Order.objects.exists())
+
+    def test_service_refuses_before_confirmation(self):
+        with self.assertRaises(placing.EmailNotConfirmed):
+            place_order(self.marie, self.destination, self.data)
+        self.assertFalse(Order.objects.exists())
+
+    def test_allowed_after_confirmation(self):
+        confirm(self.marie)
+
+        self.assertEqual(place_order(self.marie, self.destination, self.data).client, self.marie)

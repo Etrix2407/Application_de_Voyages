@@ -1,7 +1,9 @@
+import importlib
 import re
 from datetime import timedelta
 from unittest import mock
 
+from django.apps import apps as django_apps
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core import mail
@@ -10,13 +12,15 @@ from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
-from accounts.services.sign_up import UNCONFIRMED_RETENTION, purge_unconfirmed
+from accounts.services.sign_up import purge_unconfirmed
 from accounts.services.throttling import confirmation_emails, login_failures, password_reset_requests
 from accounts.models import Role
 
-from .factories import PASSWORD, create_client
+from .factories import PASSWORD, create_agent, create_client
 
 User = get_user_model()
+
+NEW_PASSWORD = "soleil-plage-42"
 
 
 def sign_up_data(**fields):
@@ -26,6 +30,8 @@ def sign_up_data(**fields):
         "email": "marie@example.com",
         "phone": "0470 12 34 56",
         "birth_date": "1955-04-12",
+        "password1": NEW_PASSWORD,
+        "password2": NEW_PASSWORD,
         "consent": "on",
     }
     data.update(fields)
@@ -47,45 +53,44 @@ class SignUpTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "politique de confidentialité")
-        self.assertNotContains(response, 'type="password"')
+        self.assertContains(response, 'type="password"')
 
-    def test_sign_up_creates_inactive_client_and_sends_link(self):
+    def test_sign_up_creates_unconfirmed_client_with_password_and_sends_link(self):
         response = self.client.post(self.url, sign_up_data())
 
         self.assertRedirects(response, reverse("sign_up_done"))
         user = User.objects.get(email="marie@example.com")
         self.assertEqual(user.role, Role.CLIENT)
-        self.assertFalse(user.is_active)
         self.assertTrue(user.is_awaiting_confirmation)
-        self.assertFalse(user.has_usable_password())
+        self.assertTrue(user.check_password(NEW_PASSWORD))
         self.assertIsNotNone(user.consent_date)
         self.assertEqual(user.phone, "0470123456")
-        self.assertNotIn("_auth_user_id", self.client.session)
         self.assertEqual(mail.outbox[-1].to, ["marie@example.com"])
+        self.assertIn("48 heures", mail.outbox[-1].body)
 
-    def test_link_lets_user_choose_password_and_activates_account(self):
+    def test_can_log_in_before_confirmation(self):
         self.client.post(self.url, sign_up_data())
 
-        page = self.client.get(link_in_last_email())
-        self.assertContains(page, "Bienvenue Marie")
-        response = self.client.post(
-            link_in_last_email(), {"new_password1": "soleil-plage-42", "new_password2": "soleil-plage-42"}
-        )
+        response = self.client.post(reverse("login"), {"username": "marie@example.com", "password": NEW_PASSWORD})
 
         self.assertRedirects(response, reverse("home"))
-        user = User.objects.get(email="marie@example.com")
-        self.assertTrue(user.is_active)
-        self.assertIsNotNone(user.email_confirmed_at)
-        self.assertTrue(user.check_password("soleil-plage-42"))
-        self.assertEqual(int(self.client.session["_auth_user_id"]), user.pk)
 
-    def test_weak_password_refused_at_confirmation(self):
+    def test_three_login_failures_after_sign_up_lock_the_ip(self):
+        # Freine le test d'adresses : s'inscrire puis essayer de se connecter avec le mot de passe choisi.
+        create_client(email="autre@example.com")
         self.client.post(self.url, sign_up_data())
+        for address in ["a@example.com", "b@example.com", "c@example.com"]:
+            self.client.post(reverse("login"), {"username": address, "password": NEW_PASSWORD})
 
-        response = self.client.post(link_in_last_email(), {"new_password1": "court", "new_password2": "court"})
+        response = self.client.post(reverse("login"), {"username": "autre@example.com", "password": PASSWORD})
+
+        self.assertContains(response, "Trop de tentatives échouées")
+
+    def test_weak_password_refused(self):
+        response = self.client.post(self.url, sign_up_data(password1="court", password2="court"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertFalse(User.objects.get(email="marie@example.com").is_active)
+        self.assertFalse(User.objects.exists())
 
     def test_existing_address_not_revealed(self):
         create_client(email="marie@example.com")
@@ -99,54 +104,21 @@ class SignUpTests(TestCase):
         self.assertEqual(mail.outbox[-1].to, ["marie@example.com"])
         self.assertIn("Un compte existe déjà", mail.outbox[-1].body)
 
-    def test_account_pre_hijacking_impossible(self):
-        # Un pirate s'inscrit avec l'adresse de Marie : il ne choisit aucun mot de passe.
-        self.client.post(self.url, sign_up_data(first_name="Pirate"))
-        user = User.objects.get(email="marie@example.com")
-        self.assertFalse(user.has_usable_password())
-        # Seule la personne qui reçoit l'e-mail choisit le mot de passe.
+    def test_new_sign_up_replaces_unconfirmed_account(self):
+        # Un tiers inscrit l'adresse de Marie avec son propre mot de passe.
+        pirate_password = "tiers-connu-2026"
         self.client.post(
-            link_in_last_email(), {"new_password1": "montagne-lac-77", "new_password2": "montagne-lac-77"}
+            self.url, sign_up_data(first_name="Pirate", password1=pirate_password, password2=pirate_password)
         )
-        user.refresh_from_db()
-        self.assertTrue(user.check_password("montagne-lac-77"))
-
-    def test_new_attempt_replaces_pending_sign_up(self):
-        self.client.post(self.url, sign_up_data(first_name="Erreur"))
-
-        self.client.post(self.url, sign_up_data(first_name="Marie"))
-
-        self.assertEqual(User.objects.get(email="marie@example.com").first_name, "Marie")
-
-    def test_new_attempt_invalidates_earlier_link(self):
-        # Marie s'inscrit, puis un tiers réinscrit son adresse avec d'autres données.
-        self.client.post(self.url, sign_up_data())
-        marie_link = link_in_last_email()
+        pirate_link = link_in_last_email()
         with mock.patch("django.utils.timezone.now", return_value=timezone.now() + timedelta(minutes=1)):
-            self.client.post(self.url, sign_up_data(first_name="Pirate", phone="0470 99 99 99"))
+            self.client.post(self.url, sign_up_data())
 
-        # Le lien de Marie ne peut plus activer le compte avec les données du tiers.
-        self.assertContains(self.client.get(marie_link), "plus valable")
-        passwords = {"new_password1": "soleil-plage-42", "new_password2": "soleil-plage-42"}
-        response = self.client.post(marie_link, passwords)
-        self.assertContains(response, "plus valable")
-        self.assertFalse(User.objects.get(email="marie@example.com").is_active)
-
-    def test_activation_page_shows_data_before_activating(self):
-        self.client.post(self.url, sign_up_data(first_name="Pirate"))
-
-        page = self.client.get(link_in_last_email())
-
-        self.assertContains(page, "Pirate Dupont")
-        self.assertContains(page, "0470123456")
-        self.assertContains(page, "12 avril 1955")
-        self.assertContains(page, "recommencez l'inscription")
-
-    def test_resent_link_works(self):
-        self.client.post(self.url, sign_up_data())
-        self.client.post(reverse("resend_confirmation"), {"email": "marie@example.com"})
-
-        self.assertContains(self.client.get(link_in_last_email()), "Bienvenue Marie")
+        user = User.objects.get(email="marie@example.com")
+        self.assertEqual(user.first_name, "Marie")
+        self.assertFalse(user.check_password(pirate_password))
+        # Le lien envoyé pour le compte remplacé ne vaut plus rien.
+        self.assertContains(self.client.get(pirate_link), "plus valable")
 
     def test_role_forced_even_if_sent(self):
         self.client.post(self.url, sign_up_data(role=Role.ADMINISTRATOR))
@@ -158,6 +130,7 @@ class SignUpTests(TestCase):
             "sans consentement": {"consent": ""},
             "sans date de naissance": {"birth_date": ""},
             "téléphone invalide": {"phone": "12345"},
+            "mots de passe différents": {"password2": "autre-mot-2026"},
         }
         for reason, fields in cases.items():
             with self.subTest(reason=reason):
@@ -175,27 +148,43 @@ class SignUpTests(TestCase):
 class ConfirmationLinkTests(TestCase):
     def setUp(self):
         cache.clear()
-        self.client.post(reverse("sign_up"), sign_up_data())
+        self.client.post(reverse("sign_up"), sign_up_data(first_name="Pirate"))
         self.link = link_in_last_email()
+
+    def test_page_shows_account_data_and_confirms_only_on_click(self):
+        page = self.client.get(self.link)
+
+        # La propriétaire de l'adresse voit si ce compte est le sien avant de confirmer.
+        self.assertContains(page, "Pirate Dupont")
+        self.assertContains(page, "0470123456")
+        self.assertContains(page, "12 avril 1955")
+        self.assertContains(page, "recommencez l'inscription")
+        self.assertTrue(User.objects.get().is_awaiting_confirmation)
+
+        response = self.client.post(self.link)
+
+        self.assertRedirects(response, reverse("login"))
+        self.assertFalse(User.objects.get().is_awaiting_confirmation)
+
+    def test_link_valid_48_hours(self):
+        now = timezone.now().timestamp()
+        with mock.patch("django.core.signing.time") as clock:
+            clock.time.return_value = now + 47 * 3600
+            self.assertContains(self.client.get(self.link), "Confirmer mon adresse")
+            clock.time.return_value = now + 49 * 3600
+            self.assertContains(self.client.get(self.link), "plus valable")
 
     def test_tampered_link_refused(self):
         response = self.client.get(self.link[:-3] + "xyz/")
 
         self.assertContains(response, "plus valable")
 
-    def test_expired_link_refused(self):
-        with mock.patch("accounts.services.sign_up.CONFIRMATION_MAX_AGE", timedelta(seconds=-1)):
-            response = self.client.get(self.link)
-
-        self.assertContains(response, "plus valable")
-
     def test_already_confirmed_redirects_to_login(self):
-        self.client.post(self.link, {"new_password1": "soleil-plage-42", "new_password2": "soleil-plage-42"})
-        self.client.logout()
+        self.client.post(self.link)
 
         self.assertRedirects(self.client.get(self.link), reverse("login"))
 
-    def test_resend_link_only_for_pending_sign_up(self):
+    def test_resend_link_only_for_unconfirmed_address(self):
         create_client(email="active@example.com")
         sent = len(mail.outbox)
 
@@ -207,6 +196,18 @@ class ConfirmationLinkTests(TestCase):
         self.assertEqual(len(mail.outbox), sent + 1)
         self.assertEqual(mail.outbox[-1].to, ["marie@example.com"])
 
+    def test_logged_in_client_resends_link_from_profile(self):
+        user = User.objects.get()
+        self.client.force_login(user)
+        self.assertContains(self.client.get(reverse("profile")), reverse("resend_confirmation"))
+
+        response = self.client.post(reverse("resend_confirmation"))
+
+        self.assertRedirects(response, reverse("profile"))
+        self.assertEqual(mail.outbox[-1].to, ["marie@example.com"])
+        self.client.post(link_in_last_email())
+        self.assertFalse(User.objects.get().is_awaiting_confirmation)
+
     def test_confirmation_emails_limited_per_address(self):
         for _ in range(10):
             self.client.post(reverse("resend_confirmation"), {"email": "marie@example.com"})
@@ -214,17 +215,35 @@ class ConfirmationLinkTests(TestCase):
         self.assertEqual(len(mail.outbox), confirmation_emails.max_attempts)
 
 
+class DeletePendingSignUpsBeforeV5Tests(TestCase):
+    """Migration 0007 : seules les inscriptions clients d'avant la v5 sont supprimées."""
+
+    def test_only_old_pending_client_sign_ups_deleted(self):
+        migration = importlib.import_module("accounts.migrations.0007_delete_pending_sign_ups_before_v5")
+        # Avant la v5 : compte inactif, sans mot de passe utilisable.
+        old_pending = create_client(email="ancien@example.com", is_active=False, email_confirmed_at=None)
+        invited_agent = create_agent(email="invite@example.com")
+        deactivated_agent = create_agent(email="parti@example.com", is_active=False)
+        for user in (old_pending, invited_agent, deactivated_agent):
+            user.set_unusable_password()
+            user.save()
+        new_unconfirmed = create_client(email="nouveau@example.com", email_confirmed_at=None)
+
+        migration.delete_pending_sign_ups(django_apps, None)
+
+        self.assertEqual(set(User.objects.all()), {invited_agent, deactivated_agent, new_unconfirmed})
+
+
 class PurgeUnconfirmedTests(TestCase):
-    def test_old_unconfirmed_sign_ups_deleted(self):
+    def test_accounts_unconfirmed_after_30_days_deleted(self):
         cache.clear()
         self.client.post(reverse("sign_up"), sign_up_data())
-        active = create_client(email="active@example.com")
-        later = timezone.now() + UNCONFIRMED_RETENTION + timedelta(minutes=1)
+        confirmed = create_client(email="active@example.com")
 
-        self.assertEqual(purge_unconfirmed(now=timezone.now()), 0)
-        self.assertEqual(purge_unconfirmed(now=later), 1)
+        self.assertEqual(purge_unconfirmed(now=timezone.now() + timedelta(days=29)), 0)
+        self.assertEqual(purge_unconfirmed(now=timezone.now() + timedelta(days=31)), 1)
 
-        self.assertEqual(list(User.objects.all()), [active])
+        self.assertEqual(list(User.objects.all()), [confirmed])
 
 
 class LoginTests(TestCase):

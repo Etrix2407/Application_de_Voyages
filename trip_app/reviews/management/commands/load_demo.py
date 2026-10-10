@@ -219,7 +219,8 @@ class Command(BaseCommand):
             return
         # Mot de passe aléatoire : jamais écrit dans le code ni dans le dépôt.
         password = secrets.token_urlsafe(9) + "1a"
-        fields = {"birth_date": date(1960, 1, 1)} if role == Role.CLIENT else {}
+        # Client de démonstration : adresse fictive considérée comme confirmée (il peut faire une demande).
+        fields = {"birth_date": date(1960, 1, 1), "email_confirmed_at": timezone.now()} if role == Role.CLIENT else {}
         User.objects.create_user(
             email, password, last_name=last_name, first_name=first_name, role=role, **fields
         )

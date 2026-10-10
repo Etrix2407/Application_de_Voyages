@@ -11,7 +11,13 @@
         <dt>Nom</dt>
         <dd>{{ user.last_name }}</dd>
         <dt>Adresse e-mail</dt>
-        <dd>{{ user.email }}</dd>
+        <dd>
+            {{ user.email }}
+            {% if user.is_awaiting_confirmation %}
+                <p>Adresse non confirmée : vous ne pouvez pas encore envoyer de demande de voyage.
+                    <a href="{% url 'resend_confirmation' %}">Recevoir un nouveau lien de confirmation</a></p>
+            {% endif %}
+        </dd>
         {% if user.is_client %}
             <dt>Téléphone</dt>
             <dd>{{ user.phone|default:"Non renseigné" }}</dd>

@@ -84,3 +84,12 @@ login_failures_by_ip = Limiter("login-failures-ip", max_attempts=20, window_seco
 sign_ups_by_ip = Limiter("sign-ups-ip", max_attempts=5, window_seconds=60 * 60)
 password_reset_requests_by_ip = Limiter("password-reset-ip", max_attempts=10, window_seconds=60 * 60)
 confirmation_requests_by_ip = Limiter("confirmation-resend-ip", max_attempts=10, window_seconds=60 * 60)
+
+# Après une inscription, se connecter avec le mot de passe choisi révèle si l'adresse avait
+# déjà un compte confirmé (la connexion échoue). Pour freiner ce test d'adresses en série :
+# une IP qui s'est inscrite dans l'heure est bloquée 15 minutes après 3 échecs de connexion.
+# `recent_sign_ups_by_ip` est remis à zéro à chaque inscription : l'heure part de la dernière.
+recent_sign_ups_by_ip = Limiter("recent-sign-up-ip", max_attempts=1, window_seconds=60 * 60)
+login_failures_after_sign_up_by_ip = Limiter(
+    "login-failures-after-sign-up-ip", max_attempts=3, window_seconds=15 * 60
+)

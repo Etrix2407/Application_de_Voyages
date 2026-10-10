@@ -59,6 +59,10 @@ def daily_limit_reached(client) -> bool:
     return Order.objects.filter(client=client, created_at__gte=since).count() >= MAX_ORDERS_PER_DAY
 
 
+class EmailNotConfirmed(Exception):
+    """Le client n'a pas encore confirmé son adresse e-mail : il ne peut pas envoyer de demande."""
+
+
 class DailyLimitReached(Exception):
     """Trop de demandes envoyées ces dernières 24 heures."""
 
@@ -87,7 +91,10 @@ def place_order(
     même si deux envois arrivent au même instant. Au-delà de MAX_ORDERS_PER_DAY demandes
     en 24 heures, lève DailyLimitReached. Si la limite de la promotion est atteinte au moment
     de l'enregistrement (dernière utilisation prise entre-temps), lève PromotionUnavailable.
+    Un client dont l'adresse e-mail n'est pas confirmée lève EmailNotConfirmed.
     """
+    if client.is_awaiting_confirmation:
+        raise EmailNotConfirmed
     try:
         return _create_order(client, destination, data, offer, submission_token)
     except IntegrityError:

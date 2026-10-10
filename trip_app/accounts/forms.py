@@ -1,17 +1,24 @@
 """Formulaires des comptes : inscription, connexion, profil, personnel."""
 
 from django import forms
-from django.contrib.auth.forms import AuthenticationForm, PasswordChangeForm, PasswordResetForm
+from django.contrib.auth.forms import (
+    AuthenticationForm,
+    BaseUserCreationForm,
+    PasswordChangeForm,
+    PasswordResetForm,
+)
 from django.core.exceptions import ValidationError
 
 from .models import STAFF_ROLES, Role, User, normalize_email_address
 from .services.throttling import (
     get_client_ip,
     login_failures,
+    login_failures_after_sign_up_by_ip,
     login_failures_by_ip,
     password_confirmations,
     password_reset_requests,
     password_reset_requests_by_ip,
+    recent_sign_ups_by_ip,
 )
 from .services.staff_rules import check_not_self
 
@@ -25,8 +32,8 @@ CLIENT_WIDGETS = {
 CLIENT_HELP_TEXTS = {"phone": "Facultatif. Exemple : 0470 12 34 56, ou +33 6 12 34 56 78 depuis l'étranger."}
 
 
-class SignUpForm(forms.ModelForm):
-    """Inscription sans mot de passe : il sera choisi après confirmation de l'adresse."""
+class SignUpForm(BaseUserCreationForm):
+    """Inscription avec choix du mot de passe (saisi deux fois, vérifié par les validateurs)."""
 
     consent = forms.BooleanField(
         label="J'ai lu et j'accepte la politique de confidentialité.",
@@ -74,7 +81,12 @@ class LoginForm(AuthenticationForm):
     def clean(self):
         email = self.cleaned_data.get("username") or ""
         ip = get_client_ip(self.request)
-        if (email and login_failures.is_locked(email)) or login_failures_by_ip.is_locked(ip):
+        just_signed_up = recent_sign_ups_by_ip.is_locked(ip)
+        if (
+            (email and login_failures.is_locked(email))
+            or login_failures_by_ip.is_locked(ip)
+            or (just_signed_up and login_failures_after_sign_up_by_ip.is_locked(ip))
+        ):
             raise ValidationError(self.error_messages["locked"], code="locked")
         try:
             cleaned_data = super().clean()
@@ -82,6 +94,8 @@ class LoginForm(AuthenticationForm):
             if email:
                 login_failures.record(email)
             login_failures_by_ip.record(ip)
+            if just_signed_up:
+                login_failures_after_sign_up_by_ip.record(ip)
             raise
         # Le compteur de l'IP n'est pas remis à zéro : un compte valide ne doit pas
         # permettre de relancer une série d'essais sur d'autres comptes.

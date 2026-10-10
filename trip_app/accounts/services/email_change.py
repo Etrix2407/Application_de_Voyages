@@ -11,6 +11,7 @@ from datetime import timedelta
 from django.core import signing
 from django.db import IntegrityError, transaction
 from django.urls import reverse
+from django.utils import timezone
 
 from accounts.models import Role, User, normalize_email_address
 from accounts.services.emails import send_email
@@ -55,17 +56,21 @@ def apply_email_change(user: User, new_email: str) -> bool:
     """Applique un changement obtenu par pending_email_change (lien déjà vérifié).
 
     Renvoie False, sans rien modifier, si l'adresse a été prise depuis la vérification du lien.
+    Le clic sur le lien prouve que le client reçoit les e-mails de la nouvelle adresse :
+    un compte pas encore confirmé devient confirmé.
     """
-    old_email = user.email
+    old_email, old_confirmed_at = user.email, user.email_confirmed_at
     user.email = new_email
+    if user.email_confirmed_at is None:
+        user.email_confirmed_at = timezone.now()
     try:
         with transaction.atomic():
-            user.save(update_fields=["email"])
+            user.save(update_fields=["email", "email_confirmed_at"])
             # Dans la même transaction : les autres applications suivent la nouvelle adresse.
             email_changed.send(sender=User, user=user)
     except IntegrityError:
         # La base garantit l'unicité : l'adresse a été prise au même instant.
-        user.email = old_email
+        user.email, user.email_confirmed_at = old_email, old_confirmed_at
         return False
     return True
 
