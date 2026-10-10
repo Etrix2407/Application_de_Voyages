@@ -1,6 +1,6 @@
 # Application_de_Voyages
 
-Application web (Python 3, Django 5.2) pour une agence de voyage. Elle gère les comptes des clients et du personnel, et propose un catalogue de pays, destinations et activités. Le cahier des charges est résumé dans [Recap.md](Recap.md) (v1 : comptes et catalogue), [Recap_2.md](Recap_2.md) (v2 : demandes de voyage), [Recap_3.md](Recap_3.md) (v3 : avis clients) et [Recap_4.md](Recap_4.md) (v4 : promotions, en cours de développement). Les énoncés ne sont jamais modifiés : les décisions prises ensuite avec la cliente sont décrites dans ce README.
+Application web (Python 3, Django 5.2) pour une agence de voyage. Elle gère les comptes des clients et du personnel, et propose un catalogue de pays, destinations et activités. Le cahier des charges est résumé dans [Recap.md](Recap.md) (v1 : comptes et catalogue), [Recap_2.md](Recap_2.md) (v2 : demandes de voyage), [Recap_3.md](Recap_3.md) (v3 : avis clients) et [Recap_4.md](Recap_4.md) (v4 : promotions). Les énoncés ne sont jamais modifiés : les décisions prises ensuite avec la cliente sont décrites dans ce README.
 
 ## Sommaire
 
@@ -178,7 +178,7 @@ Limites par adresse IP, contre les robots : 20 échecs de connexion par 15 minut
 
 ## Promotions (v4) : décisions validées
 
-En cours de développement. Le [Recap_4.md](Recap_4.md) décrit les promotions ; voici les réponses de la cliente à ses questions ouvertes et aux cas qu'il ne couvrait pas. La « commande » du Recap est la **demande de voyage** de l'application.
+Version terminée. Le [Recap_4.md](Recap_4.md) décrit les promotions ; voici les réponses de la cliente à ses questions ouvertes et aux cas qu'il ne couvrait pas. La « commande » du Recap est la **demande de voyage** de l'application.
 
 - **Calcul** :
   - la remise s'applique **après** le demi-tarif enfant ;
