@@ -121,6 +121,7 @@ Formats à respecter :
 3. **Publier l'avis**, ou **Refuser l'avis** (l'action porte sur la version que vous avez lue : si le client l'a modifiée entre-temps, relisez-la) avec un motif de la liste (langage injurieux, hors sujet, coordonnées personnelles, autre) et une précision, obligatoire pour « Autre ». Un avis publié peut être **masqué** de la même façon. Le client voit le motif. Le texte d'un client n'est jamais modifié.
 4. **Tous les avis** (lien depuis « Avis à modérer ») : tous les avis, du plus récent au plus ancien, 25 par page, filtrables par état, pays, destination, note, **avis négatifs seulement**, date de l'avis et date du séjour.
 5. **Répondre à l'avis** (avis publié uniquement) : une seule réponse par avis, publique, signée de votre **prénom**. Seul son auteur peut la modifier (un administrateur si l'auteur a quitté l'agence : compte supprimé ou désactivé). Si le client modifie son avis, la réponse est supprimée.
+6. **E-mails au client (v5)** (`reviews/services/notifications.py`) : avis publié (« Merci, votre avis est en ligne », avec le lien vers la destination) ; avis refusé, masqué ou retiré automatiquement (« Voyage annulé ») : le motif et, tant que l'avis est encore modifiable, la date limite de correction (30 jours après la création de l'avis), sinon la mention que ce délai est dépassé (pas pour « Voyage annulé ») ; réponse de l'agence, à sa création et à chaque modification. Un client supprimé (avis anonymisé) ne reçoit rien.
 
 ### Gérer les promotions (administrateur ; agents en consultation)
 

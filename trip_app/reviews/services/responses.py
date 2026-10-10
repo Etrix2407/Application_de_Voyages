@@ -11,6 +11,7 @@ from django.db import IntegrityError, transaction
 from django.utils import timezone
 
 from reviews.models import AgencyResponse, Review, ReviewStatus
+from reviews.services.notifications import notify_response
 
 
 class ResponseNotAllowed(Exception):
@@ -39,6 +40,7 @@ def save_response(review: Review, staff_member, text: str) -> AgencyResponse:
     response = existing_response(review) or AgencyResponse(
         review=review, author=staff_member, author_first_name=staff_member.first_name
     )
+    created = response.pk is None
     response.text = text.strip()
     response.updated_at = timezone.now()
     response.full_clean(exclude=["review"])
@@ -48,4 +50,6 @@ def save_response(review: Review, staff_member, text: str) -> AgencyResponse:
     except IntegrityError:
         # Deux agents ont répondu au même instant : la base garde une seule réponse.
         raise ResponseNotAllowed from None
+    # Le client est prévenu à la création comme à chaque modification de la réponse.
+    notify_response(response, created)
     return response

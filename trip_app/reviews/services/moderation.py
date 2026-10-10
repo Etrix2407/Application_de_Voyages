@@ -15,6 +15,7 @@ from django.utils import timezone
 
 from orders.models import Status
 from reviews.models import STAFF_REFUSAL_REASONS, Review, ReviewStatus, refusal_problem
+from reviews.services.notifications import notify_published, notify_refused
 
 
 class ModerationNotAllowed(Exception):
@@ -33,12 +34,14 @@ def publish(review: Review, seen_version=None) -> None:
         raise ModerationNotAllowed("Le voyage a été annulé : cet avis ne peut pas être publié.")
     _move(review, ReviewStatus.PENDING, ReviewStatus.PUBLISHED, "Cet avis n'est plus en attente de validation.",
           seen_version, published_at=timezone.now(), refusal_reason="", refusal_details="")
+    notify_published(review)
 
 
 def refuse(review: Review, reason: str, details: str = "", seen_version=None) -> None:
     _check_reason(reason, details)
     _move(review, ReviewStatus.PENDING, ReviewStatus.REFUSED, "Cet avis n'est plus en attente de validation.",
           seen_version, refusal_reason=reason, refusal_details=details.strip())
+    notify_refused(review)
 
 
 def hide(review: Review, reason: str, details: str = "", seen_version=None) -> None:
@@ -46,6 +49,8 @@ def hide(review: Review, reason: str, details: str = "", seen_version=None) -> N
     _check_reason(reason, details)
     _move(review, ReviewStatus.PUBLISHED, ReviewStatus.REFUSED, "Seul un avis publié peut être masqué.",
           seen_version, refusal_reason=reason, refusal_details=details.strip())
+    # Même e-mail qu'un refus : le motif, et la correction possible selon la même règle.
+    notify_refused(review)
 
 
 def _check_reason(reason: str, details: str) -> None:

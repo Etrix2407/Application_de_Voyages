@@ -30,6 +30,9 @@ SUBJECTS = {
     EmailKind.PASSWORD_RESET: "Changement de votre mot de passe",
     EmailKind.CLIENT_PASSWORD_LINK: "Changement de votre mot de passe",
     EmailKind.AGENT_ACTIVATION: "Activation de votre compte",
+    EmailKind.REVIEW_PUBLISHED: "Merci, votre avis est en ligne",
+    EmailKind.REVIEW_REFUSED: "Votre avis n'est pas publié",
+    EmailKind.REVIEW_RESPONSE: "Réponse de l'agence à votre avis",
 }
 
 

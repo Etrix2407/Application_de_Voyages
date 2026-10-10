@@ -175,6 +175,9 @@ class EmailKind(models.TextChoices):
     PASSWORD_RESET = "password_reset", "Mot de passe oublié"
     CLIENT_PASSWORD_LINK = "client_password_link", "Lien de mot de passe envoyé par un agent"
     AGENT_ACTIVATION = "agent_activation", "Activation d'un compte agent"
+    REVIEW_PUBLISHED = "review_published", "Avis publié"
+    REVIEW_REFUSED = "review_refused", "Avis refusé ou retiré"
+    REVIEW_RESPONSE = "review_response", "Réponse de l'agence à un avis"
 
 
 class EmailStatus(models.TextChoices):
