@@ -12,15 +12,20 @@ from django.utils import timezone
 from orders.models import Order, Status
 
 
-def reviewable_orders(client):
-    """Demandes du client qui peuvent recevoir un avis aujourd'hui."""
+def all_reviewable_orders():
+    """Demandes qui peuvent recevoir un avis aujourd'hui, tous clients confondus (client supprimé exclu)."""
     return Order.objects.filter(
-        client=client,
+        client__isnull=False,
         status=Status.CONFIRMED,
         return_date__lt=timezone.localdate(),
         review__isnull=True,
         review_withdrawal__isnull=True,
     )
+
+
+def reviewable_orders(client):
+    """Demandes du client qui peuvent recevoir un avis aujourd'hui."""
+    return all_reviewable_orders().filter(client=client)
 
 
 def can_review(client, order: Order) -> bool:

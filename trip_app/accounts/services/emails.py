@@ -38,6 +38,8 @@ SUBJECTS = {
     EmailKind.ORDER_CANCELLED_BY_CLIENT: "Annulation de votre demande de voyage",
     EmailKind.ORDER_CANCELLED_BY_AGENCY: "Annulation de votre demande de voyage",
     EmailKind.NEW_ORDER_ALERT: "Nouvelle demande de voyage",
+    EmailKind.DEPARTURE_REMINDER: "Votre départ approche",
+    EmailKind.REVIEW_INVITATION: "Comment s'est passé votre voyage ?",
 }
 
 

@@ -20,6 +20,9 @@ from orders.services.emails import (
     new_order_alert_context,
     placed_context,
 )
+from orders.services.reminders import TEMPLATE as DEPARTURE_REMINDER_TEMPLATE
+from orders.services.reminders import departure_reminder_context
+from orders.services.status import departure_passed
 
 
 def _order_of(log: EmailLog, status: str) -> Order | None:
@@ -76,3 +79,12 @@ def _new_order_alert(log: EmailLog) -> RebuiltEmail | None:
         return None
     order = Order.objects.filter(pk=log.order_number, client__isnull=False, status=Status.PENDING).first()
     return RebuiltEmail(NEW_ORDER_ALERT_TEMPLATE, new_order_alert_context(order)) if order else None
+
+
+@rebuilder(EmailKind.DEPARTURE_REMINDER)
+def _departure_reminder(log: EmailLog) -> RebuiltEmail | None:
+    # Plus de raison d'être une fois le départ passé (fiche pays relue : informations à jour).
+    order = _order_of(log, Status.CONFIRMED)
+    if order is None or departure_passed(order):
+        return None
+    return RebuiltEmail(DEPARTURE_REMINDER_TEMPLATE, departure_reminder_context(order))

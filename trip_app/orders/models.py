@@ -111,6 +111,13 @@ class Order(models.Model):
     created_at = models.DateTimeField("date de la demande", default=timezone.now)
     # Jeton de la page de vérification : unique, il empêche qu'un double clic crée deux demandes.
     submission_token = models.UUIDField(null=True, blank=True, unique=True, editable=False)
+    # Rappels de voyage (v5) : date d'envoi de chaque e-mail, pour ne jamais l'envoyer deux fois.
+    departure_reminder_sent_at = models.DateTimeField(
+        "date d'envoi du rappel avant le départ", null=True, blank=True, editable=False
+    )
+    review_invitation_sent_at = models.DateTimeField(
+        "date d'envoi de l'invitation à donner un avis", null=True, blank=True, editable=False
+    )
 
     class Meta:
         verbose_name = "demande de voyage"

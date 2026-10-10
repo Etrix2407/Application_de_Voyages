@@ -90,6 +90,7 @@ C'est le **mode test**, actif par défaut dès que `DJANGO_DEBUG=1` (jamais en p
    - un pays désactivé masque toutes ses destinations et activités ;
    - une destination désactivée masque ses activités.
 4. Un pays qui contient des destinations ou des activités **ne peut pas être supprimé** : désactivez-le.
+5. Case **Passeport obligatoire** (non cochée par défaut) : cochée, le rappel envoyé 7 jours avant le départ indique « Un passeport valide est obligatoire pour ce pays » ; non cochée, « Une carte d'identité valide suffit pour ce pays ».
 
 Formats à respecter :
 
@@ -276,6 +277,16 @@ Envoyés par les services de `orders` (`orders/services/emails.py`, appelé par 
 - **Alerte au personnel** « Nouvelle demande de voyage » : envoyée à l'adresse commune `DJANGO_RESERVATIONS_EMAIL` (défaut : reservations@horizons-lointains.be), pas à chaque agent, avec le numéro, la destination, les dates, le nom du client et le lien vers la fiche de la demande (`DJANGO_SITE_URL`). Ni le téléphone ni l'e-mail du client n'y figurent.
 - **Nouvelles tentatives** : reconstruction dans `orders/services/email_rebuilders.py`. Rien n'est renvoyé si la demande a été supprimée, si le client a été supprimé ou si la demande n'est plus dans l'état annoncé (ex. « confirmée » alors qu'elle a été annulée depuis ; accusé de réception et alerte seulement pour une demande encore en attente).
 
+### Rappels de voyage
+
+Deux e-mails liés aux dates du voyage, envoyés **une seule fois par demande** (la date d'envoi est notée sur la demande), jamais pour une demande annulée ni pour un client qui a supprimé son compte :
+
+- **Rappel avant le départ** (`orders/services/reminders.py`), pour une demande **confirmée** dont le départ est dans 7 jours ou moins : passeport (case « Passeport obligatoire » du pays), visa, décalage horaire avec la Belgique le jour du départ (ligne omise si le fuseau du pays n'est pas renseigné) et monnaie, lus sur la fiche pays au moment de l'envoi. Si la demande est confirmée alors que le départ est dans 7 jours ou moins, le rappel part dès la confirmation, juste après l'e-mail « demande confirmée ».
+- **Invitation à donner un avis** (`reviews/services/invitations.py`), à partir du lendemain du retour, avec un lien direct vers « Donner mon avis », seulement si le voyage peut encore recevoir un avis (règles de `reviews/services/eligibility.py` : demande confirmée, retour passé, pas encore d'avis).
+
+Ils partent par la commande `python manage.py send_trip_reminders`, à **planifier une fois par jour** (voir [Tâches planifiées](#tâches-planifiées)). Elle rattrape les jours manqués : le rappel part tant que le départ n'est pas passé, l'invitation tant que l'avis reste possible.
+- **Nouvelles tentatives** : reconstruction dans `orders/services/email_rebuilders.py` (rappel) et `reviews/services/email_rebuilders.py` (invitation). Rien n'est renvoyé si la demande a été annulée ou le client supprimé, si le départ est passé (rappel) ou si un avis a été laissé ou n'est plus possible (invitation).
+
 ## Tests
 
 ```bash
@@ -331,23 +342,26 @@ HSTS (en-tête `Strict-Transport-Security`) demande aux navigateurs de n'utilise
 
 ### Tâches planifiées
 
-Deux commandes doivent tourner seules sur le serveur (tâche planifiée Windows ou cron), depuis le dossier `trip_app`, avec le Python où l'application est installée :
+Trois commandes doivent tourner seules sur le serveur (tâche planifiée Windows ou cron), depuis le dossier `trip_app`, avec le Python où l'application est installée :
 
 | Commande | Fréquence | Rôle |
 |---|---|---|
 | `python manage.py process_emails` | Toutes les 5 minutes | Retente les e-mails en attente (5 puis 15 minutes après l'échec précédent) et efface les lignes du journal des e-mails de plus d'un an |
 | `python manage.py purge_unconfirmed` | Une fois par jour | Efface les comptes clients dont l'adresse n'a pas été confirmée dans les 30 jours (RGPD) |
+| `python manage.py send_trip_reminders` | Une fois par jour | Envoie le rappel des départs dans 7 jours ou moins et l'invitation à donner un avis après le retour, une seule fois par demande, avec rattrapage des jours manqués (voir [Rappels de voyage](#rappels-de-voyage)) |
 
 Exemples (remplacez `C:\chemin` ou `/chemin` par l'emplacement réel ; l'heure quotidienne est au choix) :
 
 ```bat
 schtasks /Create /TN "Horizons Lointains - e-mails" /SC MINUTE /MO 5 /TR "C:\chemin\venv\Scripts\python.exe C:\chemin\trip_app\manage.py process_emails"
 schtasks /Create /TN "Horizons Lointains - comptes non confirmes" /SC DAILY /ST 03:00 /TR "C:\chemin\venv\Scripts\python.exe C:\chemin\trip_app\manage.py purge_unconfirmed"
+schtasks /Create /TN "Horizons Lointains - rappels de voyage" /SC DAILY /ST 08:00 /TR "C:\chemin\venv\Scripts\python.exe C:\chemin\trip_app\manage.py send_trip_reminders"
 ```
 
 ```cron
 */5 * * * * cd /chemin/trip_app && /chemin/venv/bin/python manage.py process_emails
 0 3 * * *   cd /chemin/trip_app && /chemin/venv/bin/python manage.py purge_unconfirmed
+0 8 * * *   cd /chemin/trip_app && /chemin/venv/bin/python manage.py send_trip_reminders
 ```
 
 Les liens des e-mails envoyés par ces commandes utilisent `DJANGO_SITE_URL` : réglez-le. Si deux reprises des e-mails tournent en même temps, chaque message n'est pris que par une seule.
@@ -394,14 +408,16 @@ trip_app/
 │   ├── views/              # client (faire, suivre, annuler), manage (personnel)
 │   ├── services/           # pricing, placing (création), promotions (choix de la promotion), status (changements d'état),
 │   │                       # filtering (liste du personnel), privacy (anonymisation RGPD),
-│   │                       # promotion_statistics (statistiques d'une promotion)
+│   │                       # promotion_statistics (statistiques d'une promotion), reminders (rappel avant le départ)
 │   ├── models.py · forms.py · signals.py · urls.py
 │   └── tests/
 ├── reviews/                # avis clients (v3) : modèle, avis vérifiés, lien avec les demandes
 │   ├── views/              # client (donner, modifier, supprimer), manage (modération)
 │   ├── services/           # eligibility, writing (client), moderation, responses, filtering (personnel),
-│   │                       # ratings (notes publiques), order_events, privacy (effacement RGPD des signatures)
-│   ├── management/commands/load_demo.py  # données de démonstration de toutes les versions
+│   │                       # ratings (notes publiques), order_events, privacy (effacement RGPD des signatures),
+│   │                       # invitations (invitation à donner un avis)
+│   ├── management/commands/  # load_demo (données de démonstration de toutes les versions),
+│   │                         # send_trip_reminders (rappels de voyage, chaque jour)
 │   ├── models.py · forms.py · signals.py · urls.py · context_processors.py (compteur du menu)
 │   └── tests/
 ├── templates/

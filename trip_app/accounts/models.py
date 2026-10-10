@@ -210,6 +210,8 @@ class EmailKind(models.TextChoices):
     ORDER_CANCELLED_BY_CLIENT = "order_cancelled_by_client", "Demande de voyage annulée par le client"
     ORDER_CANCELLED_BY_AGENCY = "order_cancelled_by_agency", "Demande de voyage annulée par l'agence"
     NEW_ORDER_ALERT = "new_order_alert", "Alerte au personnel : nouvelle demande de voyage"
+    DEPARTURE_REMINDER = "departure_reminder", "Rappel 7 jours avant le départ"
+    REVIEW_INVITATION = "review_invitation", "Invitation à donner un avis"
 
 
 class EmailStatus(models.TextChoices):

@@ -8,6 +8,9 @@ avis toujours dans l'état annoncé (publié, refusé, réponse encore présente
 from accounts.models import EmailKind, EmailLog
 from accounts.services.email_retry import RebuiltEmail, rebuilder
 from reviews.models import AgencyResponse, Review, ReviewStatus
+from reviews.services.eligibility import reviewable_orders
+from reviews.services.invitations import TEMPLATE as INVITATION_TEMPLATE
+from reviews.services.invitations import review_invitation_context
 from reviews.services.notifications import (
     PUBLISHED_TEMPLATE,
     REFUSED_TEMPLATE,
@@ -50,3 +53,12 @@ def _review_response(log: EmailLog) -> RebuiltEmail | None:
     # Texte actuel de la réponse ; « modifiée » si elle l'a été depuis sa création.
     created = response.updated_at == response.created_at
     return RebuiltEmail(RESPONSE_TEMPLATE, response_context(response, created))
+
+
+@rebuilder(EmailKind.REVIEW_INVITATION)
+def _review_invitation(log: EmailLog) -> RebuiltEmail | None:
+    # Seulement si le voyage peut encore recevoir un avis (ni avis laissé, ni annulation depuis).
+    if log.user is None or log.order_number is None:
+        return None
+    order = reviewable_orders(log.user).filter(pk=log.order_number).select_related("client").first()
+    return RebuiltEmail(INVITATION_TEMPLATE, review_invitation_context(order)) if order else None

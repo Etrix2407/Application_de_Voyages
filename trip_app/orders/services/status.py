@@ -18,6 +18,7 @@ from common.text import euros
 from orders.models import Order, Status, StatusChange
 from orders.services.emails import send_order_cancelled_by_agency, send_order_cancelled_by_client, send_order_confirmed
 from orders.services.placing import price_at_current_rates
+from orders.services.reminders import send_departure_reminders
 
 
 # États de départ permis pour chaque action : seule source de ces règles (services et pages).
@@ -80,6 +81,8 @@ def confirm_by_staff(order: Order, staff_member) -> None:
     for field, value in updates.items():
         setattr(order, field, value)
     send_order_confirmed(order, staff_member)
+    # Départ dans 7 jours ou moins : le rappel part dès la confirmation (sinon, la commande quotidienne).
+    send_departure_reminders(order_pk=order.pk)
 
 
 def cancel_by_staff(order: Order, staff_member, internal_reason: str, explanation: str = "") -> None:
