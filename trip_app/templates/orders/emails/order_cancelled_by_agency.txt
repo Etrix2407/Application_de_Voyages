@@ -1,0 +1,7 @@
+{% autoescape off %}Bonjour {{ client.first_name }},
+
+Nous sommes au regret de vous informer que l'agence a annulé votre demande de voyage n° {{ order.pk }} : {{ order.destination_name }} ({{ order.country_name }}), {{ dates }}.
+{% if explanation %}
+Explication de l'agence : {{ explanation }}
+{% endif %}
+Nous vous prions de nous excuser pour ce désagrément. Pour toute question, n'hésitez pas à nous contacter.{% endautoescape %}

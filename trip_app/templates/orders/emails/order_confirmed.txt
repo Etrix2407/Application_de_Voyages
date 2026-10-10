@@ -1,0 +1,7 @@
+{% autoescape off %}Bonjour {{ client.first_name }},
+
+Bonne nouvelle : votre demande de voyage est confirmée. Votre conseiller est {{ advisor }}.
+
+Récapitulatif de votre demande :
+{% include "orders/emails/_summary.txt" %}
+{% endautoescape %}

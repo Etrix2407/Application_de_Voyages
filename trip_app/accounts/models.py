@@ -205,6 +205,11 @@ class EmailKind(models.TextChoices):
     REVIEW_PUBLISHED = "review_published", "Avis publié"
     REVIEW_REFUSED = "review_refused", "Avis refusé ou retiré"
     REVIEW_RESPONSE = "review_response", "Réponse de l'agence à un avis"
+    ORDER_PLACED = "order_placed", "Demande de voyage reçue"
+    ORDER_CONFIRMED = "order_confirmed", "Demande de voyage confirmée"
+    ORDER_CANCELLED_BY_CLIENT = "order_cancelled_by_client", "Demande de voyage annulée par le client"
+    ORDER_CANCELLED_BY_AGENCY = "order_cancelled_by_agency", "Demande de voyage annulée par l'agence"
+    NEW_ORDER_ALERT = "new_order_alert", "Alerte au personnel : nouvelle demande de voyage"
 
 
 class EmailStatus(models.TextChoices):

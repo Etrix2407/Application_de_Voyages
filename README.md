@@ -264,6 +264,18 @@ Fonctionnement :
 - **Adresse à vérifier** : calculée à partir du journal (`accounts/services/address_check.py`), sans champ à tenir à jour. Un client est marqué quand 3 messages différents envoyés à son adresse actuelle sont arrivés à l'état « échec » après leurs 3 tentatives, sans envoi réussi vers cette adresse depuis.
 - **Conservation** : les lignes du journal de plus d'**un an** sont effacées par la même commande `process_emails`.
 
+### E-mails des demandes de voyage
+
+Envoyés par les services de `orders` (`orders/services/emails.py`, appelé par `placing.py` et `status.py`), avec le numéro de la demande dans le journal :
+
+- **Demande envoyée** : accusé de réception au client (« un conseiller vous rappellera sous 48 h ») avec le récapitulatif : numéro, destination, dates, voyageurs, activités, promotion (nom et remise) et prix estimé (« estimation, non contractuelle »).
+- **Demande confirmée** : même récapitulatif au **prix confirmé** (recalculé aux tarifs du jour, remise ré-appliquée ou « non applicable », mention « sur devis » s'il y a lieu), avec le prénom et le nom du conseiller qui confirme. L'historique du site affiche toujours « Agence ».
+- **Demande annulée par le client** : accusé de réception.
+- **Demande annulée par l'agence** : l'explication pour le client et un mot d'excuse ; sans explication, un message neutre. Le **motif interne n'apparaît jamais** dans un e-mail.
+- **Compte supprimé** : les demandes en attente sont annulées sans e-mail.
+- **Alerte au personnel** « Nouvelle demande de voyage » : envoyée à l'adresse commune `DJANGO_RESERVATIONS_EMAIL` (défaut : reservations@horizons-lointains.be), pas à chaque agent, avec le numéro, la destination, les dates, le nom du client et le lien vers la fiche de la demande (`DJANGO_SITE_URL`). Ni le téléphone ni l'e-mail du client n'y figurent.
+- **Nouvelles tentatives** : reconstruction dans `orders/services/email_rebuilders.py`. Rien n'est renvoyé si la demande a été supprimée, si le client a été supprimé ou si la demande n'est plus dans l'état annoncé (ex. « confirmée » alors qu'elle a été annulée depuis ; accusé de réception et alerte seulement pour une demande encore en attente).
+
 ## Tests
 
 ```bash

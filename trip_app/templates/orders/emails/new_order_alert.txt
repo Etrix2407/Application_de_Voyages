@@ -1,0 +1,11 @@
+{% autoescape off %}Bonjour,
+
+Une nouvelle demande de voyage vient d'être envoyée.
+
+- N° de demande : {{ order.pk }}
+- Destination : {{ order.destination_name }} ({{ order.country_name }})
+- Dates : {{ dates|capfirst }}
+- Client : {{ client_name }}
+
+Fiche de la demande dans l'espace personnel :
+{{ link }}{% endautoescape %}

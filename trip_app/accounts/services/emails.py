@@ -33,6 +33,11 @@ SUBJECTS = {
     EmailKind.REVIEW_PUBLISHED: "Merci, votre avis est en ligne",
     EmailKind.REVIEW_REFUSED: "Votre avis n'est pas publié",
     EmailKind.REVIEW_RESPONSE: "Réponse de l'agence à votre avis",
+    EmailKind.ORDER_PLACED: "Nous avons bien reçu votre demande de voyage",
+    EmailKind.ORDER_CONFIRMED: "Votre demande de voyage est confirmée",
+    EmailKind.ORDER_CANCELLED_BY_CLIENT: "Annulation de votre demande de voyage",
+    EmailKind.ORDER_CANCELLED_BY_AGENCY: "Annulation de votre demande de voyage",
+    EmailKind.NEW_ORDER_ALERT: "Nouvelle demande de voyage",
 }
 
 

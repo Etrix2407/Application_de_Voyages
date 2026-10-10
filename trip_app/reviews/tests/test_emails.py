@@ -75,7 +75,12 @@ class ReviewEmailTests(SendEmailsImmediately, TestCase):
     def test_trip_cancelled_without_correction_reminder(self):
         cancel_by_staff(self.trip, self.agent, "Voyage non effectué.")
 
-        body = self.assertSentToJulie(EmailKind.REVIEW_REFUSED)
+        # Deux e-mails : l'annulation de la demande (orders) et le retrait de l'avis.
+        self.assertEqual(
+            set(EmailLog.objects.values_list("kind", flat=True)),
+            {EmailKind.ORDER_CANCELLED_BY_AGENCY, EmailKind.REVIEW_REFUSED},
+        )
+        (body,) = [message.body for message in mail.outbox if message.subject == "Votre avis n'est pas publié"]
         self.assertIn("Motif : Voyage annulé", body)
         self.assertNotIn("corriger", body)
 
