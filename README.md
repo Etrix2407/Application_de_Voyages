@@ -149,7 +149,7 @@ Formats à respecter :
 
 Sur la page de connexion, **Mot de passe oublié ?** envoie un lien valable 1 heure (3 demandes par heure au plus pour une même adresse, contre les envois en masse).
 
-Limites par adresse IP, contre les robots : 20 échecs de connexion par 15 minutes, 5 inscriptions et 10 demandes de lien par heure. Elles sont volontairement larges, car un bureau ou un wifi partage souvent une même IP. Après 5 tentatives de connexion échouées, la connexion est bloquée 15 minutes pour cette adresse e-mail.
+Limites par adresse IP, contre les robots : 20 échecs de connexion par 15 minutes, 5 inscriptions, 10 demandes de lien et 30 codes promo faux par heure. Elles sont volontairement larges, car un bureau ou un wifi partage souvent une même IP. Après 5 tentatives de connexion échouées, la connexion est bloquée 15 minutes pour cette adresse e-mail.
 
 ## Fonctionnalités par rôle
 
@@ -191,7 +191,7 @@ En cours de développement. Le [Recap_4.md](Recap_4.md) décrit les promotions ;
 - **Messages du code promo**, en plus des cinq du Recap :
   - « Ce code ne s'applique pas à ces dates de départ » (départ hors de la période autorisée) ;
   - un code dont la promotion n'a pas encore commencé donne « Code invalide », pour ne pas révéler les offres à venir.
-- **Sécurité** : 10 codes faux par heure au plus pour un client, contre les essais au hasard.
+- **Sécurité** : 10 codes faux par heure au plus pour un client et 30 par adresse IP (tous comptes confondus), contre les essais au hasard.
 - **Envoi de la demande** : si la remise change entre la page de vérification et l'envoi (promotion expirée, dernière utilisation prise), la demande n'est pas envoyée et le client revoit le récapitulatif avec le nouveau prix. Pour un code promo, il revoit le formulaire avec le message sous le champ « Code promo ». Les limites sont revérifiées au moment de l'enregistrement : si deux clients envoient leur demande au même instant pour la dernière utilisation, un seul l'obtient.
 - **Promotion déjà utilisée** : seuls le **nom**, la **description** et la **date de fin** restent modifiables ; pour changer le reste, on crée une nouvelle promotion.
 - **Dates** :
