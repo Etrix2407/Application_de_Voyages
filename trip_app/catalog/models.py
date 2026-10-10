@@ -96,6 +96,10 @@ class Country(models.Model):
     visa = models.CharField(
         "visa pour les Belges", max_length=20, choices=Visa.choices, default=Visa.NOT_REQUIRED
     )
+    # Repris dans le rappel envoyé 7 jours avant le départ (passeport, ou carte d'identité).
+    # Valeur par défaut aussi dans la base : le code des migrations antérieures, qui ignore ce
+    # champ, peut encore créer des pays (tests de migrations).
+    passport_required = models.BooleanField("passeport obligatoire", default=False, db_default=False)
     # Fuseau principal (nom IANA, ex. « Asia/Tokyo ») : le décalage avec la Belgique en découle.
     # Vide pour un pays créé avant le calcul automatique, en attendant qu'un agent le choisisse.
     time_zone = models.CharField(

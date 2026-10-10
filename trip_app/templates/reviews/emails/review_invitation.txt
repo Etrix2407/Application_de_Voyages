@@ -1,0 +1,9 @@
+{% autoescape off %}Bonjour {{ user.first_name }},
+
+Nous espérons que votre voyage à {{ order.destination_name }} ({{ order.country_name }}), du {{ order.departure_date|date:"j F Y" }} au {{ order.return_date|date:"j F Y" }}, s'est bien passé.
+
+Votre avis aide les autres voyageurs à choisir leur destination. Pour le donner, ouvrez ce lien (connexion à votre compte demandée) :
+
+{{ review_link }}
+
+Votre avis sera publié après validation par l'agence. Merci d'avance pour votre retour.{% endautoescape %}

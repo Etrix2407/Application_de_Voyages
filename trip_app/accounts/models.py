@@ -175,6 +175,8 @@ class EmailKind(models.TextChoices):
     PASSWORD_RESET = "password_reset", "Mot de passe oublié"
     CLIENT_PASSWORD_LINK = "client_password_link", "Lien de mot de passe envoyé par un agent"
     AGENT_ACTIVATION = "agent_activation", "Activation d'un compte agent"
+    DEPARTURE_REMINDER = "departure_reminder", "Rappel 7 jours avant le départ"
+    REVIEW_INVITATION = "review_invitation", "Invitation à donner un avis"
 
 
 class EmailStatus(models.TextChoices):

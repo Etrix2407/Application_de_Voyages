@@ -90,6 +90,7 @@ C'est le **mode test**, actif par défaut dès que `DJANGO_DEBUG=1` (jamais en p
    - un pays désactivé masque toutes ses destinations et activités ;
    - une destination désactivée masque ses activités.
 4. Un pays qui contient des destinations ou des activités **ne peut pas être supprimé** : désactivez-le.
+5. Case **Passeport obligatoire** (non cochée par défaut) : cochée, le rappel envoyé 7 jours avant le départ indique « Un passeport valide est obligatoire pour ce pays » ; non cochée, « Une carte d'identité valide suffit pour ce pays ».
 
 Formats à respecter :
 
@@ -245,6 +246,15 @@ Fonctionnement :
 - **Télécharger mes données** : le fichier JSON contient aussi la liste des e-mails reçus (`emails` : date, type, objet, état), pour les clients comme pour le personnel.
 - **Compte supprimé** : les lignes du journal restent (statistiques anonymes), sans adresse ni lien vers le compte (`accounts/signals.py`, quel que soit le chemin de suppression).
 
+### Rappels de voyage
+
+Deux e-mails liés aux dates du voyage, envoyés **une seule fois par demande** (la date d'envoi est notée sur la demande), jamais pour une demande annulée ni pour un client qui a supprimé son compte :
+
+- **Rappel avant le départ** (`orders/services/reminders.py`), pour une demande **confirmée** dont le départ est dans 7 jours ou moins : passeport (case « Passeport obligatoire » du pays), visa, décalage horaire avec la Belgique le jour du départ (ligne omise si le fuseau du pays n'est pas renseigné) et monnaie, lus sur la fiche pays au moment de l'envoi. Si la demande est confirmée alors que le départ est dans 7 jours ou moins, le rappel part dès la confirmation.
+- **Invitation à donner un avis** (`reviews/services/invitations.py`), à partir du lendemain du retour, avec un lien direct vers « Donner mon avis », seulement si le voyage peut encore recevoir un avis (règles de `reviews/services/eligibility.py` : demande confirmée, retour passé, pas encore d'avis).
+
+Ils partent par la commande `python manage.py send_trip_reminders`, à **planifier une fois par jour** (voir [Mise en production](#mise-en-production)). Elle rattrape les jours manqués : le rappel part tant que le départ n'est pas passé, l'invitation tant que l'avis reste possible.
+
 ## Tests
 
 ```bash
@@ -301,6 +311,7 @@ HSTS (en-tête `Strict-Transport-Security`) demande aux navigateurs de n'utilise
 Points d'attention :
 
 - Planifiez chaque jour `python manage.py purge_unconfirmed` (tâche planifiée Windows ou cron) : elle efface les comptes clients dont l'adresse n'a pas été confirmée dans les 30 jours (RGPD).
+- Planifiez aussi chaque jour `python manage.py send_trip_reminders` (même méthode) : rappels avant le départ et invitations à donner un avis (voir [Rappels de voyage](#rappels-de-voyage)). `DJANGO_SITE_URL` doit être renseigné pour les liens de ces e-mails.
 - **Ne committez jamais** la clé secrète ni les identifiants SMTP.
 - Les limites anti-abus (5 échecs de connexion, 3 liens « mot de passe oublié » par heure, 5 essais quand le mot de passe est redemandé, etc.) sont stockées dans le dossier `trip_app/cache/` (créé automatiquement, jamais commité) : elles sont partagées par tous les processus du serveur et conservées au redémarrage. Ce dossier doit être accessible en écriture par le serveur. Les adresses IPv6 sont comptées par réseau /64.
 - SQLite suffit pour le volume prévu (environ 1 000 clients).
@@ -338,14 +349,16 @@ trip_app/
 │   ├── views/              # client (faire, suivre, annuler), manage (personnel)
 │   ├── services/           # pricing, placing (création), promotions (choix de la promotion), status (changements d'état),
 │   │                       # filtering (liste du personnel), privacy (anonymisation RGPD),
-│   │                       # promotion_statistics (statistiques d'une promotion)
+│   │                       # promotion_statistics (statistiques d'une promotion), reminders (rappel avant le départ)
 │   ├── models.py · forms.py · signals.py · urls.py
 │   └── tests/
 ├── reviews/                # avis clients (v3) : modèle, avis vérifiés, lien avec les demandes
 │   ├── views/              # client (donner, modifier, supprimer), manage (modération)
 │   ├── services/           # eligibility, writing (client), moderation, responses, filtering (personnel),
-│   │                       # ratings (notes publiques), order_events, privacy (effacement RGPD des signatures)
-│   ├── management/commands/load_demo.py  # données de démonstration de toutes les versions
+│   │                       # ratings (notes publiques), order_events, privacy (effacement RGPD des signatures),
+│   │                       # invitations (invitation à donner un avis)
+│   ├── management/commands/  # load_demo (données de démonstration de toutes les versions),
+│   │                         # send_trip_reminders (rappels de voyage, chaque jour)
 │   ├── models.py · forms.py · signals.py · urls.py · context_processors.py (compteur du menu)
 │   └── tests/
 ├── templates/

@@ -45,10 +45,17 @@ class CountryForm(forms.ModelForm):
             "currency",
             "description",
             "visa",
+            "passport_required",
             "time_zone",
             "active",
         )
-        help_texts = {"active": "Décochez pour masquer ce pays et tout son contenu aux clients."}
+        help_texts = {
+            "passport_required": (
+                "Cochez si un passeport valide est obligatoire pour ce pays ; sinon, le rappel envoyé "
+                "7 jours avant le départ indique qu'une carte d'identité valide suffit."
+            ),
+            "active": "Décochez pour masquer ce pays et tout son contenu aux clients.",
+        }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

@@ -30,6 +30,8 @@ SUBJECTS = {
     EmailKind.PASSWORD_RESET: "Changement de votre mot de passe",
     EmailKind.CLIENT_PASSWORD_LINK: "Changement de votre mot de passe",
     EmailKind.AGENT_ACTIVATION: "Activation de votre compte",
+    EmailKind.DEPARTURE_REMINDER: "Votre départ approche",
+    EmailKind.REVIEW_INVITATION: "Comment s'est passé votre voyage ?",
 }
 
 
