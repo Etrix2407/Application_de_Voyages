@@ -1,12 +1,16 @@
+from unittest import mock
+
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
-from accounts.tests.factories import create_client
+from accounts.tests.factories import create_agent, create_client
 from catalog.tests.factories import create_country, create_destination
 from orders.models import Status
+from orders.services.status import cancel_by_staff
 from orders.tests.factories import create_order
 from reviews.models import EDIT_PERIOD, RefusalReason, Review, ReviewStatus
+from reviews.services.writing import update_review
 
 from .factories import create_review, create_trip_done
 
@@ -141,6 +145,24 @@ class EditReviewTests(TestCase):
 
         review.refresh_from_db()
         self.assertEqual(review.status, ReviewStatus.PUBLISHED)
+
+    def test_trip_cancelled_meanwhile_not_overwritten(self):
+        review = create_review(self.trip, status=ReviewStatus.PUBLISHED, title="Avant")
+
+        def cancel_then_update(*args, **kwargs):
+            # L'agence annule le voyage pendant que le client envoie sa modification.
+            cancel_by_staff(self.trip, create_agent(), "Voyage non effectué.")
+            return update_review(*args, **kwargs)
+
+        with mock.patch("reviews.views.client.update_review", side_effect=cancel_then_update):
+            response = self.edit(review, title="Après")
+
+        self.assertContains(response, "ne peut plus être modifié")
+        review.refresh_from_db()
+        self.assertEqual(
+            (review.title, review.status, review.refusal_reason),
+            ("Avant", ReviewStatus.REFUSED, RefusalReason.TRIP_CANCELLED),
+        )
 
     def test_other_client_review_not_found(self):
         review = create_review(self.trip)

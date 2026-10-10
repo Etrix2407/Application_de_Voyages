@@ -74,6 +74,8 @@ def confirm_email_change(request, token):
     user, new_email = pending
     if request.method != "POST":
         return render(request, "accounts/profile/confirm_email_change.html", {"new_email": new_email})
-    apply_email_change(user, new_email)
+    if not apply_email_change(user, new_email):
+        # Adresse prise entre-temps : même page qu'un lien qui n'est plus valable.
+        return render(request, "accounts/profile/email_change_invalid.html")
     messages.success(request, f"Votre adresse e-mail est maintenant {new_email}.")
     return redirect("profile" if request.user.is_authenticated else "login")

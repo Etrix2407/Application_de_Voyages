@@ -21,6 +21,7 @@ from orders.models import (
     Status,
     StatusChange,
 )
+from orders.services import placing
 from orders.services.placing import MAX_ORDERS_PER_DAY, DailyLimitReached, place_order
 
 from .factories import create_order, departure_in, review_tokens, submit_order
@@ -318,6 +319,31 @@ class DailyLimitTests(TestCase):
 
         with self.assertRaises(DailyLimitReached):
             place_order(self.client_user, self.destination, data)
+        self.assertEqual(Order.objects.count(), MAX_ORDERS_PER_DAY)
+
+    def test_last_allowed_order_taken_meanwhile_refused(self):
+        # Deux envois simultanés à 9 demandes sur 10 : l'autre envoi enregistre la sienne juste avant.
+        self.send_orders(MAX_ORDERS_PER_DAY - 1)
+        real_create_order = placing._create_order
+
+        def create(*args, **kwargs):
+            self.send_orders(1)
+            return real_create_order(*args, **kwargs)
+
+        departure = departure_in()
+        data = {
+            "departure_date": departure.isoformat(),
+            "return_date": (departure + timedelta(days=7)).isoformat(),
+            "adults": "1",
+            "children": "0",
+            "remarks": "",
+            "promo_code": "",
+        }
+
+        with mock.patch("orders.services.placing._create_order", side_effect=create):
+            response = submit_order(self.client, self.url, data)
+
+        self.assertRedirects(response, reverse("my_orders"))
         self.assertEqual(Order.objects.count(), MAX_ORDERS_PER_DAY)
 
 

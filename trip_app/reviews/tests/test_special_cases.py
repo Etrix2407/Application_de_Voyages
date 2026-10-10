@@ -39,6 +39,9 @@ class DeletedAccountTests(TestCase):
         review = Review.objects.get(pk=self.review.pk)
         self.assertIsNone(review.order.client)
         self.assertEqual(review.author_name, ANONYMOUS_NAME)
+        # Signature effacée en base, pas seulement masquée à l'affichage.
+        self.assertEqual(self.review.signature, "Julie D.")
+        self.assertEqual(review.signature, "")
         self.assertEqual(attach_ratings([self.destination])[0].rating_summary.count, 1)
         page = self.client.get(reverse("destination_detail", args=[self.destination.pk]))
         self.assertContains(page, "Superbe")

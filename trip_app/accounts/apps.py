@@ -1,6 +1,9 @@
 from importlib import import_module
 
 from django.apps import AppConfig
+from django.db.backends.signals import connection_created
+
+from common.db import register_sql_normalize
 
 
 class AccountsConfig(AppConfig):
@@ -10,3 +13,5 @@ class AccountsConfig(AppConfig):
     def ready(self):
         # Branche la durée de connexion réduite du personnel.
         import_module("accounts.signals")
+        # Recherche de client sans accents faite par la base (voir matching_clients).
+        connection_created.connect(register_sql_normalize, dispatch_uid="common.sql_normalize")

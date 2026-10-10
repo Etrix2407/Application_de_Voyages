@@ -49,6 +49,8 @@
             {% if promotion.max_uses %}{{ promotion.max_uses }} demandes au total{% else %}Illimité au total{% endif %} ;
             {% if promotion.max_uses_per_client %}{{ promotion.max_uses_per_client }} par client{% else %}illimité par client{% endif %}
         </dd>
+        <dt>Créée par</dt>
+        <dd>{{ created_by|default:"—" }}</dd>
     </dl>
 
     <h2>Historique</h2>

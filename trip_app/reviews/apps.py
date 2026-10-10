@@ -9,5 +9,6 @@ class ReviewsConfig(AppConfig):
     verbose_name = "avis clients"
 
     def ready(self):
-        # Branche le retrait de l'avis quand le voyage est annulé.
+        # Branche le retrait de l'avis quand le voyage est annulé, et l'effacement RGPD
+        # des signatures à la suppression d'un compte.
         import_module("reviews.signals")

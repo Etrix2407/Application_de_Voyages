@@ -12,7 +12,9 @@ from django.core.exceptions import ValidationError
 from django.core.validators import MaxLengthValidator, MinValueValidator
 from django.db import models
 from django.utils import timezone
+from django.utils.crypto import salted_hmac
 
+from accounts.models import normalize_email_address
 from catalog.models import Activity, Destination
 from promotions.models import Promotion
 
@@ -21,6 +23,19 @@ MAX_DAYS_BEFORE_DEPARTURE = 2 * 365
 MAX_STAY_DAYS = 90
 MAX_TRAVELLERS = 10
 MAX_REMARKS_LENGTH = 2000
+CLIENT_FINGERPRINT_SALT = "orders.Order.client_fingerprint"
+
+
+def client_fingerprint(email: str) -> str:
+    """Empreinte de l'adresse du client, pour la limite d'utilisation d'une promotion par client.
+
+    Adresse normalisée comme pour les comptes, puis sans la partie « +… » (moi+1@x = moi@x).
+    HMAC avec la clé secrète du site (SECRET_KEY) : l'adresse n'est pas conservée en clair,
+    mais changer cette clé remet les compteurs à zéro.
+    """
+    local, at, domain = normalize_email_address(email).rpartition("@")
+    local = local.split("+", 1)[0]
+    return salted_hmac(CLIENT_FINGERPRINT_SALT, f"{local}{at}{domain}", algorithm="sha256").hexdigest()
 
 
 class Status(models.TextChoices):
@@ -49,6 +64,11 @@ class Order(models.Model):
         related_name="orders",
         verbose_name="client",
     )
+    # Empreinte de l'adresse e-mail du client (client_fingerprint), remplie à la création,
+    # recalculée si le client change d'adresse (orders/signals.py) et conservée après la
+    # suppression du compte : la limite « par client » d'une promotion tient malgré une
+    # réinscription avec la même adresse. Vide pour les demandes déjà anonymisées avant son ajout.
+    client_fingerprint = models.CharField(max_length=64, blank=True, db_index=True, editable=False)
     # PROTECT : une destination déjà demandée ne peut pas être supprimée, seulement désactivée.
     destination = models.ForeignKey(
         Destination, on_delete=models.PROTECT, related_name="orders", verbose_name="destination"
@@ -70,6 +90,14 @@ class Order(models.Model):
     # Recalculé aux tarifs du jour quand le personnel confirme (le prix peut avoir changé
     # depuis la demande). L'estimation de départ reste conservée à côté.
     confirmed_price = _price_field("prix recalculé à la confirmation", null=True, blank=True)
+    # Prix de la destination retenu dans ce recalcul (vide = sur devis). Il n'est connu que pour les
+    # demandes confirmées après l'ajout de ces champs : le booléen distingue « sur devis » de « inconnu ».
+    confirmed_destination_price = _price_field(
+        "prix indicatif de la destination à la confirmation", null=True, blank=True
+    )
+    has_confirmed_destination_price = models.BooleanField(
+        "prix de la destination enregistré à la confirmation", default=False
+    )
     # Promotion appliquée (v4). Les prix ci-dessus sont après remise. PROTECT : une promotion
     # utilisée ne se supprime pas ; son nom est figé, et ses valeur, portée et assiette ne
     # changent plus une fois utilisée : la remise est ré-appliquée telle quelle à la confirmation.
@@ -113,9 +141,38 @@ class Order(models.Model):
         return self.confirmed_price + (self.confirmed_discount or Decimal("0.00"))
 
     @property
+    def confirmed_discount_applies(self) -> bool:
+        """La promotion ré-appliquée à la confirmation donne une remise (ex. : 0 € sur un séjour devenu sur devis)."""
+        return bool(self.confirmed_discount)
+
+    @property
     def is_quote_required(self) -> bool:
         """La destination n'avait pas de prix indicatif : son prix sera donné sur devis."""
         return self.destination_price is None
+
+    @property
+    def is_confirmed_quote_required(self) -> bool:
+        """Le prix à la confirmation ne compte pas le séjour : la destination était alors sur devis."""
+        return self.has_confirmed_destination_price and self.confirmed_destination_price is None
+
+    @property
+    def confirmed_price_includes_stay(self) -> bool:
+        return self.has_confirmed_destination_price and self.confirmed_destination_price is not None
+
+    @property
+    def is_latest_price_quote_required(self) -> bool:
+        """Le prix le plus récent ne compte pas le séjour.
+
+        Demande confirmée avant l'enregistrement du prix de la destination : règle de l'estimation.
+        """
+        if self.has_confirmed_destination_price:
+            return self.is_confirmed_quote_required
+        return self.is_quote_required
+
+    @property
+    def shows_quote_note_on_estimate(self) -> bool:
+        """Mention « sur devis » sous l'estimation, masquée si le prix confirmé compte le séjour."""
+        return self.is_quote_required and not self.confirmed_price_includes_stay
 
     def clean(self) -> None:
         super().clean()

@@ -48,6 +48,16 @@ class EmployeeNumberTests(TestCase):
         self.assertEqual(first.employee_number, "AG0001")
         self.assertEqual(second.employee_number, "AG0002")
 
+    def test_number_after_9999_sorted_numerically(self):
+        first = create_agent(email="a1@example.com")
+        User.objects.filter(pk=first.pk).update(employee_number="AG9999")
+
+        second = create_agent(email="a2@example.com")
+        third = create_agent(email="a3@example.com")
+
+        self.assertEqual(second.employee_number, "AG10000")
+        self.assertEqual(third.employee_number, "AG10001")
+
     def test_number_kept_on_update(self):
         agent = create_agent()
         agent.last_name = "Nouveau"

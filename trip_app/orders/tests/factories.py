@@ -6,7 +6,7 @@ from decimal import Decimal
 
 from django.utils import timezone
 
-from orders.models import MIN_DAYS_BEFORE_DEPARTURE, Order, OrderActivity
+from orders.models import MIN_DAYS_BEFORE_DEPARTURE, Order, OrderActivity, client_fingerprint
 
 
 def departure_in(days: int = MIN_DAYS_BEFORE_DEPARTURE + 30):
@@ -21,6 +21,8 @@ def create_order(client, destination, activities=(), **fields) -> Order:
     fields.setdefault("estimated_price", Decimal("0"))
     fields.setdefault("destination_name", destination.name)
     fields.setdefault("country_name", destination.country.name)
+    if client is not None:
+        fields.setdefault("client_fingerprint", client_fingerprint(client.email))
     order = Order.objects.create(client=client, destination=destination, **fields)
     for activity in activities:
         OrderActivity.objects.create(
