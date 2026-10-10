@@ -61,6 +61,8 @@ def apply_email_change(user: User, new_email: str) -> bool:
     try:
         with transaction.atomic():
             user.save(update_fields=["email"])
+            # Dans la même transaction : les autres applications suivent la nouvelle adresse.
+            email_changed.send(sender=User, user=user)
     except IntegrityError:
         # La base garantit l'unicité : l'adresse a été prise au même instant.
         user.email = old_email
