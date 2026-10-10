@@ -4,8 +4,10 @@
 | --------------------- | ------------------------- | ------------------------- | ----------- |
 | cancel_by_client      | En attente                | le client                 | facultatif  |
 | confirm_by_staff      | En attente, départ à venir | agent ou administrateur  | — (prix)    |
-| cancel_by_staff       | En attente ou Confirmée   | agent ou administrateur   | obligatoire |
-| cancel_after_account_deletion | En attente        | automatique (« Client »)  | fixé        |
+| cancel_by_staff       | En attente ou Confirmée   | agent ou administrateur   | interne obligatoire, explication facultative |
+| cancel_after_account_deletion | En attente        | automatique (« Client »)  | interne, fixé |
+
+Le motif (champ reason) est visible par le client ; le motif interne, par le personnel seulement.
 """
 
 from django.db import transaction
@@ -76,30 +78,36 @@ def confirm_by_staff(order: Order, staff_member) -> None:
         setattr(order, field, value)
 
 
-def cancel_by_staff(order: Order, staff_member, reason: str) -> None:
-    if not reason.strip():
-        raise ValueError("Le motif est obligatoire quand le personnel annule une demande.")
+def cancel_by_staff(order: Order, staff_member, internal_reason: str, explanation: str = "") -> None:
+    """Annulation par l'agence : motif interne obligatoire, explication pour le client facultative.
+
+    Le motif interne n'est montré qu'au personnel ; l'explication apparaît dans l'historique du client.
+    """
+    if not internal_reason.strip():
+        raise ValueError("Le motif interne est obligatoire quand le personnel annule une demande.")
     _change_status(
         order, STAFF_CANCELLABLE, Status.CANCELLED, staff_member, staff_member.get_full_name(),
-        reason, "Cette demande est déjà annulée.",
+        explanation, "Cette demande est déjà annulée.", internal_reason=internal_reason,
     )
 
 
-# Motif visible par le personnel : plus personne à rappeler pour cette demande.
+# Motif interne (personnel) : plus personne à rappeler pour cette demande.
 ACCOUNT_DELETED_REASON = "Compte client supprimé : demande annulée automatiquement."
 
 
 def cancel_after_account_deletion(order: Order) -> None:
     """Le client supprime son compte : sa demande en attente n'a plus à être traitée."""
     _change_status(
-        order, CLIENT_CANCELLABLE, Status.CANCELLED, None, StatusChange.CLIENT_AUTHOR, ACCOUNT_DELETED_REASON,
+        order, CLIENT_CANCELLABLE, Status.CANCELLED, None, StatusChange.CLIENT_AUTHOR, "",
         "Seule une demande en attente est annulée à la suppression du compte.", by_client=True,
+        internal_reason=ACCOUNT_DELETED_REASON,
     )
 
 
 @transaction.atomic
 def _change_status(
-    order, allowed_from, new_status, author, author_name, reason, refusal, by_client=False, updates=None
+    order, allowed_from, new_status, author, author_name, reason, refusal, by_client=False, updates=None,
+    internal_reason="",
 ) -> None:
     # Mise à jour conditionnelle : deux actions simultanées ne peuvent pas passer toutes les deux.
     updated = Order.objects.filter(pk=order.pk, status__in=allowed_from).update(
@@ -111,5 +119,5 @@ def _change_status(
     # Nom figé : l'historique reste lisible même si le compte de l'agent est supprimé ensuite.
     StatusChange.objects.create(
         order=order, status=new_status, author=author, author_name=author_name, reason=reason.strip(),
-        by_client=by_client,
+        internal_reason=internal_reason.strip(), by_client=by_client,
     )

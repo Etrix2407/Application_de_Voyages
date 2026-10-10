@@ -2,6 +2,7 @@
 
 Le client y retrouve ce qu'il voit dans « Mes demandes » : noms et prix figés,
 promotion appliquée, historique avec « Agence » à la place du nom de l'agent.
+Droit d'accès : le motif interne de l'agence, absent du site, est inclus dans l'export.
 Le jeton d'envoi (donnée technique interne) n'est pas exporté.
 """
 
@@ -40,6 +41,7 @@ def _order_data(order: Order) -> dict:
                 "status": change.get_status_display(),
                 "by": change.author_for_client,
                 "reason": change.reason,
+                "internal_reason": change.internal_reason,
             }
             for change in order.history.all()
         ],

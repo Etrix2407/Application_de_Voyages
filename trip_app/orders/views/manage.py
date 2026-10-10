@@ -38,6 +38,7 @@ def order_detail(request, pk):
         "activities": order.activities.select_related("activity"),
         "history": order.history.all(),
         "show_staff_names": True,
+        "show_internal_reasons": True,
         "can_confirm": staff_can_confirm(order),
         "departure_passed": order.status == Status.PENDING and departure_passed(order),
         "can_cancel": staff_can_cancel(order),
@@ -68,7 +69,9 @@ def cancel_order(request, pk):
     form = StaffCancelForm(request.POST or None)
     if request.method == "POST" and form.is_valid():
         try:
-            cancel_by_staff(order, request.user, form.cleaned_data["reason"])
+            cancel_by_staff(
+                order, request.user, form.cleaned_data["internal_reason"], form.cleaned_data["explanation"]
+            )
         except TransitionNotAllowed as error:
             messages.error(request, str(error))
         else:

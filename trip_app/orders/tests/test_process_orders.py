@@ -52,23 +52,30 @@ class StaffProcessingTests(TestCase):
         self.assertContains(response, self.cancel_url)
 
     def test_staff_cancel_requires_reason(self):
-        response = self.client.post(self.cancel_url, {"reason": "   "})
+        response = self.client.post(self.cancel_url, {"internal_reason": "   "})
 
-        self.assertContains(response, "Le motif est obligatoire.")
+        self.assertContains(response, "Le motif interne est obligatoire.")
         self.assertEqual(self.refreshed_status(), Status.PENDING)
 
-    def test_staff_cancels_pending_order_with_reason(self):
-        response = self.client.post(self.cancel_url, {"reason": "Client injoignable."}, follow=True)
+    def test_staff_cancels_pending_order_with_reason_and_explanation(self):
+        response = self.client.post(
+            self.cancel_url,
+            {"internal_reason": "Client injoignable.", "explanation": "Nous n'avons pas pu vous joindre."},
+            follow=True,
+        )
 
         self.assertContains(response, "est annulée")
         self.assertEqual(self.refreshed_status(), Status.CANCELLED)
         change = self.order.history.get()
-        self.assertEqual((change.author_name, change.reason), ("Luc Martin", "Client injoignable."))
+        self.assertEqual(
+            (change.author_name, change.internal_reason, change.reason),
+            ("Luc Martin", "Client injoignable.", "Nous n'avons pas pu vous joindre."),
+        )
 
     def test_staff_can_cancel_confirmed_order(self):
         confirm_by_staff(self.order, self.agent)
 
-        self.client.post(self.cancel_url, {"reason": "Le client a appelé pour annuler."})
+        self.client.post(self.cancel_url, {"internal_reason": "Le client a appelé pour annuler."})
 
         self.assertEqual(self.refreshed_status(), Status.CANCELLED)
         self.assertEqual(
@@ -87,7 +94,7 @@ class StaffProcessingTests(TestCase):
         cancel_by_client(self.order)
 
         confirm = self.client.post(self.confirm_url, follow=True)
-        cancel = self.client.post(self.cancel_url, {"reason": "Doublon."}, follow=True)
+        cancel = self.client.post(self.cancel_url, {"internal_reason": "Doublon."}, follow=True)
 
         self.assertContains(confirm, "Seule une demande en attente peut être confirmée.")
         self.assertContains(cancel, "Cette demande est déjà annulée.")
@@ -101,19 +108,31 @@ class StaffProcessingTests(TestCase):
         self.client.force_login(self.marie)
 
         self.assertEqual(self.client.post(self.confirm_url).status_code, 403)
-        self.assertEqual(self.client.post(self.cancel_url, {"reason": "x"}).status_code, 403)
+        self.assertEqual(self.client.post(self.cancel_url, {"internal_reason": "x"}).status_code, 403)
         self.assertEqual(self.refreshed_status(), Status.PENDING)
 
-    def test_client_sees_staff_cancellation_and_reason(self):
-        cancel_by_staff(self.order, self.agent, "Destination fermée cette saison.")
+    def test_client_sees_explanation_but_not_internal_reason(self):
+        cancel_by_staff(self.order, self.agent, "Hôtel partenaire en faillite.", "Destination fermée cette saison.")
         self.client.force_login(self.marie)
 
         response = self.client.get(reverse("my_order_detail", args=[self.order.pk]))
 
         self.assertContains(response, "Annulée")
         self.assertContains(response, "Destination fermée cette saison.")
+        self.assertNotContains(response, "Hôtel partenaire en faillite.")
+        self.assertNotContains(response, "Motif interne")
         self.assertContains(response, "Agence")
         self.assertNotContains(response, "Luc Martin")
+
+    def test_client_sees_no_reason_without_explanation(self):
+        cancel_by_staff(self.order, self.agent, "Hôtel partenaire en faillite.")
+        self.client.force_login(self.marie)
+
+        response = self.client.get(reverse("my_order_detail", args=[self.order.pk]))
+
+        self.assertEqual(self.order.history.get().reason, "")
+        self.assertNotContains(response, "Hôtel partenaire en faillite.")
+        self.assertContains(response, "<td>—</td>", html=True)
 
     def test_client_or_agency_decided_by_who_acted_not_by_name(self):
         # Un agent qui s'appellerait « Client » reste affiché « Agence » au client.
@@ -123,10 +142,14 @@ class StaffProcessingTests(TestCase):
         self.assertEqual(agent_named_client.author_for_client, "Agence")
         self.assertEqual(client_change.author_for_client, "Client")
 
-    def test_staff_sees_agent_name_in_history(self):
-        cancel_by_staff(self.order, self.agent, "Destination fermée cette saison.")
+    def test_staff_sees_agent_name_and_internal_reason_in_history(self):
+        cancel_by_staff(self.order, self.agent, "Hôtel partenaire en faillite.", "Destination fermée cette saison.")
 
-        self.assertContains(self.client.get(self.detail), "Luc Martin")
+        response = self.client.get(self.detail)
+
+        self.assertContains(response, "Luc Martin")
+        self.assertContains(response, "Hôtel partenaire en faillite.")
+        self.assertContains(response, "Destination fermée cette saison.")
 
     def test_client_sees_own_actions_as_client(self):
         cancel_by_client(self.order)

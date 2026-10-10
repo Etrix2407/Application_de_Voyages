@@ -6,7 +6,12 @@
                     <th scope="col">Date</th>
                     <th scope="col">État</th>
                     <th scope="col">Par</th>
-                    <th scope="col">Motif</th>
+                    {% if show_internal_reasons %}
+                        <th scope="col">Motif visible par le client</th>
+                        <th scope="col">Motif interne</th>
+                    {% else %}
+                        <th scope="col">Motif</th>
+                    {% endif %}
                 </tr>
             </thead>
             <tbody>
@@ -17,6 +22,8 @@
                         {# Nom de l'agent réservé au personnel ; le client voit « Agence ». #}
                         <td>{% if show_staff_names %}{{ change.author_name }}{% else %}{{ change.author_for_client }}{% endif %}</td>
                         <td>{{ change.reason|default:"—" }}</td>
+                        {# Motif interne réservé au personnel : jamais affiché au client. #}
+                        {% if show_internal_reasons %}<td>{{ change.internal_reason|default:"—" }}</td>{% endif %}
                     </tr>
                 {% endfor %}
             </tbody>
