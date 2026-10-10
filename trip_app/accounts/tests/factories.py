@@ -3,6 +3,7 @@
 from datetime import date
 
 from django.contrib.auth import get_user_model
+from django.utils import timezone
 
 from accounts.models import Role
 
@@ -15,6 +16,8 @@ def create_client(email="client@example.com", **fields):
     fields.setdefault("last_name", "Dupont")
     fields.setdefault("first_name", "Marie")
     fields.setdefault("birth_date", date(1955, 4, 12))
+    # Adresse confirmée par défaut : un client non confirmé ne peut pas envoyer de demande.
+    fields.setdefault("email_confirmed_at", timezone.now())
     return User.objects.create_user(email, PASSWORD, **fields)
 
 

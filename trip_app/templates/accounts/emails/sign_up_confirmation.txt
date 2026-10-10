@@ -1,7 +1,7 @@
 {% autoescape off %}Bonjour {{ user.first_name }},
 
-Merci pour votre inscription. Pour confirmer votre adresse e-mail et choisir votre mot de passe, ouvrez ce lien (valable 24 heures) :
+Merci pour votre inscription. Pour confirmer votre adresse e-mail, ouvrez ce lien (valable 48 heures) :
 
 {{ confirmation_link }}
 
-Si vous n'êtes pas à l'origine de cette inscription, ignorez cet e-mail : aucun compte ne sera activé et les informations saisies seront effacées sous 7 jours.{% endautoescape %}
+Si vous n'êtes pas à l'origine de cette inscription, ignorez cet e-mail : l'adresse ne sera pas confirmée et le compte sera effacé au bout de 30 jours.{% endautoescape %}

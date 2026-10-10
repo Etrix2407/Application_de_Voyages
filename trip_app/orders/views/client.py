@@ -15,6 +15,7 @@ from orders.services.placing import (
     NO_DISCOUNT,
     AlreadySubmitted,
     DailyLimitReached,
+    EmailNotConfirmed,
     PromotionUnavailable,
     daily_limit_reached,
     find_pending_duplicates,
@@ -30,6 +31,8 @@ from reviews.services.eligibility import can_review
 @client_required
 def create_order(request, destination_pk):
     """Formulaire, puis page de vérification (prix estimé, doublon), puis envoi."""
+    if request.user.is_awaiting_confirmation:
+        return _email_not_confirmed_refusal(request)
     destination = get_object_or_404(Destination.objects.select_related("country"), pk=destination_pk)
     if not Destination.objects.visible().filter(pk=destination.pk).exists():
         # Ex. destination désactivée pendant que le client remplissait sa demande.
@@ -61,6 +64,8 @@ def create_order(request, destination_pk):
         return redirect("my_order_detail", pk=duplicate.order.pk)
     except DailyLimitReached:
         return _daily_limit_refusal(request)
+    except EmailNotConfirmed:
+        return _email_not_confirmed_refusal(request)
     except PromotionUnavailable:
         # Dernière utilisation de la promotion prise au même instant : rien n'a été enregistré.
         # Code : message sous le champ ; promotion automatique : récapitulatif au nouveau prix.
@@ -101,6 +106,16 @@ def _daily_limit_refusal(request):
         "Réessayez demain, ou appelez l'agence : un conseiller vous aidera volontiers.",
     )
     return redirect("my_orders")
+
+
+def _email_not_confirmed_refusal(request):
+    # La page de renvoi du lien explique le blocage et propose un nouveau lien en un clic.
+    messages.error(
+        request,
+        "Pour envoyer une demande de voyage, confirmez d'abord votre adresse e-mail "
+        "en ouvrant le lien que nous vous avons envoyé.",
+    )
+    return redirect("resend_confirmation")
 
 
 def _expected(quote, choice) -> str:

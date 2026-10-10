@@ -1,17 +1,21 @@
 """Inscription des clients avec confirmation de l'adresse e-mail.
 
 Le parcours ne révèle jamais si une adresse est déjà inscrite :
-- adresse nouvelle (ou inscription en attente) : compte inactif + lien de confirmation ;
-- adresse déjà utilisée : aucun compte créé, la propriétaire est prévenue par e-mail.
-Le mot de passe est choisi après le clic sur le lien : seule la personne qui reçoit
-les e-mails de l'adresse peut l'activer (pas de « pré-détournement » de compte).
-Une nouvelle tentative remplace les données en attente et rend les anciens liens
-inutilisables ; la page d'activation affiche les données qui seront enregistrées.
+- adresse nouvelle (ou compte non confirmé) : compte créé avec le mot de passe choisi
+  + lien de confirmation ;
+- adresse déjà confirmée : aucun compte créé, la propriétaire est prévenue par e-mail.
+Le compte est utilisable tout de suite (connexion, catalogue, favoris), mais le client
+ne peut pas envoyer de demande de voyage tant que son adresse n'est pas confirmée.
+Une nouvelle inscription avec l'adresse d'un compte non confirmé remplace ce compte :
+la vraie propriétaire de l'adresse peut toujours reprendre la main.
+La page de confirmation affiche les données du compte et demande un clic sur un bouton :
+la propriétaire de l'adresse ne confirme pas sans le savoir un compte créé par un tiers.
 """
 
 from datetime import timedelta
 
 from django.core import signing
+from django.db import transaction
 from django.urls import reverse
 from django.utils import timezone
 
@@ -19,8 +23,8 @@ from accounts.models import EmailKind, Role, User, normalize_email_address
 from accounts.services.emails import send_email
 from accounts.services.throttling import confirmation_emails
 
-CONFIRMATION_MAX_AGE = timedelta(hours=24)
-UNCONFIRMED_RETENTION = timedelta(days=7)
+CONFIRMATION_MAX_AGE = timedelta(hours=48)
+UNCONFIRMED_RETENTION = timedelta(days=30)
 _TOKEN_SALT = "accounts.sign-up-confirmation"
 _PERSONAL_FIELDS = ("first_name", "last_name", "phone", "birth_date")
 
@@ -53,21 +57,23 @@ def request_sign_up(request, form) -> None:
         _notify(request, existing, EmailKind.SIGN_UP_EXISTING, "accounts/emails/sign_up_existing.txt")
         return
 
-    # Nouvelle inscription, ou nouvelle tentative qui remplace une inscription en attente.
-    user = existing or User(email=email, role=Role.CLIENT)
+    user = User(email=email, role=Role.CLIENT, consent_date=timezone.now())
     for field in _PERSONAL_FIELDS:
         setattr(user, field, form.cleaned_data.get(field))
-    user.is_active = False
-    user.consent_date = timezone.now()
-    user.date_joined = timezone.now()
-    user.set_unusable_password()
-    user.save()
+    user.set_password(form.cleaned_data["password1"])
+    with transaction.atomic():
+        if existing:
+            # Compte non confirmé : supprimé (sessions et favoris compris) et remplacé.
+            # Ses anciens liens de confirmation ne valent plus rien (autre compte).
+            existing.delete()
+        user.save()
     send_confirmation(request, user)
 
 
-def send_confirmation(request, user: User) -> None:
+def send_confirmation(request, user: User) -> bool:
+    """Envoie le lien de confirmation. Renvoie False s'il n'est pas parti (limite ou panne)."""
     link = request.build_absolute_uri(reverse("confirm_sign_up", args=[make_confirmation_token(user)]))
-    _notify(
+    return _notify(
         request,
         user,
         EmailKind.SIGN_UP_CONFIRMATION,
@@ -77,33 +83,32 @@ def send_confirmation(request, user: User) -> None:
 
 
 def resend_confirmation(request, email: str) -> None:
-    """Renvoie le lien si une inscription est en attente pour cette adresse ; sinon ne fait rien."""
+    """Renvoie le lien si l'adresse attend sa confirmation ; sinon ne fait rien."""
     user = User.objects.filter(email=normalize_email_address(email)).first()
     if user and user.is_awaiting_confirmation:
         send_confirmation(request, user)
 
 
-def confirm(user: User, password: str) -> None:
-    """Active le compte avec le mot de passe choisi (déjà validé par le formulaire)."""
-    user.set_password(password)
-    user.is_active = True
+def confirm(user: User) -> None:
+    """Confirme l'adresse du compte : le client peut désormais envoyer des demandes de voyage."""
     user.email_confirmed_at = timezone.now()
-    user.save(update_fields=["is_active", "email_confirmed_at", "password"])
+    user.save(update_fields=["email_confirmed_at"])
 
 
 def purge_unconfirmed(now=None) -> int:
-    """Supprime les inscriptions jamais confirmées (RGPD : pas de données sans raison)."""
+    """Supprime les comptes clients jamais confirmés (RGPD : pas de données sans raison)."""
     limit = (now or timezone.now()) - UNCONFIRMED_RETENTION
-    deleted, _ = User.objects.filter(
-        role=Role.CLIENT, is_active=False, email_confirmed_at__isnull=True, date_joined__lt=limit
+    _, deleted = User.objects.filter(
+        role=Role.CLIENT, email_confirmed_at__isnull=True, date_joined__lt=limit
     ).delete()
-    return deleted
+    # Seuls les comptes sont comptés, pas leurs favoris supprimés avec eux.
+    return deleted.get(User._meta.label, 0)
 
 
-def _notify(request, user: User, kind: EmailKind, template_name: str, extra: dict | None = None) -> None:
+def _notify(request, user: User, kind: EmailKind, template_name: str, extra: dict | None = None) -> bool:
     # Limite par adresse : on ne peut pas se servir du site pour inonder une boîte e-mail.
     if confirmation_emails.is_locked(user.email):
-        return
+        return False
     confirmation_emails.record(user.email)
     context = {
         "user": user,
@@ -111,4 +116,4 @@ def _notify(request, user: User, kind: EmailKind, template_name: str, extra: dic
         "password_reset_link": request.build_absolute_uri(reverse("password_reset")),
         **(extra or {}),
     }
-    send_email(user.email, kind, template_name, context, user=user)
+    return send_email(user.email, kind, template_name, context, user=user)

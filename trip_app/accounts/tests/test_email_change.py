@@ -58,6 +58,16 @@ class EmailChangeTests(SendEmailsImmediately, TestCase):
         self.user.refresh_from_db()
         self.assertEqual(self.user.email, "nouvelle@example.com")
 
+    def test_change_confirms_unconfirmed_account(self):
+        self.user.email_confirmed_at = None
+        self.user.save()
+        self.request_change()
+
+        self.client.post(self.link_sent_to("nouvelle@example.com"))
+
+        self.user.refresh_from_db()
+        self.assertFalse(self.user.is_awaiting_confirmation)
+
     def test_taken_address_not_revealed(self):
         create_client(email="pris@example.com")
 
