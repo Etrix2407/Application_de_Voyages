@@ -33,6 +33,7 @@ ACCESS = {
     "country_list": PUBLIC,
     "profile": LOGGED_IN,
     "change_password": LOGGED_IN,
+    "download_my_data": LOGGED_IN,
     "search": PUBLIC,
     "destination_list": PUBLIC,
     "country_detail": PUBLIC,
