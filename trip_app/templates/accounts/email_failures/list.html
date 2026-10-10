@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block title %}E-mails en échec{% endblock %}
+
+{% block content %}
+    <h1>E-mails en échec</h1>
+
+    <p>Ces e-mails n'ont pas pu partir. Vérifiez l'adresse du destinataire, puis renvoyez le message : il est refait à neuf, avec un nouveau lien s'il en contient un.</p>
+
+    {% if page.object_list %}
+        <div class="table-scroll">
+            <table>
+                <caption>E-mails en échec, du plus récent au plus ancien{% if page.paginator.num_pages > 1 %}, page {{ page.number }} sur {{ page.paginator.num_pages }}{% endif %}</caption>
+                <thead>
+                    <tr>
+                        <th scope="col">Date</th>
+                        <th scope="col">Destinataire</th>
+                        <th scope="col">Type et objet</th>
+                        <th scope="col">Tentatives</th>
+                        <th scope="col">Raison</th>
+                        <th scope="col">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in page.object_list %}
+                        <tr>
+                            <td>{{ log.created_at|date:"j F Y à H:i" }}</td>
+                            <td>
+                                {{ log.recipient }}
+                                {% if log.user %}<br>{{ log.user.get_full_name }}{% endif %}
+                                {% if log.order_number %}<br><a href="{% url 'manage_order_detail' log.order_number %}">Demande n° {{ log.order_number }}</a>{% endif %}
+                            </td>
+                            <td>{{ log.get_kind_display }}<br>« {{ log.subject }} »</td>
+                            <td>{{ log.attempts }}</td>
+                            <td>{{ log.last_error|default:"—" }}</td>
+                            <td>
+                                {% if log.can_resend %}
+                                    <form method="post" action="{% url 'resend_email' log.pk %}">
+                                        {% csrf_token %}
+                                        <button type="submit">Renvoyer</button>
+                                    </form>
+                                {% else %}
+                                    —
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% include "_pagination.html" with page=page label="e-mails en échec" %}
+    {% else %}
+        <p>Aucun e-mail en échec.</p>
+    {% endif %}
+{% endblock %}
