@@ -1,13 +1,15 @@
 """E-mails envoyés au client sur son avis (v5)."""
 
 from datetime import timedelta
+from unittest import mock
 
 from django.core import mail
 from django.template.defaultfilters import date
 from django.test import TestCase
 from django.utils import timezone
 
-from accounts.models import EmailKind, EmailLog
+from accounts.models import EmailKind, EmailLog, EmailStatus
+from accounts.services.email_retry import retry_due_emails
 from accounts.tests.email_delivery import SendEmailsImmediately
 from accounts.tests.factories import create_agent, create_client
 from catalog.tests.factories import create_country, create_destination
@@ -89,6 +91,18 @@ class ReviewEmailTests(SendEmailsImmediately, TestCase):
         self.assertIn("L'agence a modifié sa réponse", mail.outbox[1].body)
         self.assertIn("Merci beaucoup Julie !", mail.outbox[1].body)
         self.assertEqual(EmailLog.objects.filter(kind=EmailKind.REVIEW_RESPONSE, user=self.julie).count(), 2)
+
+    def test_failed_email_rebuilt_by_retry(self):
+        with mock.patch(
+            "accounts.services.emails.EmailMultiAlternatives.send", side_effect=OSError("serveur injoignable")
+        ):
+            refuse(self.review, RefusalReason.OFF_TOPIC)
+        EmailLog.objects.update(last_attempt_at=timezone.now() - timedelta(minutes=6))
+
+        self.assertEqual(retry_due_emails(), 1)
+
+        self.assertEqual(EmailLog.objects.get().status, EmailStatus.SENT)
+        self.assertIn("Motif : Hors sujet", self.assertSentToJulie(EmailKind.REVIEW_REFUSED))
 
     def test_nothing_for_deleted_client(self):
         self.julie.delete()

@@ -30,6 +30,7 @@
                         <li><a href="{% url 'manage_promotions' %}">Promotions</a></li>
                         <li><a href="{% url 'manage_pending_reviews' %}">Avis à modérer ({{ pending_reviews_count }})</a></li>
                         <li><a href="{% url 'client_list' %}">Clients</a></li>
+                        <li><a href="{% url 'email_failure_list' %}">E-mails en échec</a></li>
                     {% endif %}
                     {% if user.is_administrator %}
                         <li><a href="{% url 'staff_list' %}">Personnel</a></li>

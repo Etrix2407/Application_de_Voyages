@@ -43,6 +43,9 @@ def save_response(review: Review, staff_member, text: str) -> AgencyResponse:
     created = response.pk is None
     response.text = text.strip()
     response.updated_at = timezone.now()
+    if created:
+        # Même instant à la création : une réponse jamais modifiée se reconnaît (nouvelles tentatives d'envoi).
+        response.created_at = response.updated_at
     response.full_clean(exclude=["review"])
     try:
         with transaction.atomic():

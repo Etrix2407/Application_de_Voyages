@@ -12,3 +12,5 @@ class ReviewsConfig(AppConfig):
         # Branche le retrait de l'avis quand le voyage est annulé, et l'effacement RGPD
         # des signatures à la suppression d'un compte.
         import_module("reviews.signals")
+        # Déclare la reconstruction des e-mails des avis (nouvelles tentatives, renvoi manuel).
+        import_module("reviews.services.email_rebuilders")
