@@ -9,10 +9,12 @@ Le client ressaisit son mot de passe (formulaire), puis :
 from datetime import timedelta
 
 from django.core import signing
+from django.db import transaction
 from django.urls import reverse
 
 from accounts.models import Role, User, normalize_email_address
 from accounts.services.emails import send_email
+from accounts.signals import email_changed
 from accounts.services.throttling import confirmation_emails
 
 LINK_MAX_AGE = timedelta(hours=24)
@@ -49,10 +51,12 @@ def pending_email_change(token: str) -> tuple[User, str] | None:
     return user, data["new"]
 
 
+@transaction.atomic
 def apply_email_change(user: User, new_email: str) -> None:
     """Applique un changement obtenu par pending_email_change (lien déjà vérifié)."""
     user.email = new_email
     user.save(update_fields=["email"])
+    email_changed.send(sender=User, user=user)
 
 
 def _notify_current_address(user: User) -> None:

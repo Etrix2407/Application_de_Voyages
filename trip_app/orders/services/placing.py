@@ -7,7 +7,7 @@ from django.db import IntegrityError, transaction
 from django.utils import timezone
 
 from catalog.models import Destination
-from orders.models import Order, OrderActivity, Status, StatusChange
+from orders.models import Order, OrderActivity, Status, StatusChange, client_fingerprint
 from orders.services.pricing import Quote, estimate_price, price_parts
 from orders.services.promotions import limit_problem
 from promotions.services.discounts import Offer, PriceParts, discount_amount
@@ -111,6 +111,7 @@ def _create_order(client, destination: Destination, data: dict, offer: Offer | N
     order = Order(
         submission_token=submission_token,
         client=client,
+        client_fingerprint=client_fingerprint(client.email),
         destination=destination,
         destination_name=destination.name,
         country_name=destination.country.name,

@@ -15,7 +15,7 @@ from django.utils import timezone
 
 from accounts.services.throttling import Limiter
 from catalog.models import Destination
-from orders.models import Order, Status
+from orders.models import Order, Status, client_fingerprint
 from promotions.models import Promotion, normalize_code
 from common.text import euros
 from promotions.services.discounts import (
@@ -55,11 +55,20 @@ class PromotionChoice:
 
 
 def uses(promotion: Promotion, client=None) -> int:
-    """Demandes non annulées qui ont utilisé la promotion (toutes, ou celles du client)."""
+    """Demandes non annulées qui ont utilisé la promotion (toutes, ou celles du client).
+
+    Le client est reconnu à l'empreinte de son adresse e-mail (voir orders.models.client_fingerprint) :
+    ses demandes comptent encore après une suppression du compte suivie d'une réinscription.
+    """
     orders = Order.objects.filter(promotion=promotion).exclude(status=Status.CANCELLED)
     if client is not None:
-        orders = orders.filter(client=client)
+        orders = orders.filter(client_fingerprint=client_fingerprint(client.email))
     return orders.count()
+
+
+def refresh_client_fingerprint(client) -> int:
+    """Recalcule l'empreinte de toutes les demandes du client avec son adresse actuelle."""
+    return Order.objects.filter(client=client).update(client_fingerprint=client_fingerprint(client.email))
 
 
 def exhausted_promotions():

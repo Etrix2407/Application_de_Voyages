@@ -10,7 +10,9 @@ def anonymize_orders_of(client) -> int:
     Les remarques et les motifs peuvent contenir des données personnelles (santé,
     situation familiale…). Restent : destination, dates, voyageurs, activités, prix,
     états et dates de l'historique. Le lien vers le client est retiré par la base
-    (suppression du compte : client vide).
+    (suppression du compte : client vide). L'empreinte de l'adresse (client_fingerprint,
+    HMAC, pas l'adresse en clair) est volontairement conservée : elle maintient la limite
+    d'utilisation des promotions par client en cas de réinscription.
     Les demandes encore « En attente » sont ensuite annulées : il n'y a plus personne
     à rappeler. Leur motif d'annulation, fixé, ne contient aucune donnée personnelle.
     """
