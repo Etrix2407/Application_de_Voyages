@@ -161,7 +161,7 @@ DEFAULT_TEXTS: dict[str, DefaultText] = {
         "Merci, votre avis est en ligne",
         _paragraphs(
             "Bonjour {prénom},",
-            "Merci, votre avis « {titre} » ({destination}) est en ligne.",
+            "Merci, votre avis « {titre} » sur {destination} est en ligne.",
             "{lien vers la destination}",
         ),
         {
@@ -176,7 +176,7 @@ DEFAULT_TEXTS: dict[str, DefaultText] = {
         "Votre avis n'est pas publié",
         _paragraphs(
             "Bonjour {prénom},",
-            "Votre avis « {titre} » ({destination}) n'est pas publié sur notre site.",
+            "Votre avis « {titre} » sur {destination} n'est pas publié sur notre site.",
             "Motif : {motif}",
             "{correction}",
         ),
@@ -194,7 +194,7 @@ DEFAULT_TEXTS: dict[str, DefaultText] = {
         "Réponse de l'agence à votre avis",
         _paragraphs(
             "Bonjour {prénom},",
-            "{annonce} à votre avis « {titre} » ({destination}).",
+            "{annonce} à votre avis « {titre} » sur {destination}.",
             "Réponse de {auteur} :",
             "{réponse}",
             "Vous retrouvez votre avis et cette réponse sur la page « Mes avis » :",

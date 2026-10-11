@@ -17,6 +17,7 @@ from accounts.models import EmailKind
 from accounts.services.emails import send_email, site_url
 from orders.models import Order
 from orders.services.emails import order_dates
+from orders.services.labels import destination_label
 from reviews.services.eligibility import all_reviewable_orders
 
 # Au-delà, plus d'invitation : le client peut toujours donner son avis depuis le détail de sa demande.
@@ -39,7 +40,7 @@ def send_review_invitations() -> int:
 def review_invitation_context(order: Order) -> dict:
     return {
         "prénom": order.client.first_name,
-        "destination": f"{order.destination_name} ({order.country_name})",
+        "destination": destination_label(order),
         "dates": order_dates(order),
         "lien": site_url(reverse("create_review", kwargs={"order_pk": order.pk})),
     }

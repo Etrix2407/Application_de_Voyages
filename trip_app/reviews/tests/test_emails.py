@@ -41,6 +41,7 @@ class ReviewEmailTests(SendEmailsImmediately, TestCase):
 
         body = self.assertSentToJulie(EmailKind.REVIEW_PUBLISHED)
         self.assertEqual(mail.outbox[0].subject, "Merci, votre avis est en ligne")
+        self.assertIn(f"« Séjour inoubliable » sur Kyoto ({self.trip.country_name})", body)
         self.assertIn(f"/catalogue/destinations/{self.trip.destination_id}/", body)
 
     def test_refused_with_reason_and_correction_deadline(self):
