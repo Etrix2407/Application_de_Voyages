@@ -88,6 +88,13 @@ class ClientCorrectionTests(TestCase):
         self.assertEqual(self.marie.phone, "0470123456")
         self.assertEqual(self.marie.birth_date, date(1955, 4, 21))
 
+    def test_back_to_list_keeps_search_and_page(self):
+        data = {"first_name": "Marie", "last_name": "Dupont", "birth_date": "1955-04-12"}
+
+        response = self.client.post(f"{self.url}?q=dupont&page=2&next=https://exemple.org", data)
+
+        self.assertRedirects(response, f"{reverse('client_list')}?q=dupont&page=2")
+
     def test_email_and_password_not_editable(self):
         self.client.post(
             self.url,
