@@ -62,7 +62,7 @@ La commande refuse de s'exécuter en production (`DJANGO_DEBUG=0`), ainsi que su
 
 ### E-mails en développement
 
-En développement, aucun e-mail n'est réellement envoyé : il s'affiche dans le terminal où tourne `runserver`. C'est le cas des liens d'activation des agents : copiez le lien affiché dans le navigateur. Les e-mails **mis en file** (« mot de passe oublié » et e-mails promotionnels) ne partent qu'au passage de `process_emails` : lancez `python manage.py process_emails`, ils s'affichent alors dans son terminal.
+En développement, aucun e-mail n'est réellement envoyé : il s'affiche dans le terminal où tourne `runserver`. C'est le cas des liens d'activation des agents : copiez le lien affiché dans le navigateur. Les e-mails promotionnels, **mis en file**, ne partent qu'au passage de `process_emails` : lancez `python manage.py process_emails`, ils s'affichent alors dans son terminal.
 
 C'est le **mode test**, actif par défaut dès que `DJANGO_DEBUG=1` (jamais en production) :
 
@@ -125,10 +125,10 @@ Formats à respecter :
 
 ### Traiter les demandes de voyage (agent ou administrateur)
 
-1. Menu **Demandes de voyage** : toutes les demandes, les plus récentes d'abord (tri inversable), par pages de 25.
+1. Menu **Demandes de voyage** : toutes les demandes, les plus récentes d'abord (tri inversable), par pages de 25. Le client est affiché « Prénom Nom », ou « Client supprimé » si son compte n'existe plus.
 2. Filtres : état, pays, destination, client (nom, prénom ou e-mail, sans tenir compte des accents) et période de départ.
 3. Le détail d'une demande affiche le téléphone et l'e-mail du client (cliquables pour appeler ou écrire), les voyageurs, les activités aux prix figés, les remarques et l'historique.
-4. Après avoir rappelé le client : **Confirmer la demande** (impossible une fois la date de départ passée : la demande ne peut alors plus qu'être annulée). **Annuler la demande** est possible tant qu'elle est en attente ou confirmée, avec un **motif interne obligatoire** (visible par le personnel seulement) et une **explication pour le client** facultative (affichée dans l'historique de sa demande ; vide, aucun motif ne lui est affiché). Chaque action est notée dans l'historique avec la date et votre nom (le client, lui, voit « Agence »).
+4. Après avoir rappelé le client : **Confirmer la demande** (impossible une fois la date de départ passée : la demande ne peut alors plus qu'être annulée). La fiche affiche le prix aux tarifs du jour : s'il a changé avant votre clic, la confirmation est refusée et la fiche montre le nouveau prix. **Annuler la demande** est possible tant qu'elle est en attente ou confirmée, avec un **motif interne obligatoire** (jamais montré au client sur le site ni dans ses e-mails, mais présent dans son fichier « Télécharger mes données », voir [Questions en attente de la cliente](#questions-en-attente-de-la-cliente)) et une **explication pour le client** facultative (affichée dans l'historique de sa demande ; vide, aucun motif ne lui est affiché). Chaque action est notée dans l'historique avec la date et votre nom (le client, lui, voit « Agence »).
 
 ### Modérer les avis (agent ou administrateur)
 
@@ -136,7 +136,7 @@ Formats à respecter :
 2. « Lire et modérer » : l'avis, sa signature publique et toujours le **vrai client** et sa demande, même pour un avis « Voyageur anonyme ».
 3. **Publier l'avis**, ou **Refuser l'avis** (l'action porte sur la version que vous avez lue : si le client l'a modifiée entre-temps, relisez-la) avec un motif de la liste (langage injurieux, hors sujet, coordonnées personnelles, autre) et une précision, obligatoire pour « Autre ». Un avis publié peut être **masqué** de la même façon. Le client voit le motif. Le texte d'un client n'est jamais modifié.
 4. **Tous les avis** (lien depuis « Avis à modérer ») : tous les avis, du plus récent au plus ancien, 25 par page, filtrables par état, pays, destination, note, **avis négatifs seulement**, date de l'avis et date du séjour.
-5. **Répondre à l'avis** (avis publié uniquement) : une seule réponse par avis, publique, signée de votre **prénom**. Seul son auteur peut la modifier (un administrateur si l'auteur a quitté l'agence : compte supprimé ou désactivé). Si le client modifie son avis, la réponse est supprimée.
+5. **Répondre à l'avis** (avis publié uniquement) : une seule réponse par avis, publique, signée de votre **prénom**. Seul son auteur peut la modifier (un administrateur si l'auteur a quitté l'agence : compte supprimé ou désactivé). Si le client modifie son avis, la réponse est supprimée ; une réponse envoyée après une modification que vous n'aviez pas lue est refusée, même si l'avis a été republié entre-temps.
 6. **E-mails au client (v5)** (`reviews/services/notifications.py`) : avis publié (« Merci, votre avis est en ligne », avec le lien vers la destination) ; avis refusé, masqué ou retiré automatiquement (« Voyage annulé ») : le motif et, tant que l'avis est encore modifiable, la date limite de correction (30 jours après la création de l'avis), sinon la mention que ce délai est dépassé (pas pour « Voyage annulé ») ; réponse de l'agence, à sa création et à chaque modification. Un client supprimé (avis anonymisé) ne reçoit rien.
 
 ### Gérer les promotions (administrateur ; agents en consultation)
@@ -179,7 +179,7 @@ Formats à respecter :
 
 ### Mot de passe oublié
 
-Sur la page de connexion, **Mot de passe oublié ?** envoie un lien valable 1 heure (3 demandes par heure au plus pour une même adresse, contre les envois en masse). L'e-mail est mis en file et part au passage suivant de `process_emails` (5 minutes au plus, avant les e-mails promotionnels) : la page répond donc aussi vite, que l'adresse ait un compte ou non. En développement, lancez `python manage.py process_emails` pour le recevoir. Le lien d'un membre du personnel désactivé ne fonctionne plus.
+Sur la page de connexion, **Mot de passe oublié ?** envoie un lien valable 1 heure (3 demandes par heure au plus pour une même adresse, contre les envois en masse). L'e-mail part immédiatement. Le lien d'un membre du personnel désactivé ne fonctionne plus.
 
 Après chaque changement de mot de passe (depuis le profil, par « Mot de passe oublié » ou par un lien envoyé par l'agence), un e-mail de sécurité prévient le titulaire du compte, client ou membre du personnel : « Si ce n'est pas vous, contactez-nous ». Il n'est pas envoyé quand un agent invité choisit son tout premier mot de passe.
 
@@ -208,6 +208,7 @@ Limites par adresse IP, contre les robots : 20 échecs de connexion par 15 minut
 - Un client ne voit jamais les données d'un autre client ni celles du personnel. Les agents ne voient pas les favoris des clients.
 - RGPD : consentement enregistré à l'inscription, page [politique de confidentialité](trip_app/templates/privacy.html), suppression réelle du compte par le client, téléchargement de ses données au format JSON (droit à la portabilité) : chaque application fournit les siennes (`services/data_export.py`), assemblées par la vue `accounts/views/data_export.py`.
 - RGPD, demandes de voyage : à la suppression d'un compte client, ses demandes sont conservées pour les statistiques, sans lien vers le compte (remarques et motifs effacés, motifs internes compris) ; seule une empreinte non lisible de l'adresse e-mail (HMAC) est gardée, pour appliquer les limites des promotions par client. Ses demandes encore « En attente » sont **annulées automatiquement** (motif interne « Compte client supprimé : demande annulée automatiquement. ») : le personnel n'a plus personne à rappeler ; les demandes confirmées restent confirmées, marquées « Client supprimé ». Automatique quel que soit le chemin de suppression (`orders/signals.py`).
+- La base refuse elle-même une demande incohérente (retour le jour du départ ou avant, aucun adulte, prix ou remise négatif, état inconnu) et une promotion incohérente : contraintes `CheckConstraint` dans `orders/models.py` et `promotions/models.py`, en plus des contrôles des formulaires.
 - Inscription avec une adresse déjà confirmée : aucun compte n'est créé, la page affichée est identique et la propriétaire de l'adresse est prévenue par e-mail. Limite atténuée : le compte étant utilisable avant confirmation, essayer de se connecter avec le mot de passe choisi permet de savoir si l'adresse avait déjà un compte confirmé ; pour freiner ce test en série, une adresse IP qui s'est inscrite dans l'heure est bloquée 15 minutes après 3 échecs de connexion.
 - Inscription avec l'adresse de quelqu'un d'autre (« pré-détournement ») : un tiers peut créer un compte non confirmé avec une adresse qui n'est pas la sienne et un mot de passe qu'il connaît. La page de confirmation affiche donc les informations du compte (nom, téléphone, date de naissance) et demande un clic sur un bouton : la vraie propriétaire de l'adresse voit que ce compte n'est pas le sien et, au lieu de le confirmer, recommence l'inscription, ce qui le remplace par le sien. Ouvrir le lien ne confirme rien.
 - Clients non confirmés : la demande de voyage est refusée à la fois par la vue et par le service (`orders/services/placing.py`). Le personnel n'est pas concerné.
@@ -428,7 +429,7 @@ Quatre commandes doivent tourner seules sur le serveur (tâche planifiée Window
 
 | Commande | Fréquence | Rôle |
 |---|---|---|
-| `python manage.py process_emails` | Toutes les 5 minutes | Envoie les e-mails mis en file (« mot de passe oublié » d'abord, puis les e-mails promotionnels ; 200 au plus par passage), retente les e-mails en attente (5 puis 15 minutes après l'échec précédent ; un e-mail jamais tenté, par exemple après un arrêt du serveur, est repris au bout de 5 minutes) et efface les lignes du journal des e-mails de plus d'un an |
+| `python manage.py process_emails` | Toutes les 5 minutes | Envoie les e-mails promotionnels mis en file (après les autres e-mails du passage ; 200 au plus par passage), retente les e-mails en attente (5 puis 15 minutes après l'échec précédent ; un e-mail jamais tenté, par exemple après un arrêt du serveur, est repris au bout de 5 minutes) et efface les lignes du journal des e-mails de plus d'un an |
 | `python manage.py purge_unconfirmed` | Une fois par jour | Efface les comptes clients dont l'adresse n'a pas été confirmée dans les 30 jours (RGPD) ; chacun reçoit un dernier e-mail qui l'annonce |
 | `python manage.py send_trip_reminders` | Une fois par jour | Envoie le rappel des départs dans 7 jours ou moins et l'invitation à donner un avis après le retour, une seule fois par demande, avec rattrapage des jours manqués (voir [Rappels de voyage](#rappels-de-voyage)) |
 | `python manage.py clearsessions` | Une fois par jour | Commande de Django : efface de la base les sessions de connexion expirées, qui sinon s'accumulent |
@@ -471,7 +472,8 @@ trip_app/
 ├── common/                 # application partagée (dans INSTALLED_APPS) : text.py (comparaison sans accents,
 │                           # montants en euros), db.py (Normalize : comparaison sans accents ni majuscules dans
 │                           # les requêtes SQLite), apps.py (enregistre Normalize à chaque connexion),
-│                           # middleware.py (en-tête Content-Security-Policy)
+│                           # middleware.py (en-tête Content-Security-Policy), forms.py (champ de date commun),
+│                           # error_reports.py (rapport d'erreur 500 sans champs envoyés ni cookies)
 ├── accounts/               # comptes : utilisateurs, rôles, RGPD ; journal des e-mails (v5)
 │   ├── views/              # auth, profile, data_export, staff, clients, email_failures, email_texts, unsubscribe
 │   │                       # (une responsabilité par module)
@@ -511,8 +513,7 @@ trip_app/
 │   │                       # d'état), filtering (liste du personnel), privacy (anonymisation RGPD),
 │   │                       # promotion_statistics (statistiques d'une promotion), reminders (rappel avant le
 │   │                       # départ), emails (e-mails des demandes au client et alerte au personnel),
-│   │                       # email_rebuilders (reconstruction de ces e-mails), data_export (demandes du client),
-│   │                       # labels (libellé « Kyoto (Japon) » commun aux e-mails)
+│   │                       # email_rebuilders (reconstruction de ces e-mails), data_export (demandes du client)
 │   ├── models.py · forms.py · signals.py · urls.py
 │   └── tests/
 ├── reviews/                # avis clients (v3) : modèle, avis vérifiés, lien avec les demandes
@@ -551,7 +552,7 @@ Ces points sont soulevés par l'audit d'octobre 2026. Ils ne sont **pas tranché
 1. Le **motif interne** d'une annulation par l'agence doit-il figurer dans le fichier « Télécharger mes données » du client ? Aujourd'hui, il y figure.
 2. L'**empreinte HMAC** de l'adresse e-mail, gardée après la suppression d'un compte pour les limites des promotions, vaut-elle « anonymisation » ? Le dernier e-mail envoyé au client affirme que ses données sont effacées.
 3. Faut-il **annuler automatiquement** les demandes encore « En attente » dont la date de départ est passée ?
-4. Faut-il **limiter dans le temps** la possibilité de donner un avis après un voyage ?
+4. Faut-il **limiter dans le temps** la possibilité de donner un avis après un voyage, et l'invitation à le donner ? Aujourd'hui, l'avis reste possible sans limite ; l'invitation n'est envoyée que si le retour date de 7 jours au plus (règle technique, pour ne pas inviter tout l'historique au premier lancement : à valider).
 5. Faut-il un **mode test** des e-mails sur une préproduction réglée en `DJANGO_DEBUG=0` ? Aujourd'hui, le mode test n'existe qu'en développement.
 6. Peut-on envoyer par e-mail une **promotion à code qui n'a pas encore commencé** ?
 7. Le **compteur** « Avis à modérer (N) » du menu suffit-il comme « tableau de bord » ?
