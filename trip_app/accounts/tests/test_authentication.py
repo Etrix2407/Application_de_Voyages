@@ -134,6 +134,20 @@ class SignUpTests(SendEmailsImmediately, TestCase):
         self.assertEqual(mail.outbox[-1].to, ["marie@example.com"])
         self.assertIn("Un compte existe déjà", mail.outbox[-1].body)
 
+    def test_simultaneous_sign_up_with_same_address(self):
+        set_password = User.set_password
+
+        def other_sign_up_meanwhile(user, password):
+            # Une autre inscription avec la même adresse est enregistrée pendant celle-ci.
+            User.objects.create(email="marie@example.com", role=Role.CLIENT)
+            set_password(user, password)
+
+        with mock.patch.object(User, "set_password", other_sign_up_meanwhile):
+            response = self.client.post(self.url, sign_up_data())
+
+        self.assertRedirects(response, reverse("sign_up_done"))
+        self.assertEqual(User.objects.count(), 1)
+
     def test_new_sign_up_replaces_unconfirmed_account(self):
         # Un tiers inscrit l'adresse de Marie avec son propre mot de passe.
         pirate_password = "tiers-connu-2026"

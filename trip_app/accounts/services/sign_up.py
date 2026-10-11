@@ -15,7 +15,7 @@ la propriétaire de l'adresse ne confirme pas sans le savoir un compte créé pa
 from datetime import timedelta
 
 from django.core import signing
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.urls import reverse
 from django.utils import timezone
 
@@ -63,12 +63,17 @@ def request_sign_up(data: dict) -> None:
         setattr(user, field, data.get(field))
     user.set_promotional_emails_consent(data.get("promotional_emails", False))
     user.set_password(data["password1"])
-    with transaction.atomic():
-        if existing:
-            # Compte non confirmé : supprimé (sessions et favoris compris) et remplacé.
-            # Ses anciens liens de confirmation ne valent plus rien (autre compte).
-            existing.delete()
-        user.save()
+    try:
+        with transaction.atomic():
+            if existing:
+                # Compte non confirmé : supprimé (sessions et favoris compris) et remplacé.
+                # Ses anciens liens de confirmation ne valent plus rien (autre compte).
+                existing.delete()
+            user.save()
+    except IntegrityError:
+        # Inscription simultanée avec la même adresse : la première l'emporte. La page affichée
+        # reste la même que pour une adresse déjà inscrite : rien n'est révélé.
+        return
     send_confirmation(user)
 
 

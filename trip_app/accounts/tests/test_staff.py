@@ -7,6 +7,7 @@ from django.core import mail
 from django.test import TestCase
 from django.urls import reverse
 
+from accounts.forms import AgentCreationForm
 from accounts.models import Role
 from accounts.services.password_links import AgentInvitationTokenGenerator, agent_invitation_token_generator
 
@@ -101,6 +102,18 @@ class AgentCreationTests(SendEmailsImmediately, TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(len(mail.outbox), 0)
+
+    def test_email_taken_at_the_same_time_rejected(self):
+        # L'adresse est prise entre la validation du formulaire et l'enregistrement.
+        create_client(email="pris@example.com")
+
+        with mock.patch.object(AgentCreationForm, "validate_unique"):
+            response = self.client.post(
+                reverse("create_agent"), {"first_name": "L", "last_name": "M", "email": "pris@example.com"}
+            )
+
+        self.assertContains(response, "Un compte existe déjà avec cette adresse e-mail.")
+        self.assertEqual(User.objects.filter(email="pris@example.com").count(), 1)
 
 
 class StaffMemberEditTests(TestCase):
