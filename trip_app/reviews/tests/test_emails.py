@@ -1,6 +1,6 @@
 """E-mails envoyés au client sur son avis (v5)."""
 
-from datetime import timedelta
+from datetime import UTC, timedelta
 from unittest import mock
 
 from django.core import mail
@@ -44,12 +44,18 @@ class ReviewEmailTests(SendEmailsImmediately, TestCase):
         self.assertIn(f"/catalogue/destinations/{self.trip.destination_id}/", body)
 
     def test_refused_with_reason_and_correction_deadline(self):
+        # Fin du délai à 23 h 30 UTC : déjà le lendemain à l'heure belge.
+        yesterday = timezone.now() - timedelta(days=1)
+        self.review.created_at = yesterday.astimezone(UTC).replace(hour=23, minute=30)
+        self.review.save()
+        deadline = timezone.localtime(self.review.editable_until)
+        self.assertNotEqual(deadline.date(), self.review.editable_until.astimezone(UTC).date())
+
         refuse(self.review, RefusalReason.OTHER, "Merci de retirer le nom du guide.")
 
         body = self.assertSentToJulie(EmailKind.REVIEW_REFUSED)
         self.assertIn("Motif : Autre — Merci de retirer le nom du guide.", body)
-        deadline = date(timezone.localtime(self.review.created_at + timedelta(days=30)), "j F Y")
-        self.assertIn(f"Vous pouvez corriger votre avis jusqu'au {deadline}", body)
+        self.assertIn(f"Vous pouvez corriger votre avis jusqu'au {date(deadline, 'j F Y')}", body)
 
     def test_deadline_passed_instead_of_correction_reminder(self):
         self.review.created_at = timezone.now() - timedelta(days=31)

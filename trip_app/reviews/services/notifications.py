@@ -7,6 +7,7 @@ nouvelle tentative (voir reviews/services/email_rebuilders.py).
 """
 
 from django.urls import reverse
+from django.utils import timezone
 from django.utils.formats import date_format
 
 from accounts.models import EmailKind
@@ -49,8 +50,10 @@ def refused_context(review: Review) -> dict:
         reason += f" — {review.refusal_details}"
     correction = ""
     if client_can_edit(review):
+        # Date à l'heure belge : en UTC, une fin de délai en fin de soirée tomberait la veille.
+        deadline = date_format(timezone.localtime(review.editable_until), "j F Y")
         correction = (
-            f"Vous pouvez corriger votre avis jusqu'au {date_format(review.editable_until, 'j F Y')}, depuis la "
+            f"Vous pouvez corriger votre avis jusqu'au {deadline}, depuis la "
             "page « Mes avis ». Il sera de nouveau relu par l'agence avant sa publication.\n\n"
             f"{site_url(reverse('my_reviews'))}"
         )
