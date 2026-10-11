@@ -1,23 +1,32 @@
-/* Styles de base : texte grand, contraste élevé, adapté au mobile. */
+/* Design « Ligne d'horizon » : le nom de l'agence mis en image.
+   Un ciel bleu nuit, une ligne d'horizon ambrée et un soleil couchant posé dessus ;
+   les photos sont cadrées comme des hublots d'avion.
+   Trois couleurs : bleu altitude, brume et ambre du soir. Le rouge est réservé aux erreurs. */
 
 :root {
-    --color-text: #1a1a1a;
+    /* Les trois couleurs de l'agence. */
+    --color-primary: #1c3a57;       /* bleu altitude : en-tête, boutons, liens (11,7:1 sur le blanc) */
+    --color-soft: #e7eef3;          /* brume : surfaces calmes */
+    --color-accent: #9a5410;        /* ambre du soir : horizon, soleil, focus (5,7:1 sur le blanc, 4,9:1 sur la brume) */
+
+    /* Dérivés neutres (nuances du bleu, pas de nouvelle couleur). */
+    --color-primary-dark: #12283e;
+    --color-text: #16283a;
+    --color-text-muted: #47566a;    /* 7,5:1 sur le blanc */
+    --color-line: #b9c8d4;
     --color-background: #ffffff;
-    --color-primary: #0b4f8a;
-    --color-primary-dark: #083a66;
-    --color-border: #8a8a8a;
-    --color-success: #1e6b2f;
+
+    /* Erreurs et suppressions seulement. */
     --color-error: #a4161a;
-    --color-background-soft: #f2f5f8;
-    /* Contour de focus : orange foncé, contraste supérieur à 3:1 sur le blanc (WCAG). */
-    --color-focus: #b35c00;
-    --color-warning: #b35c00;
-    /* Contour de focus sur l'en-tête bleu : blanc, contraste 8,4:1. */
+    --color-error-dark: #7a1013;
+
+    /* Contour de focus : ambre sur fond clair, blanc sur l'en-tête bleu. */
+    --color-focus: var(--color-accent);
     --color-focus-on-primary: #ffffff;
-    /* Texte orangé foncé (états « en attente », « à venir », étoiles) : contraste supérieur à 4,5:1. */
-    --color-warning-text: #8a4b00;
-    /* Texte secondaire gris foncé : contraste supérieur à 4,5:1 sur le blanc. */
-    --color-text-muted: #444444;
+
+    --font-heading: Candara, "Gill Sans", "Gill Sans MT", Optima, "Segoe UI", sans-serif;
+    --font-body: "Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif;
+    --radius-window: 2.75rem / 2.25rem;
 }
 
 *,
@@ -32,14 +41,52 @@ html {
 
 body {
     margin: 0;
-    font-family: Verdana, Arial, sans-serif;
+    /* Un mot trop long pour la ligne passe à la ligne au lieu de déborder. */
+    overflow-wrap: break-word;
+    font-family: var(--font-body);
     line-height: 1.6;
     color: var(--color-text);
     background: var(--color-background);
 }
 
+h1,
+h2,
+h3 {
+    font-family: var(--font-heading);
+    line-height: 1.2;
+    color: var(--color-primary);
+}
+
+h1 {
+    margin: 0.5rem 0 1rem;
+    font-size: 2.4rem;
+    font-weight: 700;
+}
+
+h2 {
+    margin: 2.5rem 0 0.75rem;
+    font-size: 1.7rem;
+    font-weight: 700;
+}
+
+h3 {
+    font-size: 1.3rem;
+}
+
+p,
+li,
+dd {
+    max-width: 42rem;
+}
+
 a {
     color: var(--color-primary);
+    text-decoration-thickness: 2px;
+    text-underline-offset: 0.2em;
+}
+
+a:hover {
+    color: var(--color-accent);
 }
 
 a:focus-visible,
@@ -48,15 +95,16 @@ input:focus-visible,
 select:focus-visible,
 textarea:focus-visible {
     outline: 3px solid var(--color-focus);
-    outline-offset: 2px;
+    outline-offset: 3px;
 }
 
 .site-header a:focus-visible,
-.site-header button:focus-visible {
+.site-header button:focus-visible,
+.skip-link:focus-visible {
     outline-color: var(--color-focus-on-primary);
 }
 
-/* Masqué à l'écran, lu par les lecteurs d'écran (précise un lien « Modifier », « Voir »...). */
+/* Masqué à l'écran, lu par les lecteurs d'écran. */
 .sr-only {
     position: absolute;
     width: 1px;
@@ -77,34 +125,61 @@ textarea:focus-visible {
 .skip-link:focus {
     left: 1rem;
     top: 1rem;
-    padding: 0.5rem 1rem;
+    z-index: 10;
+    padding: 0.6rem 1rem;
+    color: var(--color-primary);
     background: var(--color-background);
 }
+
+/* En-tête : le ciel, fermé en bas par la ligne d'horizon. */
 
 .site-header {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
-    gap: 1rem;
-    padding: 1rem;
+    gap: 0.5rem 2rem;
+    /* Aligné sur la colonne de contenu (64rem moins ses marges). */
+    padding: 1rem max(1rem, calc((100% - 62rem) / 2));
     background: var(--color-primary);
+    border-bottom: 4px solid var(--color-accent);
 }
 
 .site-header a {
     color: #ffffff;
 }
 
+.site-header a:hover {
+    color: var(--color-soft);
+}
+
+/* Logo : un petit soleil posé sur l'horizon, avant le nom. */
 .logo {
-    font-size: 1.3rem;
-    font-weight: bold;
+    display: inline-flex;
+    /* Texte très agrandi sur un petit écran : le nom se coupe plutôt que de déborder. */
+    overflow-wrap: anywhere;
+    align-items: flex-end;
+    gap: 0.6rem;
+    font-family: var(--font-heading);
+    font-size: 1.5rem;
+    font-weight: 700;
     text-decoration: none;
+}
+
+.logo::before {
+    content: "";
+    width: 1.6rem;
+    height: 0.8rem;
+    margin-bottom: 0.35rem;
+    background: var(--color-accent);
+    border-radius: 1.6rem 1.6rem 0 0;
+    box-shadow: 0 3px 0 0 #ffffff;
 }
 
 .menu {
     display: flex;
     flex-wrap: wrap;
-    gap: 0 1rem;
+    gap: 0 1.25rem;
     margin: 0;
     padding: 0;
     list-style: none;
@@ -115,20 +190,180 @@ textarea:focus-visible {
 .logout-form button {
     display: inline-block;
     min-height: 44px;
-    padding: 0.5rem 0.25rem;
+    padding: 0.5rem 0.1rem;
+}
+
+.menu a {
+    text-decoration: none;
+    border-bottom: 2px solid transparent;
+}
+
+.menu a:hover {
+    border-bottom-color: var(--color-accent);
+}
+
+.logout-form button {
+    margin: 0;
+    color: #ffffff;
+    font-size: 1rem;
+    font-weight: normal;
+    border: none;
+    border-radius: 0;
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+    background: none;
+}
+
+.logout-form button:hover {
+    color: var(--color-soft);
+    background: none;
 }
 
 .content {
-    max-width: 60rem;
+    max-width: 64rem;
     margin: 0 auto;
-    padding: 1.5rem 1rem;
+    padding: 2rem 1rem 3rem;
 }
 
 .site-footer {
-    padding: 1rem;
+    padding: 1.5rem 1rem;
     text-align: center;
-    background: var(--color-background-soft);
+    color: var(--color-text);
+    background: var(--color-soft);
+    border-top: 4px solid var(--color-primary);
 }
+
+.site-footer p {
+    margin: 0 auto;
+}
+
+/* Accueil : le ciel en grand, et le soleil qui se lève une seule fois au chargement. */
+
+.hero {
+    position: relative;
+    overflow: hidden;
+    margin: -0.5rem 0 2rem;
+    padding: 3rem 2rem 4.5rem;
+    background: var(--color-soft);
+    border-bottom: 4px solid var(--color-accent);
+    border-radius: 2rem 2rem 0 0;
+}
+
+.hero > * {
+    position: relative;
+    z-index: 1;
+}
+
+.hero h1 {
+    max-width: 14ch;
+    margin-top: 0;
+    font-size: clamp(2.4rem, 6vw, 3.6rem);
+}
+
+.hero-text {
+    font-size: 1.25rem;
+}
+
+.hero::after {
+    content: "";
+    position: absolute;
+    right: 8%;
+    bottom: 0;
+    width: clamp(8rem, 24vw, 15rem);
+    aspect-ratio: 2 / 1;
+    background: var(--color-accent);
+    border-radius: 15rem 15rem 0 0;
+    opacity: 0.9;
+    animation: sunrise 1.6s ease-out both;
+}
+
+@keyframes sunrise {
+    from {
+        transform: translateY(100%);
+    }
+}
+
+@media (max-width: 40rem) {
+    .hero {
+        padding: 2rem 1.25rem 6rem;
+    }
+
+    .hero::after {
+        right: 1.25rem;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .hero::after {
+        animation: none;
+    }
+}
+
+/* Étapes d'une demande : un trajet, chaque étape est une escale. */
+
+.steps {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(15rem, 100%), 1fr));
+    gap: 1.5rem;
+    margin: 1.5rem 0 0;
+    padding: 0;
+    list-style: none;
+    counter-reset: step;
+}
+
+.steps li {
+    position: relative;
+    padding-top: 3.5rem;
+    counter-increment: step;
+}
+
+.steps li::before {
+    content: counter(step);
+    position: absolute;
+    top: 0;
+    left: 0;
+    display: grid;
+    place-items: center;
+    width: 2.6rem;
+    height: 2.6rem;
+    font-family: var(--font-heading);
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: #ffffff;
+    background: var(--color-primary);
+    border-radius: 50%;
+}
+
+/* La route entre les escales. */
+.steps li::after {
+    content: "";
+    position: absolute;
+    top: 1.3rem;
+    left: 3.2rem;
+    right: -1rem;
+    border-top: 3px dotted var(--color-line);
+}
+
+.steps li:last-child::after {
+    display: none;
+}
+
+/* Moins de trois colonnes (sous 900 px ; dans une media query, 1rem = 16 px) : pas de route horizontale. */
+@media (max-width: 56.25rem) {
+    .steps li::after {
+        display: none;
+    }
+}
+
+.steps h3 {
+    margin: 0 0 0.25rem;
+}
+
+.steps p {
+    margin: 0;
+}
+
+/* Messages */
 
 .messages {
     padding: 0;
@@ -136,45 +371,89 @@ textarea:focus-visible {
 }
 
 .message {
-    padding: 0.75rem 1rem;
+    padding: 0.8rem 1rem;
     margin-bottom: 0.5rem;
+    background: var(--color-soft);
     border-left: 6px solid var(--color-primary);
-    background: var(--color-background-soft);
+    border-radius: 0 0.75rem 0.75rem 0;
 }
 
 .message-success {
-    border-color: var(--color-success);
+    border-color: var(--color-primary);
+}
+
+.message-warning {
+    border-color: var(--color-accent);
 }
 
 .message-error {
     border-color: var(--color-error);
 }
 
-.message-warning {
-    border-color: var(--color-warning);
+/* Le type du message est aussi donné par un symbole, pas seulement par la couleur.
+   Symbole décoratif (texte de remplacement vide) : le texte du message suffit. */
+.message-success,
+.message-warning,
+.message-error {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.6rem;
+}
+
+.message-success::before,
+.message-warning::before,
+.message-error::before {
+    flex-shrink: 0;
+    display: grid;
+    place-items: center;
+    width: 1.6rem;
+    height: 1.6rem;
+    font-weight: bold;
+    line-height: 1;
+    color: #ffffff;
+    border-radius: 50%;
+}
+
+.message-success::before {
+    content: "✓" / "";
+    background: var(--color-primary);
+}
+
+.message-warning::before {
+    content: "!" / "";
+    color: #ffffff;
+    background: var(--color-accent);
+}
+
+.message-error::before {
+    content: "✕" / "";
+    background: var(--color-error);
 }
 
 /* Formulaires */
 
 label {
     display: block;
-    margin-top: 1rem;
-    font-weight: bold;
+    margin-top: 1.1rem;
+    font-weight: 600;
 }
 
 input,
 select,
 textarea {
     width: 100%;
-    max-width: 30rem;
-    padding: 0.6rem;
-    font-size: 1rem;
-    border: 2px solid var(--color-border);
-    border-radius: 4px;
+    max-width: 32rem;
+    padding: 0.65rem 0.75rem;
+    font: inherit;
+    color: var(--color-text);
+    background: var(--color-background);
+    border: 2px solid var(--color-text-muted);
+    border-radius: 0.6rem;
 }
 
-/* Cases à cocher : grandes, placées devant leur libellé, sur la même ligne. */
-input[type="checkbox"] {
+/* Cases à cocher et boutons radio : grands, placés devant leur libellé, sur la même ligne. */
+input[type="checkbox"],
+input[type="radio"] {
     flex-shrink: 0;
     width: 1.5rem;
     height: 1.5rem;
@@ -196,18 +475,20 @@ form div:has(> input[type="checkbox"]) > input[type="checkbox"] {
 
 form div:has(> input[type="checkbox"]) > label {
     flex: 1;
+    min-width: 0;
     margin-top: 0;
     font-weight: normal;
 }
 
-/* Aide et erreurs de la case : sous la ligne case + libellé. */
 form div:has(> input[type="checkbox"]) > :not(label, input) {
     flex-basis: 100%;
 }
 
-/* Choix multiples (activités) : la case est dans son libellé. */
-label:has(> input[type="checkbox"]) {
+label:has(> input[type="checkbox"]),
+label:has(> input[type="radio"]) {
     display: flex;
+    /* Le texte à côté de la case peut se couper : sinon un mot très long sort de l'écran. */
+    overflow-wrap: anywhere;
     align-items: flex-start;
     gap: 0.75rem;
     margin-top: 0.5rem;
@@ -215,55 +496,92 @@ label:has(> input[type="checkbox"]) {
 }
 
 fieldset {
+    /* Sinon le cadre s'élargit au libellé le plus long et sort de l'écran. */
+    min-width: 0;
     margin-top: 1rem;
-    border: 2px solid var(--color-border);
-    border-radius: 4px;
+    padding: 0.5rem 1rem 1rem;
+    border: 2px solid var(--color-text-muted);
+    border-radius: 1rem;
 }
 
 legend {
-    font-weight: bold;
+    max-width: 100%;
+    padding: 0 0.4rem;
+    font-weight: 600;
 }
 
 .button,
 button {
     display: inline-block;
+    max-width: 100%;
     margin-top: 1rem;
-    padding: 0.7rem 1.4rem;
-    font-size: 1rem;
+    padding: 0.75rem 1.5rem;
+    font: inherit;
+    font-weight: 600;
     color: #ffffff;
     text-decoration: none;
     background: var(--color-primary);
-    border: none;
-    border-radius: 4px;
+    border: 2px solid var(--color-primary);
+    border-radius: 999px;
     cursor: pointer;
 }
 
 .button:hover,
 button:hover {
+    color: #ffffff;
+    background: var(--color-primary-dark);
+    border-color: var(--color-primary-dark);
+}
+
+.button-secondary {
+    color: var(--color-primary);
+    background: var(--color-background);
+}
+
+.button-secondary:hover {
+    color: #ffffff;
     background: var(--color-primary-dark);
 }
 
+/* Espace porté par le premier bouton : si le bouton secondaire passe à la ligne,
+   il reste aligné à gauche. */
+button:has(+ .button-secondary),
+.button:has(+ .button-secondary) {
+    margin-right: 0.5rem;
+}
+
+.button-danger {
+    background: var(--color-error);
+    border-color: var(--color-error);
+}
+
+.button-danger:hover {
+    background: var(--color-error-dark);
+    border-color: var(--color-error-dark);
+}
+
 .errorlist {
-    color: var(--color-error);
+    margin: 0.4rem 0 0;
     padding-left: 1rem;
+    font-weight: 600;
+    color: var(--color-error);
 }
 
 /* Récapitulatif des erreurs, en haut du formulaire. */
 .form-errors {
     margin: 1rem 0;
-    padding: 0.75rem 1rem;
+    padding: 0.8rem 1.2rem;
+    background: var(--color-background);
     border: 3px solid var(--color-error);
-    border-radius: 6px;
-    background: var(--color-background-soft);
+    border-radius: 1rem;
 }
 
 .form-errors p {
     margin-top: 0;
-    font-weight: bold;
+    font-weight: 700;
     color: var(--color-error);
 }
 
-/* Les erreurs hors champ sont déjà dans le récapitulatif : pas de doublon dans le formulaire. */
 .form-errors + form > .errorlist.nonfield {
     display: none;
 }
@@ -278,40 +596,54 @@ button:hover {
     margin: 0.25rem 0;
 }
 
-.logout-form button {
-    margin: 0;
-    color: #ffffff;
-    text-decoration: underline;
-    background: none;
+.search-form,
+.filters {
+    padding: 1.25rem 1.5rem 1.5rem;
+    background: var(--color-soft);
+    border-radius: 1.5rem;
 }
 
-.logout-form button:hover {
-    background: none;
+/* Fiches de détail : libellé à gauche, valeur à droite sur grand écran. */
+
+.details {
+    display: grid;
+    grid-template-columns: minmax(10rem, max-content) 1fr;
+    gap: 0;
+    max-width: 44rem;
+    border-top: 2px solid var(--color-line);
+}
+
+.details dt,
+.details dd {
+    margin: 0;
+    padding: 0.6rem 0;
+    border-bottom: 2px solid var(--color-line);
 }
 
 .details dt {
-    margin-top: 0.75rem;
-    font-weight: bold;
+    padding-right: 1.5rem;
+    font-weight: 600;
+    color: var(--color-primary);
 }
 
-.details dd {
-    margin-left: 0;
+@media (max-width: 40rem) {
+    .details {
+        grid-template-columns: 1fr;
+    }
+
+    .details dt {
+        padding-bottom: 0;
+        border-bottom: none;
+    }
 }
 
 .actions {
     display: flex;
     flex-wrap: wrap;
-    gap: 1rem;
+    gap: 0.75rem 1rem;
+    margin: 0;
     padding: 0;
     list-style: none;
-}
-
-.button-danger {
-    background: var(--color-error);
-}
-
-.button-danger:hover {
-    background: #7a1013;
 }
 
 /* Tableaux : défilement horizontal limité au tableau sur petit écran. */
@@ -320,23 +652,35 @@ button:hover {
     overflow-x: auto;
 }
 
+/* Tableau défilant atteint au clavier (tabindex="0") : même contour que les liens. */
+.table-scroll:focus-visible {
+    outline: 3px solid var(--color-focus);
+    outline-offset: 3px;
+}
+
 table {
     width: 100%;
     border-collapse: collapse;
 }
 
 caption {
-    text-align: left;
-    font-weight: bold;
     padding: 0.5rem 0;
+    font-weight: 600;
+    text-align: left;
 }
 
 th,
 td {
-    padding: 0.6rem;
+    padding: 0.7rem;
     text-align: left;
     vertical-align: top;
-    border-bottom: 1px solid var(--color-border);
+    border-bottom: 2px solid var(--color-line);
+}
+
+thead th {
+    color: var(--color-primary);
+    background: var(--color-soft);
+    border-bottom: 3px solid var(--color-primary);
 }
 
 .table-actions {
@@ -347,202 +691,10 @@ td {
 
 .table-actions button {
     margin: 0;
-    /* Assez grand pour être visé facilement, même dans un tableau. */
     padding: 0.7rem 1rem;
 }
 
-.thumbnail {
-    display: block;
-    width: 8rem;
-    max-width: 100%;
-    height: auto;
-    border-radius: 4px;
-}
-
-/* Cartes du catalogue : une colonne sur téléphone, plusieurs sur ordinateur. */
-
-.cards {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(min(16rem, 100%), 1fr));
-    gap: 1rem;
-    padding: 0;
-    list-style: none;
-}
-
-.card {
-    padding: 1rem;
-    border: 2px solid var(--color-border);
-    border-radius: 6px;
-    background: var(--color-background);
-}
-
-.card h3 {
-    margin-top: 0;
-}
-
-.card-photo,
-.photo {
-    display: block;
-    width: 100%;
-    height: auto;
-    border-radius: 4px;
-}
-
-.card-photo {
-    aspect-ratio: 4 / 3;
-    object-fit: cover;
-    margin-bottom: 0.5rem;
-}
-
-.photo {
-    max-width: 40rem;
-}
-
-.search-form,
-.filters {
-    padding: 1rem;
-    background: var(--color-background-soft);
-    border-radius: 6px;
-}
-
-.button-secondary {
-    margin-left: 0.5rem;
-    color: var(--color-primary);
-    background: var(--color-background);
-    border: 2px solid var(--color-primary);
-}
-
-.button-secondary:hover {
-    color: #ffffff;
-}
-
-.result-count {
-    font-size: 1.2rem;
-    font-weight: bold;
-}
-
-.unavailable {
-    font-style: italic;
-    color: var(--color-text-muted);
-}
-
-/* États des demandes de voyage : toujours écrits en toutes lettres, la couleur n'est qu'un repère. */
-
-.status {
-    display: inline-block;
-    padding: 0.1rem 0.6rem;
-    font-weight: bold;
-    border-radius: 4px;
-    border: 2px solid currentColor;
-}
-
-.status-pending {
-    color: var(--color-warning-text);
-}
-
-.status-confirmed {
-    color: var(--color-success);
-}
-
-.status-cancelled {
-    color: var(--color-error);
-}
-
-/* États des avis. */
-
-.status-published {
-    color: var(--color-success);
-}
-
-.status-refused {
-    color: var(--color-error);
-}
-
-/* États des promotions. */
-
-.status-upcoming {
-    color: var(--color-warning-text);
-}
-
-.status-running {
-    color: var(--color-success);
-}
-
-.status-finished,
-.status-disabled {
-    color: var(--color-text-muted);
-}
-
-/* Étiquettes : texte toujours présent, la couleur n'est qu'un repère. */
-
-.badge {
-    display: inline-block;
-    padding: 0.1rem 0.5rem;
-    font-weight: bold;
-    color: #ffffff;
-    border-radius: 4px;
-}
-
-.badge-negative,
-.badge-warning {
-    background: var(--color-error);
-}
-
-.badge-promo {
-    background: var(--color-success);
-}
-
-.promo-banner {
-    margin: 1rem 0;
-    padding: 1rem;
-    border: 3px solid var(--color-success);
-    border-radius: 6px;
-    background: var(--color-background-soft);
-}
-
-.card h2 {
-    margin-top: 0;
-}
-
-.reviews {
-    list-style: none;
-    padding: 0;
-}
-
-.review {
-    margin-bottom: 1.5rem;
-    padding: 1rem;
-    border: 2px solid var(--color-border);
-    border-radius: 6px;
-}
-
-.review h3 {
-    margin-top: 0;
-}
-
-.verified {
-    font-weight: bold;
-    color: var(--color-success);
-}
-
-.review-meta {
-    color: var(--color-text-muted);
-}
-
-.agency-response {
-    margin-top: 0.75rem;
-    padding: 0.75rem 1rem;
-    border-left: 4px solid var(--color-primary);
-    background: var(--color-background-soft);
-}
-
-.stars {
-    color: var(--color-warning-text);
-    letter-spacing: 0.1em;
-}
-
-/* Tableaux du client sur téléphone : chaque ligne devient une carte, chaque cellule
-   précédée du nom de sa colonne (attribut data-label). */
+/* Tableaux du client sur téléphone : chaque ligne devient une carte. */
 
 @media (max-width: 40rem) {
     .table-cards thead {
@@ -556,9 +708,9 @@ td {
     .table-cards tr {
         display: block;
         margin-bottom: 1rem;
-        padding: 0.5rem;
-        border: 2px solid var(--color-border);
-        border-radius: 6px;
+        padding: 0.5rem 0.75rem;
+        border: 2px solid var(--color-text-muted);
+        border-radius: 1rem;
     }
 
     .table-cards td {
@@ -569,6 +721,183 @@ td {
     .table-cards td::before {
         content: attr(data-label);
         display: block;
-        font-weight: bold;
+        font-weight: 600;
+        color: var(--color-primary);
     }
+
+    /* Un état long (« En attente de validation ») passe à la ligne dans la carte. */
+    .table-cards .status {
+        white-space: normal;
+    }
+}
+
+/* Cartes du catalogue, photos en hublot. */
+
+.cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(16rem, 100%), 1fr));
+    gap: 1.5rem;
+    padding: 0;
+    list-style: none;
+}
+
+.card {
+    padding: 1rem 1.25rem 1.25rem;
+    background: var(--color-background);
+    border: 2px solid var(--color-line);
+    border-radius: 1.5rem;
+}
+
+.card h2,
+.card h3 {
+    margin: 0.25rem 0 0.5rem;
+}
+
+.card p {
+    margin: 0.4rem 0;
+}
+
+.card-photo,
+.photo,
+.thumbnail {
+    display: block;
+    max-width: 100%;
+    height: auto;
+    background: var(--color-soft);
+    border: 0.5rem solid var(--color-soft);
+    border-radius: var(--radius-window);
+}
+
+.card-photo {
+    width: 100%;
+    aspect-ratio: 5 / 4;
+    object-fit: cover;
+    margin-bottom: 0.5rem;
+}
+
+.photo {
+    width: 100%;
+    max-width: 34rem;
+    margin: 1.5rem 0;
+    border-width: 0.75rem;
+    border-radius: 5rem / 4rem;
+}
+
+.thumbnail {
+    width: 8rem;
+    border-width: 0.3rem;
+    border-radius: 1.5rem / 1.25rem;
+}
+
+.result-count {
+    font-size: 1.25rem;
+    font-weight: 700;
+}
+
+.unavailable {
+    font-style: italic;
+    color: var(--color-text-muted);
+}
+
+/* États : toujours écrits en toutes lettres. La forme les distingue aussi :
+   plein = acquis, contour = en cours, pointillés = terminé ou annulé. */
+
+.status {
+    display: inline-block;
+    padding: 0.1rem 0.75rem;
+    font-weight: 600;
+    white-space: nowrap;
+    border: 2px solid currentColor;
+    border-radius: 999px;
+}
+
+.status-confirmed,
+.status-published,
+.status-running {
+    color: #ffffff;
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+}
+
+.status-pending,
+.status-upcoming {
+    color: var(--color-accent);
+}
+
+.status-cancelled,
+.status-refused,
+.status-finished,
+.status-disabled {
+    color: var(--color-text-muted);
+    border-style: dashed;
+}
+
+/* Étiquettes : texte toujours présent, la couleur n'est qu'un repère. */
+
+.badge,
+.badge-negative,
+.badge-warning,
+.badge-promo {
+    display: inline-block;
+    padding: 0.1rem 0.6rem;
+    font-weight: 600;
+    color: #ffffff;
+    border-radius: 999px;
+}
+
+.badge-negative,
+.badge-warning {
+    background: var(--color-error);
+}
+
+.badge-promo {
+    background: var(--color-accent);
+}
+
+.promo-banner {
+    margin: 1.5rem 0;
+    padding: 1rem 1.5rem;
+    background: var(--color-background);
+    border: 3px solid var(--color-accent);
+    border-radius: 1.5rem;
+}
+
+/* Avis */
+
+.reviews {
+    padding: 0;
+    list-style: none;
+}
+
+.review {
+    margin-bottom: 1.5rem;
+    padding: 1.25rem 1.5rem;
+    background: var(--color-soft);
+    border-radius: 1.5rem 1.5rem 1.5rem 0.25rem;
+}
+
+.review h3 {
+    margin-top: 0;
+}
+
+.verified {
+    font-weight: 600;
+    color: var(--color-primary);
+}
+
+.review-meta {
+    color: var(--color-text-muted);
+}
+
+.agency-response {
+    margin-top: 0.75rem;
+    padding: 0.75rem 1rem;
+    background: var(--color-background);
+    border-left: 4px solid var(--color-primary);
+    border-radius: 0 1rem 1rem 0;
+}
+
+.stars {
+    color: var(--color-accent);
+    letter-spacing: 0.1em;
 }
