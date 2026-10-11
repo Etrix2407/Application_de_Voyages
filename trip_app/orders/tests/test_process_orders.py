@@ -6,11 +6,12 @@ from django.urls import reverse
 from django.utils import timezone
 
 from accounts.tests.factories import create_agent, create_client
+from catalog.models import Destination
 from catalog.tests.factories import create_activity, create_country, create_destination
 from orders.models import Order, OrderStatus, StatusChange
 from orders.services.status import TransitionNotAllowed, cancel_by_client, cancel_by_staff, confirm_by_staff
 
-from .factories import create_order
+from .factories import confirm_on_page, create_order
 
 
 class StaffProcessingTests(TestCase):
@@ -34,7 +35,7 @@ class StaffProcessingTests(TestCase):
         self.assertContains(response, self.cancel_url)
 
     def test_confirm_records_agent_in_history(self):
-        response = self.client.post(self.confirm_url, follow=True)
+        response = confirm_on_page(self.client, self.order, follow=True)
 
         self.assertContains(response, "est confirmée")
         self.assertEqual(self.refreshed_status(), OrderStatus.CONFIRMED)
@@ -42,6 +43,17 @@ class StaffProcessingTests(TestCase):
         self.assertEqual(
             (change.status, change.author, change.author_name), (OrderStatus.CONFIRMED, self.agent, "Luc Martin")
         )
+
+    def test_confirm_refused_when_price_changed_since_page_display(self):
+        page = self.client.get(self.detail)
+        Destination.objects.filter(pk=self.order.destination_id).update(price_from=Decimal("1500"))
+
+        response = self.client.post(
+            self.confirm_url, {"expected_price": page.context["expected_price"]}, follow=True
+        )
+
+        self.assertContains(response, "Le prix aux tarifs du jour a changé")
+        self.assertEqual(self.refreshed_status(), OrderStatus.PENDING)
 
     def test_confirmed_order_shows_cancel_only(self):
         confirm_by_staff(self.order, self.agent)
@@ -93,7 +105,7 @@ class StaffProcessingTests(TestCase):
     def test_invalid_transitions_refused_with_message(self):
         cancel_by_client(self.order)
 
-        confirm = self.client.post(self.confirm_url, follow=True)
+        confirm = self.client.post(self.confirm_url, {"expected_price": "0.00"}, follow=True)
         cancel = self.client.post(self.cancel_url, {"internal_reason": "Doublon."}, follow=True)
 
         self.assertContains(confirm, "Seule une demande en attente peut être confirmée.")

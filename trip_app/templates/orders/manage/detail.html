@@ -38,6 +38,7 @@
                     </p>
                     <form method="post" action="{% url 'manage_confirm_order' order.pk %}">
                         {% csrf_token %}
+                        <input type="hidden" name="expected_price" value="{{ expected_price }}">
                         <button type="submit">Confirmer la demande (client rappelé)</button>
                     </form>
                 </li>

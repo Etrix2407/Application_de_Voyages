@@ -12,6 +12,8 @@ les e-mails du client, mais figure dans les données qu'il peut télécharger.
 Le client est prévenu par e-mail de chaque action, sauf de l'annulation automatique (compte supprimé).
 """
 
+from decimal import Decimal
+
 from django.db import transaction
 from django.utils import timezone
 
@@ -26,10 +28,21 @@ from orders.services.reminders import send_departure_reminders
 CLIENT_CANCELLABLE = frozenset({OrderStatus.PENDING})
 CONFIRMABLE = frozenset({OrderStatus.PENDING})
 STAFF_CANCELLABLE = frozenset({OrderStatus.PENDING, OrderStatus.CONFIRMED})
+CONFIRM_REFUSAL = "Seule une demande en attente peut être confirmée."
 
 
 class TransitionNotAllowed(Exception):
     """Le changement d'état demandé n'est pas permis dans l'état actuel."""
+
+
+class PriceChanged(Exception):
+    """Le prix aux tarifs du jour n'est plus celui que l'agent a vu en confirmant."""
+
+    def __init__(self):
+        super().__init__(
+            "Le prix aux tarifs du jour a changé depuis l'affichage de la page : "
+            "vérifiez le nouveau prix avant de confirmer."
+        )
 
 
 def client_can_cancel(order: Order) -> bool:
@@ -62,14 +75,20 @@ def cancel_by_client(order: Order, reason: str = "") -> None:
     send_order_cancelled_by_client(order)
 
 
-def confirm_by_staff(order: Order, staff_member) -> None:
+def confirm_by_staff(order: Order, staff_member, expected_price: Decimal | None = None) -> None:
     """Confirme la demande au prix recalculé aux tarifs du jour.
 
     Si le prix a changé depuis la demande, l'historique l'indique (visible par le client).
+    `expected_price` : prix affiché à l'agent ; s'il ne correspond plus au recalcul, lève PriceChanged.
     """
+    if order.status not in CONFIRMABLE:
+        # Contrôle rapide avant le recalcul ; la mise à jour conditionnelle reste la garantie.
+        raise TransitionNotAllowed(CONFIRM_REFUSAL)
     if departure_passed(order):
         raise TransitionNotAllowed("La date de départ est passée : cette demande ne peut plus être confirmée.")
     quote = price_at_current_rates(order)
+    if expected_price is not None and expected_price != quote.price:
+        raise PriceChanged
     note = "" if quote.price == order.estimated_price else (
         f"Prix recalculé aux tarifs du jour : {euros(order.estimated_price)} → {euros(quote.price)}."
     )
@@ -86,7 +105,7 @@ def confirm_by_staff(order: Order, staff_member) -> None:
         author=staff_member,
         author_name=staff_member.get_full_name(),
         reason=note,
-        refusal="Seule une demande en attente peut être confirmée.",
+        refusal=CONFIRM_REFUSAL,
         updates=updates,
     )
     for field, value in updates.items():

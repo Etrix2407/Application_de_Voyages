@@ -1,5 +1,7 @@
 """Demandes de voyage côté personnel : liste filtrée, détail, confirmation et annulation."""
 
+from decimal import Decimal, InvalidOperation
+
 from django.contrib import messages
 from django.core.paginator import Paginator
 from django.shortcuts import get_object_or_404, redirect, render
@@ -11,6 +13,7 @@ from orders.models import Order, OrderStatus
 from orders.services.filtering import filter_orders
 from orders.services.placing import price_at_current_rates
 from orders.services.status import (
+    PriceChanged,
     TransitionNotAllowed,
     cancel_by_staff,
     confirm_by_staff,
@@ -46,6 +49,8 @@ def order_detail(request, pk):
     if context["can_confirm"]:
         # Prix qui sera enregistré si l'agent confirme maintenant.
         context["price_if_confirmed"] = price_at_current_rates(order)
+        # Renvoyé à la confirmation : si le prix change entre-temps, l'agent le revoit avant de confirmer.
+        context["expected_price"] = str(context["price_if_confirmed"].price)
         context["destination_on_quote_now"] = order.destination.price_from is None
     return render(request, "orders/manage/detail.html", context)
 
@@ -54,13 +59,24 @@ def order_detail(request, pk):
 @require_POST
 def confirm_order(request, pk):
     order = get_object_or_404(Order, pk=pk)
+    expected_price = _posted_price(request)
     try:
-        confirm_by_staff(order, request.user)
-    except TransitionNotAllowed as error:
+        if expected_price is None:
+            raise PriceChanged  # page ouverte avant l'ajout du contrôle, ou champ modifié
+        confirm_by_staff(order, request.user, expected_price=expected_price)
+    except (TransitionNotAllowed, PriceChanged) as error:
         messages.error(request, str(error))
     else:
         messages.success(request, f"La demande n° {order.pk} est confirmée.")
     return redirect("manage_order_detail", pk=order.pk)
+
+
+def _posted_price(request) -> Decimal | None:
+    """Prix vu par l'agent (champ caché de la page), ou None s'il est absent ou illisible."""
+    try:
+        return Decimal(request.POST.get("expected_price", ""))
+    except InvalidOperation:
+        return None
 
 
 @staff_required

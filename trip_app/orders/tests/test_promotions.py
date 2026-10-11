@@ -17,7 +17,7 @@ from orders.services.promotions import choose_promotion
 from promotions.models import Base, Kind, Promotion, Scope
 from promotions.tests.factories import create_promotion
 
-from .factories import create_order, departure_in, review_tokens, submit_order
+from .factories import confirm_on_page, create_order, departure_in, review_tokens, submit_order
 
 
 class ChoosePromotionTests(TestCase):
@@ -254,7 +254,7 @@ class ConfirmationTests(TestCase):
         promotion.save()
         self.client.force_login(create_agent())
 
-        self.client.post(reverse("manage_confirm_order", args=[order.pk]))
+        confirm_on_page(self.client, order)
 
         order.refresh_from_db()
         self.assertEqual((order.confirmed_price, order.confirmed_discount), (Decimal("1080.00"), Decimal("120.00")))
@@ -268,7 +268,7 @@ class ConfirmationTests(TestCase):
         kyoto.price_from = None
         kyoto.save()
         self.client.force_login(create_agent())
-        self.client.post(reverse("manage_confirm_order", args=[order.pk]))
+        confirm_on_page(self.client, order)
         self.client.force_login(client)
 
         response = self.client.get(reverse("my_order_detail", args=[order.pk]))
