@@ -14,6 +14,7 @@ from django.db.models import Prefetch
 
 from catalog.models import Country, Destination
 from promotions.models import Promotion, Scope
+from promotions.services.discounts import in_scope
 
 
 def current_offers(today=None, exclude=()) -> list[Promotion]:
@@ -31,23 +32,14 @@ def current_offers(today=None, exclude=()) -> list[Promotion]:
     return [promotion for promotion in promotions if promotion.scope == Scope.CATALOG or promotion.targets_label]
 
 
-def targets(promotion: Promotion, destination: Destination) -> bool:
-    """La destination est dans la portée (pays et destinations préchargés par current_offers)."""
-    if promotion.scope == Scope.COUNTRIES:
-        return any(country.pk == destination.country_id for country in promotion.countries.all())
-    if promotion.scope == Scope.DESTINATIONS:
-        return any(target.pk == destination.pk for target in promotion.destinations.all())
-    return True
-
-
 def offers_for(destination: Destination, offers: list[Promotion]) -> list[Promotion]:
     """Offres (current_offers) qui visent cette destination (bandeau de la fiche)."""
-    return [promotion for promotion in offers if targets(promotion, destination)]
+    return [promotion for promotion in offers if in_scope(promotion, destination)]
 
 
 def mark_promoted(destinations, offers: list[Promotion]) -> list:
     """Ajoute `has_promotion` à chaque destination (étiquette « Promo » des cartes)."""
     destinations = list(destinations)
     for destination in destinations:
-        destination.has_promotion = any(targets(promotion, destination) for promotion in offers)
+        destination.has_promotion = any(in_scope(promotion, destination) for promotion in offers)
     return destinations

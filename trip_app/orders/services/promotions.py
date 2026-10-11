@@ -62,16 +62,21 @@ class PromotionChoice:
         return f"Code appliqué : -{euros(self.offer.discount)}" if self.code_applied else ""
 
 
-def uses(promotion: Promotion, client=None) -> int:
-    """Demandes non annulées qui ont utilisé la promotion (toutes, ou celles du client).
+# Seules les demandes non annulées comptent dans les limites (une annulation rend l'utilisation).
+_NOT_CANCELLED = ~Q(orders__status=Status.CANCELLED)
+
+
+def _usage(client) -> dict:
+    """Annotations : demandes non annulées qui ont utilisé la promotion, au total et celles du client.
 
     Le client est reconnu à l'empreinte de son adresse e-mail (voir orders.models.client_fingerprint) :
     ses demandes comptent encore après une suppression du compte suivie d'une réinscription.
     """
-    orders = Order.objects.filter(promotion=promotion).exclude(status=Status.CANCELLED)
-    if client is not None:
-        orders = orders.filter(client_fingerprint=client_fingerprint(client.email))
-    return orders.count()
+    fingerprint = client_fingerprint(client.email)
+    return {
+        "total_uses": Count("orders", filter=_NOT_CANCELLED),
+        "client_uses": Count("orders", filter=_NOT_CANCELLED & Q(orders__client_fingerprint=fingerprint)),
+    }
 
 
 def refresh_client_fingerprint(client) -> int:
@@ -83,7 +88,7 @@ def exhausted_promotions():
     """Promotions dont le maximum au total est atteint (demandes non annulées), en une requête."""
     return (
         Promotion.objects.filter(max_uses__isnull=False)
-        .annotate(used=Count("orders", filter=~Q(orders__status=Status.CANCELLED)))
+        .annotate(used=Count("orders", filter=_NOT_CANCELLED))
         .filter(used__gte=F("max_uses"))
         .values_list("pk", flat=True)
     )
@@ -95,9 +100,17 @@ def public_offers(today=None) -> list[Promotion]:
 
 
 def limit_problem(promotion: Promotion, client) -> str:
-    if promotion.max_uses_per_client and uses(promotion, client) >= promotion.max_uses_per_client:
+    """Limite atteinte pour ce client ou au total ; les deux comptes en une seule requête."""
+    if not (promotion.max_uses or promotion.max_uses_per_client):
+        return ""
+    counts = Promotion.objects.filter(pk=promotion.pk).aggregate(**_usage(client))
+    return _limit_reached(promotion, counts["total_uses"], counts["client_uses"])
+
+
+def _limit_reached(promotion: Promotion, total_uses: int, client_uses: int) -> str:
+    if promotion.max_uses_per_client and client_uses >= promotion.max_uses_per_client:
         return ALREADY_USED
-    if promotion.max_uses and uses(promotion) >= promotion.max_uses:
+    if promotion.max_uses and total_uses >= promotion.max_uses:
         return NO_LONGER_AVAILABLE
     return ""
 
@@ -113,10 +126,18 @@ def choose_promotion(
 ) -> PromotionChoice:
     """`ip` : adresse du client, telle que donnée par accounts.services.throttling.get_client_ip."""
     today = today or timezone.localdate()
+    # Nombre fixe de requêtes, quel que soit le nombre de promotions automatiques en cours.
+    running = (
+        Promotion.objects.running(today)
+        .automatic()
+        .prefetch_related("countries", "destinations")
+        .annotate(**_usage(client))
+    )
     automatic = best_offer(
         offer_for(promotion, prices)
-        for promotion in Promotion.objects.running(today).automatic()
-        if covers(promotion, destination, departure_date) and not limit_problem(promotion, client)
+        for promotion in running
+        if covers(promotion, destination, departure_date)
+        and not _limit_reached(promotion, promotion.total_uses, promotion.client_uses)
     )
     if not code:
         return PromotionChoice(automatic)

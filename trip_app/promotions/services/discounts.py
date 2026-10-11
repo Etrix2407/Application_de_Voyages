@@ -54,10 +54,16 @@ def discount_amount(promotion: Promotion, prices: PriceParts) -> Decimal:
 
 
 def in_scope(promotion: Promotion, destination: Destination) -> bool:
+    """La destination est dans la portée de la promotion.
+
+    Les pays et destinations visés sont lus dans le préchargement (prefetch_related) s'il existe,
+    sinon en une requête. Un préchargement limité aux éléments proposés (voir public.py) écarte
+    donc aussi les pays et destinations désactivés.
+    """
     if promotion.scope == Scope.COUNTRIES:
-        return promotion.countries.filter(pk=destination.country_id).exists()
+        return any(country.pk == destination.country_id for country in promotion.countries.all())
     if promotion.scope == Scope.DESTINATIONS:
-        return promotion.destinations.filter(pk=destination.pk).exists()
+        return any(target.pk == destination.pk for target in promotion.destinations.all())
     return True
 
 
