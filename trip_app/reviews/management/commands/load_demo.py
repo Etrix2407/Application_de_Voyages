@@ -286,14 +286,17 @@ def _refuse_real_accounts() -> None:
 
     Sécurité en plus de DJANGO_DEBUG : lancée par erreur sur la base de l'agence, la commande
     créerait un agent et le code promo public EXEMPLE10. Toutes les adresses de démonstration
-    sont en @example.com, domaine réservé aux exemples qui n'appartient à personne.
+    sont en @example.com, domaine réservé aux exemples qui n'appartient à personne. Les comptes
+    administrateurs ne comptent pas : le premier est créé avant la démonstration (README).
     """
-    real_accounts = get_user_model().objects.exclude(email__iendswith=DEMO_EMAIL_DOMAIN)
+    real_accounts = (
+        get_user_model().objects.exclude(email__iendswith=DEMO_EMAIL_DOMAIN).exclude(role=Role.ADMINISTRATOR)
+    )
     if real_accounts.exists():
         raise CommandError(
-            "Données de démonstration refusées : la base contient des comptes réels (adresse qui ne "
-            f"se termine pas par {DEMO_EMAIL_DOMAIN}). Utilisez une base de développement : en local, "
-            f"créez votre compte administrateur avec une adresse en {DEMO_EMAIL_DOMAIN}."
+            "Données de démonstration refusées : la base contient des comptes clients ou agents "
+            f"réels (adresse qui ne se termine pas par {DEMO_EMAIL_DOMAIN}). Utilisez une base de "
+            "développement."
         )
 
 

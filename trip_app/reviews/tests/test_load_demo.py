@@ -4,6 +4,7 @@ from django.contrib.auth import get_user_model
 from django.core.management import CommandError, call_command
 from django.test import TestCase, override_settings
 
+from accounts.tests.factories import create_client
 from catalog.models import Country
 from orders.models import Order
 from promotions.models import Promotion
@@ -38,9 +39,11 @@ class LoadDemoTests(TestCase):
         self.assertFalse(Country.objects.exists())
 
     def test_refused_on_database_with_real_accounts(self):
+        # Le compte administrateur, créé avant la démonstration, ne bloque pas ; un vrai client, si.
         User.objects.create_superuser("gerante@agence.be", "mot-de-passe-123", last_name="G", first_name="G")
+        create_client(email="marie@agence.be")
 
-        with self.assertRaisesMessage(CommandError, "comptes réels"):
+        with self.assertRaisesMessage(CommandError, "réels"):
             load_demo()
         self.assertFalse(Country.objects.exists())
         self.assertFalse(Promotion.objects.exists())
