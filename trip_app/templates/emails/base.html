@@ -2,8 +2,10 @@
 {% comment %}
 Mise en page commune des e-mails (version HTML). Le corps (body) est préparé par render_email
 (accounts/services/email_texts.py) : texte échappé, paragraphes conservés, et seuls les champs de
-type lien sous forme de bouton ; aucune adresse n'est rendue cliquable automatiquement. Styles en ligne : les
-messageries ignorent souvent les feuilles de style. Gros caractères et fort contraste.
+type lien sous forme de bouton ; aucune adresse n'est rendue cliquable automatiquement.
+Mise en page par tableau de 600 pixels, centré, et styles en ligne : Outlook pour Windows ignore
+max-width et les div, et beaucoup de messageries ignorent les feuilles de style.
+Gros caractères et fort contraste.
 Signature : « L'équipe … » toujours, puis les coordonnées de l'agence si elles sont réglées ;
 le logo ne s'affiche que s'il est réglé (voir config/settings.py).
 {% endcomment %}
@@ -14,22 +16,34 @@ le logo ne s'affiche que s'il est réglé (voir config/settings.py).
   <title>{{ subject }}</title>
 </head>
 <body style="margin: 0; padding: 0; background-color: #f4f4f4;">
-  <div style="max-width: 600px; margin: 0 auto; padding: 24px 16px; background-color: #ffffff; color: #1a1a1a; font-family: Arial, Helvetica, sans-serif; font-size: 18px; line-height: 1.6;">
-    <div style="padding-bottom: 16px; margin-bottom: 24px; border-bottom: 2px solid #1a1a1a;">
-      {% if logo_url %}
-        <img src="{{ logo_url }}" alt="{{ site_name }}" style="max-width: 240px; height: auto; border: 0;">
-      {% else %}
-        <span style="font-size: 24px; font-weight: bold;">{{ site_name }}</span>
-      {% endif %}
-    </div>
-    <div style="word-break: break-word;">
-      {{ body }}
-    </div>
-    <div style="margin-top: 32px; padding-top: 16px; border-top: 1px solid #767676;">
-      {% for line in signature %}
-        <p style="margin: 0;{% if forloop.first %} font-weight: bold;{% endif %}">{{ line }}</p>
-      {% endfor %}
-    </div>
-  </div>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f4f4f4;">
+    <tr>
+      <td align="center" style="padding: 16px 8px;">
+        <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width: 600px; max-width: 100%; background-color: #ffffff;">
+          <tr>
+            <td style="padding: 24px 16px 16px; border-bottom: 2px solid #1a1a1a; font-family: Arial, Helvetica, sans-serif; color: #1a1a1a;">
+              {% if logo_url %}
+                <img src="{{ logo_url }}" alt="{{ site_name }}" style="max-width: 240px; height: auto; border: 0;">
+              {% else %}
+                <span style="font-size: 24px; font-weight: bold;">{{ site_name }}</span>
+              {% endif %}
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 24px 16px; color: #1a1a1a; font-family: Arial, Helvetica, sans-serif; font-size: 18px; line-height: 1.6; word-break: break-word;">
+              {{ body }}
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 16px; border-top: 1px solid #767676; color: #1a1a1a; font-family: Arial, Helvetica, sans-serif; font-size: 18px; line-height: 1.6;">
+              {% for line in signature %}
+                <p style="margin: 0;{% if forloop.first %} font-weight: bold;{% endif %}">{{ line }}</p>
+              {% endfor %}
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
 </body>
 </html>
