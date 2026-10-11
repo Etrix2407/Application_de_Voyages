@@ -26,7 +26,7 @@
                             <td>{{ review.order.destination_name }} ({{ review.order.country_name }})</td>
                             <td>
                                 {% include "reviews/_rating.html" %}
-                                {% if review.is_negative %}<span class="badge-negative">Avis négatif</span>{% endif %}
+                                {% if review.is_negative %}<span class="badge badge-negative">Avis négatif</span>{% endif %}
                                 <br>« {{ review.title }} »
                             </td>
                             <td>{% include "reviews/manage/_client.html" %}</td>

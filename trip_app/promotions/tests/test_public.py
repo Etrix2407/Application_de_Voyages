@@ -77,4 +77,4 @@ class PublicPromotionsTests(TestCase):
         self.assertEqual(
             [destination.has_promotion for destination in response.context["destinations"]], [True, False]
         )
-        self.assertContains(response, '<span class="badge-promo">Promo</span>', count=1)
+        self.assertContains(response, '<span class="badge badge-promo">Promo</span>', count=1)

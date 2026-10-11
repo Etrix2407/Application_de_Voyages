@@ -37,7 +37,7 @@
                             <td>{{ client.last_name }} {{ client.first_name }}</td>
                             <td>
                                 {{ client.email }}
-                                {% if client.address_to_check %}<br><span class="badge-warning">Adresse à vérifier</span>{% endif %}
+                                {% if client.address_to_check %}<br><span class="badge badge-warning">Adresse à vérifier</span>{% endif %}
                             </td>
                             <td>{{ client.phone|default:"—" }}</td>
                             <td>{{ client.date_joined|date:"j F Y" }}</td>

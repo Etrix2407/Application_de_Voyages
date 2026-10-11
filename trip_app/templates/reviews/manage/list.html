@@ -37,7 +37,7 @@
                             <td>{{ review.order.departure_date|date:"F Y" }}</td>
                             <td>
                                 {% include "reviews/_rating.html" %}
-                                {% if review.is_negative %}<span class="badge-negative">Avis négatif</span>{% endif %}
+                                {% if review.is_negative %}<span class="badge badge-negative">Avis négatif</span>{% endif %}
                                 <br>« {{ review.title }} »
                             </td>
                             <td>{% include "reviews/manage/_client.html" %}</td>
