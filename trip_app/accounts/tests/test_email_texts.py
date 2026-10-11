@@ -1,9 +1,17 @@
 from django.core import mail
-from django.test import TestCase
+from django.core.exceptions import ImproperlyConfigured
+from django.db import models
+from django.test import SimpleTestCase, TestCase
 from django.urls import reverse
 
 from accounts.models import AccountEmail, EmailLog, EmailText
-from accounts.services.email_texts import fill_fields
+from accounts.services.email_texts import (
+    DefaultText,
+    email_kind_label,
+    fill_fields,
+    find_email_kind,
+    register_email_kinds,
+)
 from accounts.services.emails import send_email
 
 from .email_delivery import SendEmailsImmediately
@@ -94,3 +102,25 @@ class FillFieldsTests(TestCase):
         text = fill_fields("Annulée.\n\n{explication}\n\nÀ bientôt.", {"explication": ""})
 
         self.assertEqual(text, "Annulée.\n\nÀ bientôt.")
+
+
+class EmailKindRegistryTests(SimpleTestCase):
+    def test_declaration_refused_without_text_or_twice(self):
+        class SampleEmail(models.TextChoices):
+            SAMPLE = "sample_email", "Exemple"
+
+        class DuplicateEmail(models.TextChoices):
+            PASSWORD_RESET = AccountEmail.PASSWORD_RESET.value, "Doublon"
+
+        text = DefaultText(subject="Objet", body="Texte", fields={})
+        cases = {
+            "texte manquant": (SampleEmail, {}),
+            "valeur déjà déclarée": (DuplicateEmail, {DuplicateEmail.PASSWORD_RESET: text}),
+        }
+        for case, (kinds, texts) in cases.items():
+            with self.subTest(case), self.assertRaises(ImproperlyConfigured):
+                register_email_kinds(kinds, texts)
+        # Rien n'est enregistré après un refus.
+        self.assertIsNone(find_email_kind("sample_email"))
+        self.assertEqual(email_kind_label(AccountEmail.PASSWORD_RESET), AccountEmail.PASSWORD_RESET.label)
+
