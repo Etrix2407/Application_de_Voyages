@@ -1,6 +1,7 @@
 """Formulaires des comptes : inscription, connexion, profil, personnel."""
 
 from django import forms
+from django.conf import settings
 from django.contrib.auth.forms import (
     AuthenticationForm,
     BaseUserCreationForm,
@@ -42,7 +43,7 @@ CLIENT_WIDGETS = {
 }
 CLIENT_HELP_TEXTS = {"phone": "Facultatif. Exemple : 0470 12 34 56, ou +33 6 12 34 56 78 depuis l'étranger."}
 PROMOTIONAL_EMAILS_LABEL = (
-    "J'accepte de recevoir par e-mail les offres et promotions d'Horizons Lointains. "
+    f"J'accepte de recevoir par e-mail les offres et promotions d'{settings.SITE_NAME}. "
     "Je peux me désinscrire à tout moment."
 )
 

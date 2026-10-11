@@ -29,7 +29,7 @@ class PromotionStatistics:
 def promotion_statistics(promotion: Promotion) -> PromotionStatistics:
     orders = (
         Order.objects.filter(promotion=promotion)
-        # Calculé par la base : SQLite le rend sans décimales inutiles (50), d'où floatformat:2 à l'affichage.
+        # Calculé par la base : SQLite le rend sans décimales inutiles (50) ; le filtre |euros le met en forme.
         .annotate(latest_discount=Coalesce("confirmed_discount", "discount"))
         .select_related("client")
         .defer("remarks")

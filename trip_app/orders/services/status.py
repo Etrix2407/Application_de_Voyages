@@ -90,7 +90,7 @@ def confirm_by_staff(order: Order, staff_member, expected_price: Decimal | None 
     if order.client_id is None:
         raise TransitionNotAllowed("Le compte du client a été supprimé : cette demande ne peut plus être confirmée.")
     quote = price_at_current_rates(order)
-    if expected_price is not None and expected_price != quote.price:
+    if expected_price is not None and (not expected_price.is_finite() or expected_price != quote.price):
         raise PriceChanged
     note = "" if quote.price == order.estimated_price else (
         f"Prix recalculé aux tarifs du jour : {euros(order.estimated_price)} → {euros(quote.price)}."

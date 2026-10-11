@@ -20,6 +20,8 @@ class Limiter:
     La fenêtre de `window_seconds` part de la première tentative. Le cache Django garde le
     nombre de tentatives et le début de la fenêtre, avec le délai restant comme durée de vie :
     la fenêtre a la même durée quel que soit le cache (base de données en production, mémoire en test).
+    Le comptage lit puis écrit (le cache n'a pas d'incrément atomique) : deux essais simultanés peuvent
+    compter pour un. La connexion compte l'essai avant la vérification lente du mot de passe.
     """
 
     name: str
