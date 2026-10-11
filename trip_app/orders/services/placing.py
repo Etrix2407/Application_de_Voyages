@@ -9,8 +9,8 @@ from django.utils import timezone
 from catalog.models import Destination
 from orders.models import Order, OrderActivity, OrderStatus, StatusChange, client_fingerprint
 from orders.services.emails import send_new_order_alert, send_order_placed
-from orders.services.pricing import Quote, estimate_price, price_parts
-from orders.services.promotions import limit_problem
+from orders.services.pricing import Quote, price_parts, round_to_cent
+from orders.services.promotions import PromotionChoice, choose_promotion, limit_problem
 from promotions.services.discounts import Offer, PriceParts, discount_amount
 
 # Garde-fou contre les envois en masse : largement au-dessus d'un usage normal.
@@ -22,11 +22,19 @@ def parts_for(destination: Destination, activities, adults: int, children: int) 
     return price_parts(destination.price_from, [activity.price_per_person for activity in activities], adults, children)
 
 
-def quote_for(destination: Destination, activities, adults: int, children: int, discount=NO_DISCOUNT) -> Quote:
-    before = estimate_price(
-        destination.price_from, [activity.price_per_person for activity in activities], adults, children
-    )
-    return Quote(before, discount)
+def quote_for(parts: PriceParts, discount: Decimal = NO_DISCOUNT) -> Quote:
+    """Prix avant remise (arrondi au centime) et remise, à partir des parts déjà calculées."""
+    return Quote(round_to_cent(parts.total), discount)
+
+
+def price_request(client, destination: Destination, data: dict, ip: str | None) -> tuple[PromotionChoice, Quote]:
+    """Promotion retenue et prix d'une nouvelle demande (formulaire validé).
+
+    Recalculés à chaque passage (vérification, envoi) : un tarif ou une promotion a pu changer.
+    """
+    parts = parts_for(destination, data["activities"], data["adults"], data["children"])
+    choice = choose_promotion(client, destination, data["departure_date"], parts, data["promo_code"], ip=ip)
+    return choice, quote_for(parts, choice.offer.discount if choice.offer else NO_DISCOUNT)
 
 
 def price_at_current_rates(order: Order) -> Quote:
@@ -36,11 +44,9 @@ def price_at_current_rates(order: Order) -> Quote:
     un pourcentage, un montant fixe reste le même montant), même si elle est terminée.
     """
     activities = [line.activity for line in order.activities.select_related("activity")]
-    discount = NO_DISCOUNT
-    if order.promotion:
-        prices = parts_for(order.destination, activities, order.adults, order.children)
-        discount = discount_amount(order.promotion, prices)
-    return quote_for(order.destination, activities, order.adults, order.children, discount)
+    parts = parts_for(order.destination, activities, order.adults, order.children)
+    discount = discount_amount(order.promotion, parts) if order.promotion else NO_DISCOUNT
+    return quote_for(parts, discount)
 
 
 def find_pending_duplicates(client, destination: Destination, departure_date, return_date):
@@ -119,7 +125,7 @@ def _create_order(client, destination: Destination, data: dict, offer: Offer | N
         raise PromotionUnavailable
     activities = list(data["activities"])
     discount = offer.discount if offer else NO_DISCOUNT
-    quote = quote_for(destination, activities, data["adults"], data["children"], discount)
+    quote = quote_for(parts_for(destination, activities, data["adults"], data["children"]), discount)
     order = Order(
         submission_token=submission_token,
         client=client,
