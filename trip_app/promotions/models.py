@@ -173,12 +173,6 @@ class Promotion(models.Model):
             return State.FINISHED
         return State.RUNNING
 
-    @property
-    def created_by_name(self) -> str:
-        """Auteur de la création, lu dans l'historique (nom figé)."""
-        creation = self.history.filter(action=Action.CREATED).first()
-        return creation.author_name if creation else ""
-
 
 def targets_problem(scope: str, countries, destinations) -> dict[str, str]:
     """Erreurs de portée, par champ ; vide si la portée est valable.
@@ -259,4 +253,4 @@ class PromotionMailing(models.Model):
         ordering = ["-created_at", "-pk"]
 
     def __str__(self) -> str:
-        return f"{self.promotion} — {self.created_at:%d/%m/%Y}"
+        return f"{self.promotion} — {timezone.localtime(self.created_at):%d/%m/%Y}"

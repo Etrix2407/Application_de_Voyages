@@ -144,5 +144,5 @@ class HistoryTests(TestCase):
 
         admin.delete()
 
-        self.assertEqual(promotion.created_by_name, "Marc Dupont")
+        self.assertEqual(promotion.history.get().author_name, "Marc Dupont")
         self.assertIsNone(promotion.history.get().author)

@@ -60,7 +60,7 @@ def promotion_detail(request, pk):
     used = _is_used(promotion)
     history = list(promotion.history.all())
     mailings = list(promotion.mailings.all())
-    # Auteur lu dans l'historique déjà chargé : évite la requête de Promotion.created_by_name.
+    # Auteur de la création, lu dans l'historique déjà chargé (nom figé).
     creation = next((change for change in history if change.action == Action.CREATED), None)
     context = {
         "promotion": promotion,
@@ -189,8 +189,8 @@ def delete(request, pk):
         except PromotionMailed:
             messages.error(
                 request,
-                f"« {promotion} » a déjà été envoyée par e-mail aux clients : elle ne peut pas être supprimée, "
-                "pour garder l'historique des envois. Vous pouvez la désactiver.",
+                f"« {promotion} » a déjà été envoyée par e-mail aux clients : elle ne peut pas être "
+                "supprimée, pour garder l'historique des envois. Vous pouvez la désactiver.",
             )
             return redirect("manage_promotion_detail", pk=promotion.pk)
         messages.success(request, f"La promotion « {promotion} » a été supprimée.")

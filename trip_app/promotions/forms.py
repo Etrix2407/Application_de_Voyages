@@ -1,3 +1,5 @@
+"""Formulaires des promotions : création et modification, envoi par e-mail aux clients."""
+
 from django import forms
 from django.utils import timezone
 
@@ -46,7 +48,10 @@ class PromotionForm(forms.ModelForm):
             "starts_on": "La promotion vaut pour les demandes faites à partir de ce jour.",
             "ends_on": "Dernier jour inclus, jusqu'à minuit.",
             "departure_from": "Facultatif : départs autorisés. Vide = tous les départs.",
-            "code": "Vide = promotion automatique. Sinon 4 à 20 lettres sans accents ou chiffres (ex. BIENVENUE15).",
+            "code": (
+                "Vide = promotion automatique. "
+                "Sinon 4 à 20 caractères : lettres sans accent et chiffres (ex. BIENVENUE15)."
+            ),
             "max_uses": "Vide = illimité. Les demandes annulées ne comptent pas.",
             "max_uses_per_client": "Vide = illimité.",
         }
