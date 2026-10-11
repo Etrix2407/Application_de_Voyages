@@ -14,6 +14,7 @@ from accounts.services.throttling import (
     get_client_ip,
     recent_sign_ups_by_ip,
     sign_ups_by_ip,
+    unlock_login,
 )
 
 
@@ -98,11 +99,13 @@ class PasswordChangedNoticeMixin:
     """Mot de passe choisi par un lien reçu par e-mail : alerte de sécurité envoyée ensuite.
 
     Pas d'alerte à la toute première définition (agent invité, qui n'avait pas encore de mot de passe).
+    La connexion bloquée après trop d'échecs redevient possible depuis l'appareil utilisé.
     """
 
     def form_valid(self, form):
         had_password = self.user.has_usable_password()
         response = super().form_valid(form)
+        unlock_login(self.user.email, get_client_ip(self.request))
         if had_password:
             send_password_changed_notice(self.user)
         return response

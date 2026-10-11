@@ -17,7 +17,9 @@ from .services.throttling import (
     get_client_ip,
     login_failures,
     login_failures_after_sign_up_by_ip,
+    login_failures_by_account,
     login_failures_by_ip,
+    login_key,
     password_confirmations,
     password_reset_requests,
     password_reset_requests_by_ip,
@@ -95,24 +97,28 @@ class LoginForm(AuthenticationForm):
         email = self.cleaned_data.get("username") or ""
         ip = get_client_ip(self.request)
         just_signed_up = recent_sign_ups_by_ip.is_locked(ip)
+        account_limits = [(login_failures, login_key(email, ip)), (login_failures_by_account, email)] if email else []
         if (
-            (email and login_failures.is_locked(email))
+            any(limiter.is_locked(key) for limiter, key in account_limits)
             or login_failures_by_ip.is_locked(ip)
             or (just_signed_up and login_failures_after_sign_up_by_ip.is_locked(ip))
         ):
             raise ValidationError(self.error_messages["locked"], code="locked")
+        # L'essai est compté avant la vérification du mot de passe (lente) : des requêtes envoyées
+        # en même temps ne dépassent pas la limite du compte. Il est effacé en cas de succès.
+        for limiter, key in account_limits:
+            limiter.record(key)
         try:
             cleaned_data = super().clean()
         except ValidationError:
-            if email:
-                login_failures.record(email)
             login_failures_by_ip.record(ip)
             if just_signed_up:
                 login_failures_after_sign_up_by_ip.record(ip)
             raise
         # Le compteur de l'IP n'est pas remis à zéro : un compte valide ne doit pas
         # permettre de relancer une série d'essais sur d'autres comptes.
-        login_failures.reset(email)
+        for limiter, key in account_limits:
+            limiter.reset(key)
         return cleaned_data
 
 

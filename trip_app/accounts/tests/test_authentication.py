@@ -15,7 +15,14 @@ from django.urls import reverse
 from django.utils import timezone
 
 from accounts.services.sign_up import purge_unconfirmed
-from accounts.services.throttling import confirmation_emails, login_failures, password_reset_requests
+from accounts.services.password_links import password_link_path
+from accounts.services.throttling import (
+    confirmation_emails,
+    login_failures,
+    login_failures_by_account,
+    login_key,
+    password_reset_requests,
+)
 from accounts.models import EmailLog, Role
 
 from .email_delivery import SendEmailsImmediately
@@ -295,8 +302,8 @@ class LoginTests(TestCase):
         cache.clear()
         self.user = create_client()
 
-    def log_in(self, email="client@example.com", password=PASSWORD):
-        return self.client.post(self.url, {"username": email, "password": password})
+    def log_in(self, email="client@example.com", password=PASSWORD, ip="127.0.0.1"):
+        return self.client.post(self.url, {"username": email, "password": password}, REMOTE_ADDR=ip)
 
     def test_successful_login(self):
         response = self.log_in()
@@ -337,6 +344,32 @@ class LoginTests(TestCase):
 
         self.assertRedirects(self.log_in(), reverse("home"))
 
+    def test_lockout_does_not_block_other_ips(self):
+        # Un tiers qui se trompe exprès ne bloque pas le titulaire, qui se connecte d'ailleurs.
+        for _ in range(login_failures.max_attempts):
+            self.log_in(password="mauvais-mot-2026", ip="203.0.113.5")
+
+        self.assertRedirects(self.log_in(), reverse("home"))
+
+    def test_account_locked_from_all_ips_after_many_failures(self):
+        per_ip = login_failures.max_attempts - 1
+        for number in range(login_failures_by_account.max_attempts // per_ip + 1):
+            for _ in range(per_ip):
+                self.log_in(password="mauvais-mot-2026", ip=f"203.0.113.{number}")
+
+        self.assertContains(self.log_in(), "Trop de tentatives échouées")
+
+    def test_password_reset_unlocks_login(self):
+        for _ in range(login_failures.max_attempts):
+            self.log_in(password="mauvais-mot-2026")
+        new_password = "montagne-lac-77"
+        form_page = self.client.get(password_link_path(self.user), follow=True)
+        self.client.post(
+            form_page.redirect_chain[-1][0], {"new_password1": new_password, "new_password2": new_password}
+        )
+
+        self.assertRedirects(self.log_in(password=new_password), reverse("home"))
+
     def test_success_resets_counter(self):
         for _ in range(login_failures.max_attempts - 1):
             self.log_in(password="mauvais-mot-2026")
@@ -345,7 +378,7 @@ class LoginTests(TestCase):
 
         self.log_in(password="mauvais-mot-2026")
 
-        self.assertFalse(login_failures.is_locked("client@example.com"))
+        self.assertFalse(login_failures.is_locked(login_key("client@example.com", "127.0.0.1")))
 
     def test_logout(self):
         self.client.force_login(self.user)

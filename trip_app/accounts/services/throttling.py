@@ -106,8 +106,13 @@ def _network_of(ip: str) -> str:
     return ip
 
 
-# Par adresse e-mail.
+# Connexion : par adresse e-mail depuis une même IP (seuil bas, sans bloquer le titulaire qui se
+# connecte d'ailleurs), et par adresse e-mail toutes IP confondues (seuil haut, contre une attaque
+# répartie sur de nombreuses IP). Une réinitialisation du mot de passe remet les deux à zéro.
 login_failures = Limiter("login-failures", max_attempts=5, window_seconds=15 * 60)
+login_failures_by_account = Limiter("login-failures-account", max_attempts=50, window_seconds=15 * 60)
+
+# Par adresse e-mail.
 password_reset_requests = Limiter("password-reset", max_attempts=3, window_seconds=60 * 60)
 confirmation_emails = Limiter("sign-up-emails", max_attempts=3, window_seconds=60 * 60)
 
@@ -134,3 +139,13 @@ login_failures_after_sign_up_by_ip = Limiter(
     "login-failures-after-sign-up-ip", max_attempts=3, window_seconds=15 * 60
 )
 
+
+def login_key(email: str, ip: str) -> str:
+    """Identifiant de `login_failures` : l'adresse e-mail et l'IP d'où viennent les essais."""
+    return f"{email}|{ip}"
+
+
+def unlock_login(email: str, ip: str) -> None:
+    """Après une réinitialisation du mot de passe : la connexion redevient possible depuis cette IP."""
+    login_failures.reset(login_key(email, ip))
+    login_failures_by_account.reset(email)
