@@ -197,6 +197,12 @@ class ClientCorrectionForm(ClientDataForm):
     """Correction par un agent : ni mot de passe ni e-mail (identifiant géré par le client),
     ni consentement aux e-mails promotionnels (choix du client seul)."""
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Les données sont celles du client : le navigateur ne doit pas proposer celles de l'agent.
+        for field in self.fields.values():
+            field.widget.attrs["autocomplete"] = "off"
+
 
 TOO_MANY_PASSWORD_ATTEMPTS = f"Trop d'essais. Pour votre sécurité, réessayez dans {password_confirmations.window_text}."
 
