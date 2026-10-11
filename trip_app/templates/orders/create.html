@@ -8,7 +8,8 @@
     <h1>Demande de voyage : {{ destination.name }}</h1>
     <p>Remplissez ce formulaire. Vous pourrez vérifier votre demande et son prix estimé avant de l'envoyer.</p>
 
-    <form method="post" novalidate>
+    {% include "_form_errors.html" %}
+    <form method="post" novalidate spellcheck="true">
         {% csrf_token %}
         {{ form }}
         <button type="submit">Vérifier ma demande</button>

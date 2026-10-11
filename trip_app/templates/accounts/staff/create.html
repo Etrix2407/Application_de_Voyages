@@ -6,6 +6,7 @@
     <h1>Créer un agent</h1>
     <p>Le numéro d'employé est attribué automatiquement. L'agent recevra un e-mail pour choisir son mot de passe.</p>
 
+    {% include "_form_errors.html" %}
     <form method="post" novalidate>
         {% csrf_token %}
         {{ form }}

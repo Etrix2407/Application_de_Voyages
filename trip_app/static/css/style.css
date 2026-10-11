@@ -247,6 +247,26 @@ button:hover {
     padding-left: 1rem;
 }
 
+/* Récapitulatif des erreurs, en haut du formulaire. */
+.form-errors {
+    margin: 1rem 0;
+    padding: 0.75rem 1rem;
+    border: 3px solid var(--color-error);
+    border-radius: 6px;
+    background: var(--color-background-soft);
+}
+
+.form-errors p {
+    margin-top: 0;
+    font-weight: bold;
+    color: var(--color-error);
+}
+
+/* Les erreurs hors champ sont déjà dans le récapitulatif : pas de doublon dans le formulaire. */
+.form-errors + form > .errorlist.nonfield {
+    display: none;
+}
+
 .helptext {
     display: block;
     margin-top: 0.25rem;

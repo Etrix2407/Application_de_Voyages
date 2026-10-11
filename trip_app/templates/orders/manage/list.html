@@ -5,6 +5,7 @@
 {% block content %}
     <h1>Demandes de voyage</h1>
 
+    {% include "_form_errors.html" %}
     <form method="get" class="search-form" role="search">
         {{ form }}
         <button type="submit">Filtrer</button>

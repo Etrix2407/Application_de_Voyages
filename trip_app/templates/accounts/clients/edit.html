@@ -8,6 +8,7 @@
     <h1>Corriger les informations de {{ client.get_full_name }}</h1>
     <p>Adresse e-mail : {{ client.email }} (modifiable uniquement par le client)</p>
 
+    {% include "_form_errors.html" %}
     <form method="post" novalidate>
         {% csrf_token %}
         {{ form }}

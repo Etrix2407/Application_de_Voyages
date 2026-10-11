@@ -6,6 +6,7 @@
     <h1>Tous les avis</h1>
     <p><a href="{% url 'manage_pending_reviews' %}">Voir les avis à modérer</a></p>
 
+    {% include "_form_errors.html" %}
     <form method="get" class="search-form" role="search">
         {{ form }}
         <button type="submit">Filtrer</button>
