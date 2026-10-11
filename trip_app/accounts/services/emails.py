@@ -41,7 +41,8 @@ def send_email(
       sinon le texte d'origine. La version HTML est construite à partir de ce texte dans la mise
       en page commune.
     - `fields` : valeur de chaque champ variable du type (ex. {"prénom": ..., "lien": ...}).
-      Les liens doivent être absolus (request.build_absolute_uri, ou site_url() hors d'une requête).
+      Les liens doivent être absolus : site_url(reverse(...)), à partir de DJANGO_SITE_URL, pendant
+      une requête comme dans une commande planifiée.
     - `user`, `order_number` : compte et demande de voyage concernés, notés dans le journal.
 
     L'envoi a lieu après la validation de la transaction en cours (immédiatement hors transaction).
@@ -178,7 +179,7 @@ def failure_of(error: Exception) -> EmailFailure:
 
 
 def site_url(path: str) -> str:
-    """Lien absolu vers une page du site, hors d'une requête (ex. site_url(reverse("login")))."""
+    """Lien absolu vers une page du site, d'après DJANGO_SITE_URL (ex. site_url(reverse("login")))."""
     return f"{settings.SITE_URL}{path}"
 
 

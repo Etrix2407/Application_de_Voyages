@@ -44,9 +44,6 @@ def refused_context(review: Review) -> dict:
     (30 jours après sa création, voyage toujours confirmé : voir client_can_edit).
     Délai dépassé : l'e-mail le dit, sauf pour « Voyage annulé » (correction impossible pour une autre raison).
     """
-    reason = review.get_refusal_reason_display()
-    if review.refusal_details:
-        reason += f" — {review.refusal_details}"
     correction = ""
     if client_can_edit(review):
         # Date à l'heure belge : en UTC, une fin de délai en fin de soirée tomberait la veille.
@@ -58,7 +55,7 @@ def refused_context(review: Review) -> dict:
         )
     elif not review.can_be_changed_by_client() and review.refusal_reason != RefusalReason.TRIP_CANCELLED:
         correction = "Le délai de 30 jours pour corriger cet avis est dépassé."
-    return {**_base_context(review), "motif": reason, "correction": correction}
+    return {**_base_context(review), "motif": review.refusal_label, "correction": correction}
 
 
 def response_context(response: AgencyResponse, created: bool) -> dict:
