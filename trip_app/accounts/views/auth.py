@@ -30,7 +30,7 @@ def sign_up(request):
         sign_ups_by_ip.record(ip)
         recent_sign_ups_by_ip.reset(ip)
         recent_sign_ups_by_ip.record(ip)
-        sign_up_service.request_sign_up(request, form)
+        sign_up_service.request_sign_up(form.cleaned_data)
         # Même page que l'adresse soit nouvelle ou déjà inscrite : rien n'est révélé.
         return redirect("sign_up_done")
     return render(request, "accounts/auth/sign_up.html", {"form": form})
@@ -69,7 +69,7 @@ def resend_confirmation(request):
         ip = get_client_ip(request)
         if not confirmation_requests_by_ip.is_locked(ip):
             confirmation_requests_by_ip.record(ip)
-            sign_up_service.resend_confirmation(request, form.cleaned_data["email"])
+            sign_up_service.resend_confirmation(form.cleaned_data["email"])
         # Réponse identique dans tous les cas : rien n'est révélé.
         return redirect("sign_up_done")
     return render(request, "accounts/auth/resend_confirmation.html", {"form": form})
@@ -81,7 +81,7 @@ def _resend_to_logged_in_user(request):
         messages.info(request, "Votre adresse e-mail est déjà confirmée.")
         return redirect("profile")
     if request.method == "POST":
-        if sign_up_service.send_confirmation(request, request.user):
+        if sign_up_service.send_confirmation(request.user):
             messages.success(request, f"Un nouveau lien de confirmation vient d'être envoyé à {request.user.email}.")
         else:
             messages.error(request, "Le lien n'a pas pu être envoyé pour le moment. Réessayez plus tard.")

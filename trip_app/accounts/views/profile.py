@@ -58,7 +58,7 @@ def delete_account(request):
 def change_email(request):
     form = EmailChangeForm(request.user, request.POST or None)
     if request.method == "POST" and form.is_valid():
-        request_email_change(request, request.user, form.cleaned_data["new_email"])
+        request_email_change(request.user, form.cleaned_data["new_email"])
         # Même message dans tous les cas : rien ne révèle si l'adresse est déjà prise.
         messages.success(
             request,

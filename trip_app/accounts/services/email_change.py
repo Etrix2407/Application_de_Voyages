@@ -14,7 +14,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from accounts.models import EmailKind, Role, User, normalize_email_address
-from accounts.services.emails import send_email
+from accounts.services.emails import send_email, site_url
 from accounts.signals import email_changed
 from accounts.services.throttling import confirmation_emails
 
@@ -22,14 +22,14 @@ LINK_MAX_AGE = timedelta(hours=24)
 _TOKEN_SALT = "accounts.email-change"
 
 
-def request_email_change(request, user: User, new_email: str) -> None:
+def request_email_change(user: User, new_email: str) -> None:
     new_email = normalize_email_address(new_email)
     _notify_current_address(user)
     if User.objects.filter(email=new_email).exists() or confirmation_emails.is_locked(new_email):
         return
     confirmation_emails.record(new_email)
     token = signing.dumps({"id": user.pk, "old": user.email, "new": new_email}, salt=_TOKEN_SALT)
-    link = request.build_absolute_uri(reverse("confirm_email_change", args=[token]))
+    link = site_url(reverse("confirm_email_change", args=[token]))
     send_email(new_email, EmailKind.EMAIL_CHANGE_CONFIRMATION, {"prénom": user.first_name, "lien": link}, user=user)
 
 

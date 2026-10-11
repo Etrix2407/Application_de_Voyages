@@ -35,7 +35,7 @@ def create_agent(request):
     if request.method == "POST" and form.is_valid():
         agent = form.save()
         created = f"Le compte de {agent.get_full_name()} ({agent.employee_number}) a été créé."
-        if send_activation_link(request, agent):
+        if send_activation_link(agent):
             messages.success(request, f"{created} Un e-mail lui a été envoyé pour choisir son mot de passe.")
         else:
             messages.warning(request, f"{created} {LINK_NOT_SENT}")
@@ -76,7 +76,7 @@ def resend_link(request, pk):
     member = _get_staff_member(pk)
     if not member.is_active:
         messages.error(request, "Ce compte est désactivé : réactivez-le avant d'envoyer un lien.")
-    elif send_activation_link(request, member):
+    elif send_activation_link(member):
         messages.success(request, f"Un nouveau lien a été envoyé à {member.email}.")
     else:
         messages.error(request, LINK_NOT_SENT)

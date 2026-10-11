@@ -47,7 +47,7 @@ def edit_client(request, pk):
 @require_POST
 def send_client_link(request, pk):
     client = _get_client(pk)
-    sent = send_password_link(request, client, EmailKind.CLIENT_PASSWORD_LINK)
+    sent = send_password_link(client, EmailKind.CLIENT_PASSWORD_LINK)
     if sent:
         messages.success(request, f"Un lien pour choisir un nouveau mot de passe a été envoyé à {client.email}.")
     else:

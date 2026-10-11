@@ -12,7 +12,7 @@ from django.urls import reverse
 
 from .models import STAFF_ROLES, EmailKind, EmailText, Role, User, normalize_email_address
 from .services.email_texts import DEFAULT_TEXTS, fields_in, has_lone_brace
-from .services.emails import send_email
+from .services.emails import send_email, site_url
 from .services.throttling import (
     get_client_ip,
     login_failures,
@@ -144,7 +144,7 @@ class PasswordResetRequestForm(PasswordResetForm):
         # Envoi par le service commun (journal, HTML, mode test) : l'objet et le texte viennent du
         # type d'e-mail, les gabarits de Django ne servent pas. Lien construit avec le jeton de Django.
         path = reverse("password_reset_confirm", kwargs={"uidb64": context["uid"], "token": context["token"]})
-        fields = {"prénom": context["user"].first_name, "lien": f"{context['protocol']}://{context['domain']}{path}"}
+        fields = {"prénom": context["user"].first_name, "lien": site_url(path)}
         send_email(to_email, EmailKind.PASSWORD_RESET, fields, user=context["user"])
 
 
