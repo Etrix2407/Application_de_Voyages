@@ -1,11 +1,12 @@
 """Reconstruction des e-mails des demandes de voyage, pour les nouvelles tentatives et le renvoi manuel.
 
 La demande est retrouvée par son numéro (noté au journal). Le message n'est reconstruit que s'il
-a toujours une raison d'être : demande encore là, client non supprimé (et toujours celui du journal),
+a toujours une raison d'être : demande encore là, client non supprimé (toujours celui du journal, à la même adresse),
 demande toujours dans l'état annoncé (ex. pas de « confirmée » pour une demande annulée depuis).
 """
 
 from accounts.models import EmailKind, EmailLog
+from accounts.services.email_rebuilders import account_at_recipient
 from accounts.services.email_retry import RebuiltEmail, rebuilder
 from orders.models import Order, Status, StatusChange
 from orders.services.emails import (
@@ -20,10 +21,14 @@ from orders.services.status import departure_passed
 
 
 def _order_of(log: EmailLog, status: str) -> Order | None:
-    """Demande liée, si elle appartient toujours au client du journal et a cet état."""
-    if log.user is None or log.order_number is None:
+    """Demande liée, si elle appartient toujours au client du journal et a cet état.
+
+    Jamais à une ancienne adresse : le client doit toujours avoir l'adresse du journal.
+    """
+    client = account_at_recipient(log)
+    if client is None or log.order_number is None:
         return None
-    return Order.objects.filter(pk=log.order_number, client=log.user, status=status).first()
+    return Order.objects.filter(pk=log.order_number, client=client, status=status).first()
 
 
 def _last_change(order: Order) -> StatusChange | None:

@@ -9,7 +9,7 @@ from django.test import TestCase
 from django.utils import timezone
 
 from accounts.models import EmailKind, EmailLog, EmailStatus
-from accounts.services.email_retry import retry_due_emails
+from accounts.services.email_retry import OBSOLETE, retry_due_emails
 from accounts.tests.email_delivery import SendEmailsImmediately
 from accounts.tests.factories import create_agent, create_client
 from catalog.tests.factories import create_country, create_destination
@@ -108,6 +108,20 @@ class ReviewEmailTests(SendEmailsImmediately, TestCase):
 
         self.assertEqual(EmailLog.objects.get().status, EmailStatus.SENT)
         self.assertIn("Motif : Hors sujet", self.assertSentToJulie(EmailKind.REVIEW_REFUSED))
+
+    def test_never_rebuilt_for_a_former_address(self):
+        with mock.patch(
+            "accounts.services.emails.EmailMultiAlternatives.send", side_effect=OSError("serveur injoignable")
+        ):
+            refuse(self.review, RefusalReason.OFF_TOPIC)
+        EmailLog.objects.update(last_attempt_at=timezone.now() - timedelta(minutes=6))
+        self.julie.email = "julie.nouvelle@example.com"
+        self.julie.save()
+
+        retry_due_emails()
+
+        self.assertEqual(EmailLog.objects.get().last_error, OBSOLETE)
+        self.assertEqual(mail.outbox, [])
 
     def test_nothing_for_deleted_client(self):
         self.julie.delete()

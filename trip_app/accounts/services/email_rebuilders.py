@@ -14,7 +14,7 @@ from accounts.services.password_links import password_link_path, staff_link_fiel
 from accounts.services.sign_up import make_confirmation_token, notification_context
 
 
-def _account_at_recipient(log: EmailLog) -> User | None:
+def account_at_recipient(log: EmailLog) -> User | None:
     """Compte lié, s'il a toujours l'adresse à laquelle le message était destiné."""
     user = log.user
     return user if user is not None and user.email == log.recipient else None
@@ -22,7 +22,7 @@ def _account_at_recipient(log: EmailLog) -> User | None:
 
 @rebuilder(EmailKind.SIGN_UP_CONFIRMATION)
 def _sign_up_confirmation(log: EmailLog) -> RebuiltEmail | None:
-    user = _account_at_recipient(log)
+    user = account_at_recipient(log)
     if user is None or not user.is_awaiting_confirmation:
         return None
     link = site_url(reverse("confirm_sign_up", args=[make_confirmation_token(user)]))
@@ -31,7 +31,7 @@ def _sign_up_confirmation(log: EmailLog) -> RebuiltEmail | None:
 
 @rebuilder(EmailKind.SIGN_UP_EXISTING)
 def _sign_up_existing(log: EmailLog) -> RebuiltEmail | None:
-    user = _account_at_recipient(log)
+    user = account_at_recipient(log)
     if user is None:
         return None
     return RebuiltEmail(notification_context(user, site_url))
@@ -51,7 +51,7 @@ def _email_change_notice(log: EmailLog) -> RebuiltEmail | None:
 
 @rebuilder(EmailKind.PASSWORD_RESET)
 def _password_reset(log: EmailLog) -> RebuiltEmail | None:
-    user = _account_at_recipient(log)
+    user = account_at_recipient(log)
     # Mêmes conditions que « Mot de passe oublié » (PasswordResetForm.get_users).
     if user is None or not user.is_active or not user.has_usable_password():
         return None
@@ -60,7 +60,7 @@ def _password_reset(log: EmailLog) -> RebuiltEmail | None:
 
 @rebuilder(EmailKind.CLIENT_PASSWORD_LINK)
 def _client_password_link(log: EmailLog) -> RebuiltEmail | None:
-    user = _account_at_recipient(log)
+    user = account_at_recipient(log)
     if user is None or not user.is_client:
         return None
     return RebuiltEmail({"prénom": user.first_name, "lien": site_url(password_link_path(user))})
@@ -68,7 +68,7 @@ def _client_password_link(log: EmailLog) -> RebuiltEmail | None:
 
 @rebuilder(EmailKind.AGENT_ACTIVATION)
 def _agent_activation(log: EmailLog) -> RebuiltEmail | None:
-    user = _account_at_recipient(log)
+    user = account_at_recipient(log)
     # Invitation : sans objet si l'agent a déjà choisi son mot de passe. Lien neuf de 7 jours.
     if user is None or not user.is_staff_member or not user.is_active or user.has_usable_password():
         return None
@@ -77,7 +77,7 @@ def _agent_activation(log: EmailLog) -> RebuiltEmail | None:
 
 @rebuilder(EmailKind.STAFF_PASSWORD_LINK)
 def _staff_password_link(log: EmailLog) -> RebuiltEmail | None:
-    user = _account_at_recipient(log)
+    user = account_at_recipient(log)
     # Membre qui a déjà un mot de passe (sinon c'est une invitation). Lien neuf de 7 jours.
     if user is None or not user.is_staff_member or not user.is_active or not user.has_usable_password():
         return None

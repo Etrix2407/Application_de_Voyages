@@ -8,7 +8,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from accounts.models import EmailKind, EmailLog, EmailStatus
-from accounts.services.email_retry import retry_due_emails
+from accounts.services.email_retry import OBSOLETE, retry_due_emails
 from accounts.tests.email_delivery import SendEmailsImmediately
 from accounts.tests.factories import PASSWORD, create_agent, create_client
 from catalog.tests.factories import create_country, create_destination
@@ -120,3 +120,34 @@ class OrderEmailsTests(SendEmailsImmediately, TestCase):
         (email,) = mail.outbox
         self.assertIn("Plus de places disponibles.", email.body)
         self.assertNotIn("agressif", email.body)
+
+
+def failed_once(user, kind, order):
+    """E-mail en attente, première tentative ratée il y a 6 minutes : repris au prochain passage."""
+    return EmailLog.objects.create(
+        recipient=user.email if user else "reservations@horizons-lointains.be",
+        kind=kind,
+        subject="Objet",
+        user=user,
+        order_number=order.pk,
+        attempts=1,
+        last_attempt_at=timezone.now() - timedelta(minutes=6),
+    )
+
+
+class OrderEmailsRebuildTests(SendEmailsImmediately, TestCase):
+    def setUp(self):
+        self.marie = create_client()
+        self.agent = create_agent()
+        self.order = create_order(self.marie, create_destination(create_country("Japon"), "Kyoto"))
+
+    def test_never_rebuilt_for_a_former_address(self):
+        log = failed_once(self.marie, EmailKind.ORDER_PLACED, self.order)
+        self.marie.email = "marie.nouvelle@example.com"
+        self.marie.save()
+
+        retry_due_emails()
+
+        log.refresh_from_db()
+        self.assertEqual((log.status, log.last_error), (EmailStatus.FAILED, OBSOLETE))
+        self.assertEqual(mail.outbox, [])
