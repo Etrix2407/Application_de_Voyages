@@ -24,6 +24,7 @@ MAX_STAY_DAYS = 90
 MAX_TRAVELLERS = 10
 MAX_REMARKS_LENGTH = 2000
 CLIENT_FINGERPRINT_SALT = "orders.Order.client_fingerprint"
+AT_LEAST_ONE_ADULT = "Il faut au moins un adulte."
 
 
 def client_fingerprint(email: str) -> str:
@@ -83,7 +84,7 @@ class Order(models.Model):
     country_name = models.CharField("nom du pays au moment de la demande", max_length=100)
     departure_date = models.DateField("date de départ")
     return_date = models.DateField("date de retour")
-    adults = models.PositiveSmallIntegerField("adultes", validators=[MinValueValidator(1)])
+    adults = models.PositiveSmallIntegerField("adultes", validators=[MinValueValidator(1, AT_LEAST_ONE_ADULT)])
     children = models.PositiveSmallIntegerField("enfants", default=0)
     # max_length limite le formulaire ; le validateur limite aussi full_clean() (TextField ne le fait pas).
     remarks = models.TextField(
@@ -134,7 +135,7 @@ class Order(models.Model):
             models.Index(fields=["status", "-created_at"], name="order_status_created_idx"),
             models.Index(fields=["departure_date"], name="order_departure_idx"),
         ]
-        # Dernier rempart en base, aligné sur clean() (enfants ≥ 0 : déjà garanti par le type du champ).
+        # Dernier rempart en base, aligné sur la validation du modèle (enfants ≥ 0 : déjà garanti par le type du champ).
         constraints = [
             models.CheckConstraint(
                 condition=models.Q(return_date__gt=models.F("departure_date")), name="order_return_after_departure"
@@ -216,8 +217,6 @@ class Order(models.Model):
             errors["return_date"] = "La date de retour doit être après la date de départ."
         elif self.departure_date and self.return_date and (self.return_date - self.departure_date).days > MAX_STAY_DAYS:
             errors["return_date"] = f"Un séjour dure au maximum {MAX_STAY_DAYS} jours."
-        if self.adults is not None and self.adults < 1:
-            errors["adults"] = "Il faut au moins un adulte."
         if (self.adults or 0) + (self.children or 0) > MAX_TRAVELLERS:
             errors["children"] = f"Une demande compte au maximum {MAX_TRAVELLERS} voyageurs."
         # Règles de création : une demande existante reste valable si le temps passe

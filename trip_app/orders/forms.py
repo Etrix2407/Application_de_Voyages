@@ -6,6 +6,7 @@ from django import forms
 
 from catalog.models import Activity, Country, Destination
 from orders.models import (
+    AT_LEAST_ONE_ADULT,
     MAX_REMARKS_LENGTH,
     MAX_STAY_DAYS,
     MAX_TRAVELLERS,
@@ -25,6 +26,13 @@ class ActivityChoiceField(forms.ModelMultipleChoiceField):
 
 
 class OrderForm(forms.ModelForm):
+    # Déclaré ici : le champ du modèle (entier positif) donnerait un minimum de 0 au formulaire.
+    adults = forms.IntegerField(
+        label="Adultes",
+        min_value=1,
+        max_value=MAX_TRAVELLERS,
+        error_messages={"min_value": AT_LEAST_ONE_ADULT},
+    )
     activities = ActivityChoiceField(
         label="Activités souhaitées",
         queryset=Activity.objects.none(),
@@ -45,7 +53,6 @@ class OrderForm(forms.ModelForm):
         widgets = {
             "departure_date": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
             "return_date": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
-            "adults": forms.NumberInput(attrs={"min": 1, "max": MAX_TRAVELLERS}),
             "children": forms.NumberInput(attrs={"min": 0, "max": MAX_TRAVELLERS - 1}),
             "remarks": forms.Textarea(attrs={"rows": 4}),
         }
