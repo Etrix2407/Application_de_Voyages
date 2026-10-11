@@ -88,15 +88,6 @@ class PublicReviewFilterForm(forms.Form):
         choices=[("", "Toutes les notes"), *[(rating, label) for rating, label in RATING_CHOICES]],
     )
 
-    # Anciennes clés de tri encore présentes dans des liens enregistrés.
-    LEGACY_SORTS = {"recents": NEWEST_REVIEWS_FIRST}
-
-    def __init__(self, data=None, **kwargs):
-        if data is not None and data.get("sort") in self.LEGACY_SORTS:
-            data = data.copy()
-            data["sort"] = self.LEGACY_SORTS[data["sort"]]
-        super().__init__(data, **kwargs)
-
 
 class ResponseForm(forms.Form):
     text = forms.CharField(
