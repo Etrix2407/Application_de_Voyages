@@ -1,12 +1,14 @@
 from datetime import timedelta
+from io import StringIO
 from unittest import mock
 
 from django.core import mail
+from django.core.management import call_command
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
-from accounts.models import EmailFailure, EmailKind, EmailLog, EmailStatus
+from accounts.models import EmailFailure, EmailKind, EmailLog, EmailStatus, TaskLock
 from accounts.services.account_deletion import delete_account
 from accounts.services.email_retry import (
     _REBUILDERS,
@@ -17,6 +19,7 @@ from accounts.services.email_retry import (
     retry_due_emails,
 )
 from accounts.services.privacy import purge_old_email_log
+from accounts.services.task_lock import task_lock
 
 from .factories import create_admin, create_agent, create_client
 
@@ -109,6 +112,28 @@ class RetryTests(TestCase):
         log.refresh_from_db()
         self.assertEqual((log.status, log.last_error), (EmailStatus.FAILED, NOT_REBUILDABLE))
         self.assertEqual(mail.outbox, [])
+
+
+class ProcessEmailsLockTests(TestCase):
+    def run_command(self):
+        output = StringIO()
+        call_command("process_emails", stdout=output)
+        return output.getvalue()
+
+    def test_one_pass_at_a_time_and_lock_expires(self):
+        log = pending_log(create_client(), attempts=1, minutes_ago=6)
+
+        with task_lock("process_emails", timedelta(minutes=30)):
+            self.assertIn("Un autre passage est en cours", self.run_command())
+        self.assertEqual(mail.outbox, [])
+
+        # Passage interrompu sans rendre le verrou : il est repris une fois expiré.
+        TaskLock.objects.filter(name="process_emails").update(
+            locked_until=timezone.now() - timedelta(seconds=1), holder="passage interrompu"
+        )
+        self.assertIn("E-mails envoyés ou retentés : 1", self.run_command())
+        log.refresh_from_db()
+        self.assertEqual(log.status, EmailStatus.SENT)
 
 
 class ManualResendTests(TestCase):

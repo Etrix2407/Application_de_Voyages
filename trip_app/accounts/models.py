@@ -281,6 +281,24 @@ class EmailLog(models.Model):
         return f"{self.get_kind_display()} — {self.get_status_display()}"
 
 
+class TaskLock(models.Model):
+    """Verrou d'une tâche planifiée : un seul passage à la fois (ex. process_emails).
+
+    Il expire de lui-même (locked_until) : un passage interrompu ne bloque pas les suivants.
+    """
+
+    name = models.CharField("tâche", max_length=50, unique=True)
+    locked_until = models.DateTimeField("verrouillé jusqu'au")
+    holder = models.CharField("passage en cours", max_length=32, blank=True)
+
+    class Meta:
+        verbose_name = "verrou de tâche"
+        verbose_name_plural = "verrous de tâches"
+
+    def __str__(self) -> str:
+        return self.name
+
+
 class EmailText(models.Model):
     """Objet et texte d'un type d'e-mail, modifiés par l'administrateur (Recap 5).
 
