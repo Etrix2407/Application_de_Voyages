@@ -2,6 +2,7 @@ from datetime import timedelta
 from decimal import Decimal
 
 from django.core.exceptions import ValidationError
+from django.db import IntegrityError, transaction
 from django.db.models import ProtectedError
 from django.test import TestCase
 from django.urls import reverse
@@ -72,6 +73,21 @@ class ValidationTests(TestCase):
         create_promotion(code="")
 
         self.assertEqual(Promotion.objects.automatic().count(), 2)
+
+    def test_rules_also_enforced_by_the_database(self):
+        today = timezone.localdate()
+        invalid = [
+            {"value": Decimal("500")},
+            {"kind": Kind.FIXED, "value": Decimal("0")},
+            {"ends_on": today - timedelta(days=1)},
+            {"departure_from": today},
+            {"departure_from": today, "departure_until": today - timedelta(days=1)},
+            {"max_uses": 0},
+            {"max_uses_per_client": 0},
+        ]
+        for fields in invalid:
+            with self.subTest(fields=fields), self.assertRaises(IntegrityError), transaction.atomic():
+                self.promotion(**fields).save()
 
     def test_targets_required_for_country_or_destination_scope(self):
         self.assertIn("countries", targets_problem(Scope.COUNTRIES, [], []))
