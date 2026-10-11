@@ -14,7 +14,7 @@ from datetime import date
 from django.db.models import Count, F, Q
 from django.utils import timezone
 
-from accounts.services.throttling import Limiter
+from accounts.services.throttling import wrong_promo_codes, wrong_promo_codes_by_ip
 from catalog.models import Destination
 from orders.models import Order, Status, client_fingerprint
 from promotions.models import Promotion, normalize_code
@@ -38,11 +38,6 @@ NOT_FOR_THIS_ORDER = "Ce code ne s'applique pas à cette demande"
 ALREADY_USED = "Vous avez déjà utilisé ce code"
 NO_LONGER_AVAILABLE = "Ce code n'est plus disponible"
 TOO_MANY_WRONG_CODES = "Trop de codes incorrects ont été essayés. Réessayez dans une heure, ou appelez l'agence."
-
-wrong_codes = Limiter("promo-codes", max_attempts=10, window_seconds=60 * 60)
-# Par adresse IP : empêche de contourner la limite en changeant de compte.
-wrong_codes_by_ip = Limiter("promo-codes-ip", max_attempts=30, window_seconds=60 * 60)
-
 
 @dataclass(frozen=True)
 class PromotionChoice:
@@ -122,14 +117,14 @@ def choose_promotion(
         return PromotionChoice(automatic)
 
     attempts_key = str(client.pk)
-    if wrong_codes.is_locked(attempts_key) or wrong_codes_by_ip.is_locked(ip):
+    if wrong_promo_codes.is_locked(attempts_key) or wrong_promo_codes_by_ip.is_locked(ip):
         return PromotionChoice(automatic, code_error=TOO_MANY_WRONG_CODES)
     promotion = Promotion.objects.filter(code=normalize_code(code)).first()
     problem = _code_problem(promotion, client, destination, departure_date, today)
     offer = None if problem else offer_for(promotion, prices)
     if problem == INVALID_CODE:
-        wrong_codes.record(attempts_key)
-        wrong_codes_by_ip.record(ip)
+        wrong_promo_codes.record(attempts_key)
+        wrong_promo_codes_by_ip.record(ip)
     if offer is None:
         return PromotionChoice(automatic, code_error=problem or NOT_FOR_THIS_ORDER)
 
