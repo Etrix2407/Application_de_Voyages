@@ -1,9 +1,10 @@
+import re
 from unittest import mock
 
 from django.core import mail
 from django.test import TestCase, override_settings
 
-from accounts.models import EmailKind, EmailLog, EmailStatus
+from accounts.models import EmailKind, EmailLog, EmailStatus, EmailText
 from accounts.services.emails import MAX_ATTEMPTS, deliver, send_email
 
 from .factories import create_client
@@ -57,6 +58,7 @@ class SendEmailTests(TestCase):
         html, mimetype = message.alternatives[0]
         self.assertEqual(mimetype, "text/html")
         self.assertIn(f'href="{LINK}"', html)
+        self.assertIn("Choisir un nouveau mot de passe</a>", html)  # bouton au texte explicite
         self.assertIn("Bonjour Marie,", html)
         self.assertTrue(message.body.endswith("\n\nL'équipe Horizons Lointains\n"))
         self.assertIn("L&#x27;équipe Horizons Lointains", html)
@@ -83,6 +85,24 @@ class SendEmailTests(TestCase):
             for _ in range(MAX_ATTEMPTS - 1):
                 deliver(log, mail.EmailMultiAlternatives())
         self.assertEqual(log.status, EmailStatus.FAILED)
+
+    def test_only_link_fields_are_clickable(self):
+        # Hameçonnage : une adresse saisie dans un prénom ou écrite par l'administrateur reste du texte.
+        EmailText.objects.create(
+            kind=EmailKind.CLIENT_PASSWORD_LINK,
+            subject="Objet",
+            body="Bonjour {prénom}, voir https://admin.example/page\n\n{lien}",
+            updated_by_name="Admin",
+        )
+        fields = {"prénom": "Cliquez https://evil.example/login", "lien": LINK}
+        with self.captureOnCommitCallbacks(execute=True):
+            send_email("marie@example.com", EmailKind.CLIENT_PASSWORD_LINK, fields)
+
+        message = mail.outbox[0]
+        html = message.alternatives[0][0]
+        self.assertEqual(re.findall(r'href="([^"]*)"', html), [LINK])
+        self.assertIn("Cliquez https://evil.example/login", html)
+        self.assertIn(LINK, message.body)  # adresse complète dans la version texte
 
     def test_account_deletion_erases_address_and_link(self):
         self.send()

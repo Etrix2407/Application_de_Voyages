@@ -116,11 +116,11 @@ def redeliver(log: EmailLog) -> bool:
         log.last_error = OBSOLETE if rebuild else NOT_REBUILDABLE
         log.save(update_fields=["status", "last_error"])
         return False
-    subject, body = render_email(log.kind, rebuilt.fields)
+    subject, body, html = render_email(log.kind, rebuilt.fields)
     if subject != log.subject:
         log.subject = subject
         log.save(update_fields=["subject"])
-    return deliver(log, build_message(log.recipient, subject, body, rebuilt.headers))
+    return deliver(log, build_message(log.recipient, subject, body, html, rebuilt.headers))
 
 
 def _claim(log: EmailLog, now: datetime) -> bool:

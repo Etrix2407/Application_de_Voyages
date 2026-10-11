@@ -14,6 +14,7 @@ from django.db.transaction import on_commit
 from django.template.loader import render_to_string
 from django.templatetags.static import static
 from django.utils import timezone
+from django.utils.safestring import SafeString
 
 from accounts.models import EmailKind, EmailLog, EmailStatus, User
 from accounts.services.email_texts import current_subject, render_email
@@ -44,11 +45,11 @@ def send_email(
     Renvoie False si l'envoi immédiat a échoué ; True s'il a réussi ou s'il aura lieu à la
     validation de la transaction. Ne lève jamais d'exception à cause de l'envoi lui-même.
     """
-    subject, text = render_email(kind, fields)
+    subject, text, html = render_email(kind, fields)
     log = EmailLog.objects.create(
         recipient=to, kind=kind, subject=subject, user=user, order_number=order_number
     )
-    message = build_message(to, subject, text)
+    message = build_message(to, subject, text, html)
     results = []
     on_commit(lambda: results.append(deliver(log, message)), robust=True)
     # Hors transaction, l'envoi vient d'avoir lieu ; sinon il aura lieu à la validation.
@@ -77,9 +78,12 @@ def queue_emails(users: Iterable[User], kind: EmailKind, *, promotion_mailing_nu
     return len(EmailLog.objects.bulk_create(logs, batch_size=500))
 
 
-def build_message(to: str, subject: str, body: str, headers: dict[str, str] | None = None) -> EmailMultiAlternatives:
+def build_message(
+    to: str, subject: str, body: str, html_body: SafeString, headers: dict[str, str] | None = None
+) -> EmailMultiAlternatives:
     """Message en texte et en HTML ; en mode test, il part à l'adresse de test.
 
+    `body` et `html_body` : corps en texte et en HTML, tels que rendus par render_email.
     `headers` : en-têtes supplémentaires (ex. List-Unsubscribe des e-mails promotionnels).
     """
     if settings.EMAIL_TEST_MODE and settings.EMAIL_TEST_RECIPIENT:
@@ -99,7 +103,7 @@ def build_message(to: str, subject: str, body: str, headers: dict[str, str] | No
         "emails/base.html",
         {
             "subject": subject,
-            "body": body.strip(),
+            "body": html_body,
             "logo_url": _logo_url(),
             "site_name": settings.SITE_NAME,
             "signature": signature,

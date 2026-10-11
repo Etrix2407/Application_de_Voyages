@@ -1,7 +1,8 @@
 <!DOCTYPE html>
 {% comment %}
-Mise en page commune des e-mails (version HTML). Le texte (body) est celui de la version texte :
-les liens deviennent cliquables et les paragraphes sont conservés. Styles en ligne : les
+Mise en page commune des e-mails (version HTML). Le corps (body) est préparé par render_email
+(accounts/services/email_texts.py) : texte échappé, paragraphes conservés, et seuls les champs de
+type lien sous forme de bouton ; aucune adresse n'est rendue cliquable automatiquement. Styles en ligne : les
 messageries ignorent souvent les feuilles de style. Gros caractères et fort contraste.
 Signature : « L'équipe … » toujours, puis les coordonnées de l'agence si elles sont réglées ;
 le logo ne s'affiche que s'il est réglé (voir config/settings.py).
@@ -22,7 +23,7 @@ le logo ne s'affiche que s'il est réglé (voir config/settings.py).
       {% endif %}
     </div>
     <div style="word-break: break-word;">
-      {{ body|urlize|linebreaks }}
+      {{ body }}
     </div>
     <div style="margin-top: 32px; padding-top: 16px; border-top: 1px solid #767676;">
       {% for line in signature %}
