@@ -3,9 +3,9 @@
 - Pas de cumul : la meilleure remise en euros l'emporte (voir promotions.services.discounts).
 - Un code saisi qui est battu par une promotion automatique n'est pas consommé.
 - Limites : seules les demandes non annulées comptent (une annulation rend l'utilisation).
-- Un code dont la promotion n'a pas encore commencé est « invalide » : les offres à venir
-  ne sont pas révélées. Les codes invalides sont limités (10 par heure et par client,
-  30 par heure et par adresse IP).
+- Un code dont la promotion est désactivée ou n'a pas encore commencé est « invalide » : les
+  offres à venir ou retirées ne sont pas révélées. Les codes invalides sont limités (10 par heure
+  et par client, 30 par heure et par adresse IP).
 """
 
 from dataclasses import dataclass
@@ -137,10 +137,9 @@ def choose_promotion(
 
 
 def _code_problem(promotion: Promotion | None, client, destination, departure_date, today) -> str:
-    if promotion is None or (promotion.is_active and today < promotion.starts_on):
+    # Inconnu, désactivé ou pas encore commencé : même réponse, comptée comme un essai.
+    if promotion is None or not promotion.is_active or today < promotion.starts_on:
         return INVALID_CODE
-    if not promotion.is_active:
-        return NO_LONGER_AVAILABLE
     if today > promotion.ends_on:
         return EXPIRED_CODE
     if not in_scope(promotion, destination):

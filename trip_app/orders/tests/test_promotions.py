@@ -60,7 +60,7 @@ class ChoosePromotionTests(TestCase):
             "INCONNU": messages.INVALID_CODE,
             "FUTUR1": messages.INVALID_CODE,
             "FINI01": messages.EXPIRED_CODE,
-            "ARRETE": messages.NO_LONGER_AVAILABLE,
+            "ARRETE": messages.INVALID_CODE,
             "PORTUGAL": messages.WRONG_DESTINATION,
             "AUTOMNE": messages.WRONG_DEPARTURE,
             "ACTIVITES": messages.NOT_FOR_THIS_ORDER,
