@@ -6,7 +6,6 @@ from django.contrib import messages
 from django.core.paginator import Paginator
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
-from django.views.decorators.http import require_POST
 
 from accounts.decorators import administrator_required, staff_required
 from accounts.models import User
@@ -162,9 +161,11 @@ def edit(request, pk):
 
 
 @administrator_required
-@require_POST
 def disable(request, pk):
+    """Page de confirmation, puis désactivation (définitive) au clic sur le bouton."""
     promotion = get_object_or_404(Promotion, pk=pk)
+    if request.method != "POST":
+        return render(request, "promotions/manage/disable.html", {"promotion": promotion})
     if disable_promotion(promotion, request.user):
         messages.success(request, f"La promotion « {promotion} » est désactivée : elle n'est plus proposée.")
     else:

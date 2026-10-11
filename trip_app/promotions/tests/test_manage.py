@@ -107,6 +107,13 @@ class DisableAndDeleteTests(TestCase):
         self.client.force_login(create_admin())
         self.promotion = create_promotion()
 
+    def test_disable_asks_for_confirmation_first(self):
+        response = self.client.get(reverse("manage_disable_promotion", args=[self.promotion.pk]))
+
+        self.assertContains(response, "cette action est définitive")
+        self.promotion.refresh_from_db()
+        self.assertTrue(self.promotion.is_active)
+
     def test_disable_once_with_history(self):
         url = reverse("manage_disable_promotion", args=[self.promotion.pk])
 
