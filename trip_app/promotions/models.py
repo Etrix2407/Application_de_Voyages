@@ -11,6 +11,7 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db import models
+from django.db.models import F, Q
 from django.utils import timezone
 
 from catalog.models import Country, Destination
@@ -21,7 +22,7 @@ MAX_PERCENT = Decimal("50")
 CODE_PATTERN = re.compile(r"[A-Z0-9]{4,20}")
 
 
-class Kind(models.TextChoices):
+class DiscountKind(models.TextChoices):
     PERCENT = "percent", "Pourcentage"
     FIXED = "fixed", "Montant fixe"
 
@@ -32,7 +33,7 @@ class Scope(models.TextChoices):
     DESTINATIONS = "destinations", "Une ou plusieurs destinations"
 
 
-class Base(models.TextChoices):
+class DiscountBase(models.TextChoices):
     """Assiette : la partie du prix sur laquelle porte la remise."""
 
     STAY = "stay", "Séjour (prix de la destination)"
@@ -40,7 +41,7 @@ class Base(models.TextChoices):
     TOTAL = "total", "Total (séjour + activités)"
 
 
-class State(models.TextChoices):
+class PromotionState(models.TextChoices):
     """État affiché, déduit des dates (sauf « Désactivée »)."""
 
     UPCOMING = "upcoming", "À venir"
@@ -53,6 +54,15 @@ class Action(models.TextChoices):
     CREATED = "created", "Création"
     UPDATED = "updated", "Modification"
     DISABLED = "disabled", "Désactivation"
+
+
+class PromotionEmail(models.TextChoices):
+    """Type des e-mails promotionnels ; texte d'origine dans promotions/services/email_texts.py.
+
+    La valeur est la clé stockée au journal des e-mails : elle ne change jamais.
+    """
+
+    PROMOTION = "promotion", "E-mail promotionnel"
 
 
 def normalize_code(code: str) -> str:
@@ -73,7 +83,7 @@ class PromotionQuerySet(models.QuerySet):
 class Promotion(models.Model):
     name = models.CharField("nom", max_length=100)
     description = models.CharField("description courte", max_length=300, blank=True)
-    kind = models.CharField("type", max_length=10, choices=Kind.choices)
+    kind = models.CharField("type", max_length=10, choices=DiscountKind.choices)
     value = models.DecimalField(
         "valeur", max_digits=8, decimal_places=2, help_text="En % pour un pourcentage, en euros pour un montant fixe."
     )
@@ -83,7 +93,7 @@ class Promotion(models.Model):
     destinations = models.ManyToManyField(
         Destination, through="PromotionDestination", blank=True, verbose_name="destinations"
     )
-    base = models.CharField("assiette", max_length=15, choices=Base.choices, default=Base.TOTAL)
+    base = models.CharField("assiette", max_length=15, choices=DiscountBase.choices, default=DiscountBase.TOTAL)
     # Validité : date à laquelle le client fait sa demande (pas la date du voyage), dernier jour inclus.
     starts_on = models.DateField("date de début")
     ends_on = models.DateField("date de fin")
@@ -106,6 +116,35 @@ class Promotion(models.Model):
     class Meta:
         verbose_name = "promotion"
         ordering = ["-created_at", "-pk"]
+        # Les règles de clean(), garanties aussi par la base (ex. une promotion créée hors formulaire).
+        constraints = [
+            models.CheckConstraint(
+                condition=(
+                    Q(kind=DiscountKind.PERCENT, value__gte=MIN_PERCENT, value__lte=MAX_PERCENT)
+                    | Q(kind=DiscountKind.FIXED, value__gt=0)
+                ),
+                name="promotion_value_in_range",
+            ),
+            models.CheckConstraint(condition=Q(ends_on__gte=F("starts_on")), name="promotion_ends_after_start"),
+            models.CheckConstraint(
+                condition=(
+                    Q(departure_from__isnull=True, departure_until__isnull=True)
+                    | Q(
+                        departure_from__isnull=False,
+                        departure_until__isnull=False,
+                        departure_until__gte=F("departure_from"),
+                    )
+                ),
+                name="promotion_departure_period",
+            ),
+            models.CheckConstraint(
+                condition=Q(max_uses__isnull=True) | Q(max_uses__gte=1), name="promotion_max_uses_positive"
+            ),
+            models.CheckConstraint(
+                condition=Q(max_uses_per_client__isnull=True) | Q(max_uses_per_client__gte=1),
+                name="promotion_max_uses_per_client_positive",
+            ),
+        ]
 
     def __str__(self) -> str:
         return self.name
@@ -116,9 +155,9 @@ class Promotion(models.Model):
             self.code = normalize_code(self.code)
         errors = {}
         if self.value is not None:
-            if self.kind == Kind.PERCENT and not MIN_PERCENT <= self.value <= MAX_PERCENT:
+            if self.kind == DiscountKind.PERCENT and not MIN_PERCENT <= self.value <= MAX_PERCENT:
                 errors["value"] = f"Un pourcentage est compris entre {MIN_PERCENT} et {MAX_PERCENT} %."
-            elif self.kind == Kind.FIXED and self.value <= 0:
+            elif self.kind == DiscountKind.FIXED and self.value <= 0:
                 errors["value"] = "Le montant de la remise doit être supérieur à 0 €."
         if self.starts_on and self.ends_on and self.ends_on < self.starts_on:
             errors["ends_on"] = "La date de fin ne peut pas être avant la date de début."
@@ -143,16 +182,18 @@ class Promotion(models.Model):
     @property
     def discount_label(self) -> str:
         """« -15 % », « -12,5 % », « -100,00 € » ou « -99,50 € »."""
-        if self.kind == Kind.PERCENT:
+        if self.kind == DiscountKind.PERCENT:
             return f"-{self.value.normalize():f} %".replace(".", ",")
         return f"-{euros(self.value)}"
 
     @property
     def base_label(self) -> str:
         """Assiette en clair pour le public : « sur le séjour », « sur les activités », « sur le total »."""
-        return {Base.STAY: "sur le séjour", Base.ACTIVITIES: "sur les activités", Base.TOTAL: "sur le total"}[
-            self.base
-        ]
+        return {
+            DiscountBase.STAY: "sur le séjour",
+            DiscountBase.ACTIVITIES: "sur les activités",
+            DiscountBase.TOTAL: "sur le total",
+        }[self.base]
 
     @property
     def targets_label(self) -> str:
@@ -163,21 +204,15 @@ class Promotion(models.Model):
             return ", ".join(destination.name for destination in self.destinations.all())
         return Scope.CATALOG.label
 
-    def state(self, today=None) -> State:
+    def state(self, today=None) -> PromotionState:
         if not self.is_active:
-            return State.DISABLED
+            return PromotionState.DISABLED
         today = today or timezone.localdate()
         if today < self.starts_on:
-            return State.UPCOMING
+            return PromotionState.UPCOMING
         if today > self.ends_on:
-            return State.FINISHED
-        return State.RUNNING
-
-    @property
-    def created_by_name(self) -> str:
-        """Auteur de la création, lu dans l'historique (nom figé)."""
-        creation = self.history.filter(action=Action.CREATED).first()
-        return creation.author_name if creation else ""
+            return PromotionState.FINISHED
+        return PromotionState.RUNNING
 
 
 def targets_problem(scope: str, countries, destinations) -> dict[str, str]:
@@ -239,7 +274,9 @@ class PromotionMailing(models.Model):
     (prénom, lien de désinscription), et le journal des e-mails ne garde aucun contenu.
     """
 
-    promotion = models.ForeignKey(Promotion, on_delete=models.CASCADE, related_name="mailings")
+    # PROTECT : une promotion déjà envoyée ne se supprime pas (historique des envois et journal
+    # des e-mails) ; elle se désactive.
+    promotion = models.ForeignKey(Promotion, on_delete=models.PROTECT, related_name="mailings")
     message = models.TextField("message")
     created_at = models.DateTimeField("date", default=timezone.now)
     # Nom figé au moment de l'envoi : reste lisible si le compte de l'administrateur est supprimé.
@@ -248,10 +285,13 @@ class PromotionMailing(models.Model):
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="+"
     )
     recipients_count = models.PositiveIntegerField("nombre de destinataires")
+    # Jeton de la page de confirmation : un double clic ou un formulaire renvoyé ne crée pas
+    # un second envoi (unicité garantie par la base). Vide pour les envois d'avant ce jeton.
+    submission_token = models.UUIDField(null=True, blank=True, unique=True, editable=False)
 
     class Meta:
         verbose_name = "envoi promotionnel"
         ordering = ["-created_at", "-pk"]
 
     def __str__(self) -> str:
-        return f"{self.promotion} — {self.created_at:%d/%m/%Y}"
+        return f"{self.promotion} — {timezone.localtime(self.created_at):%d/%m/%Y}"

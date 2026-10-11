@@ -1,4 +1,5 @@
-<div class="table-scroll">
+{% load money %}
+<div class="table-scroll" tabindex="0" role="region" aria-label="Tableau : {{ caption }}">
     <table>
         <caption>{{ caption }}</caption>
         <thead>
@@ -14,12 +15,12 @@
         <tbody>
             {% for order in orders %}
                 <tr>
-                    <td><a href="{% url 'manage_order_detail' order.pk %}">{{ order.pk }}</a></td>
+                    <td><a href="{% url 'manage_order_detail' order.pk %}"><span class="sr-only">Voir la demande n° </span>{{ order.pk }}</a></td>
                     <td>{{ order.created_at|date:"j F Y" }}</td>
-                    <td>{% if order.client %}{{ order.client.last_name }} {{ order.client.first_name }}{% else %}Client supprimé{% endif %}</td>
-                    <td>{{ order.destination_name }} ({{ order.country_name }})</td>
+                    <td>{{ order.client_label }}</td>
+                    <td>{{ order.destination_label }}</td>
                     <td><span class="status status-{{ order.status }}">{{ order.get_status_display }}</span></td>
-                    <td>{{ order.latest_discount|floatformat:2 }} €</td>
+                    <td>{{ order.latest_discount|euros }}</td>
                 </tr>
             {% endfor %}
         </tbody>

@@ -10,15 +10,7 @@
 
     <h2>Informations pratiques</h2>
     <dl class="details">
-        <dt>Continent</dt>
-        <dd>{{ country.get_continent_display }}</dd>
-        <dt>Langue principale</dt>
-        <dd>{{ country.main_language }}</dd>
-        <dt>Monnaie</dt>
-        <dd>{{ country.currency }}</dd>
-        <dt>Visa pour les Belges</dt>
-        <dd>{{ country.get_visa_display }}</dd>
-        {% include "catalog/_time_offsets.html" %}
+        {% include "catalog/_country_facts.html" %}
     </dl>
 
     <h2>Destinations</h2>

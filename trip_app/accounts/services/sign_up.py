@@ -12,17 +12,18 @@ La page de confirmation affiche les données du compte et demande un clic sur un
 la propriétaire de l'adresse ne confirme pas sans le savoir un compte créé par un tiers.
 """
 
-from collections.abc import Callable
 from datetime import timedelta
 
+from django.contrib.auth.hashers import make_password
 from django.core import signing
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.urls import reverse
 from django.utils import timezone
+from django.utils.crypto import constant_time_compare, salted_hmac
 
-from accounts.models import EmailKind, Role, User, normalize_email_address
+from accounts.models import AccountEmail, Role, User, normalize_email_address
 from accounts.services.account_deletion import delete_account
-from accounts.services.emails import send_email
+from accounts.services.emails import send_email, site_url
 from accounts.services.throttling import confirmation_emails
 
 CONFIRMATION_MAX_AGE = timedelta(hours=48)
@@ -32,10 +33,12 @@ _PERSONAL_FIELDS = ("first_name", "last_name", "phone", "birth_date")
 
 
 def make_confirmation_token(user: User) -> str:
-    # L'adresse fait partie du jeton : un lien ne vaut que pour l'adresse qui l'a reçu.
+    # L'adresse fait partie du jeton : un lien ne vaut que pour l'adresse qui l'a reçu. Seule son
+    # empreinte y figure : le jeton est signé mais lisible, l'adresse n'apparaît pas dans l'URL.
     # La date d'inscription aussi : un lien ne vaut que pour les données envoyées avec lui.
     return signing.dumps(
-        {"id": user.pk, "email": user.email, "joined": user.date_joined.isoformat()}, salt=_TOKEN_SALT
+        {"id": user.pk, "address": _address_fingerprint(user.email), "joined": user.date_joined.isoformat()},
+        salt=_TOKEN_SALT,
     )
 
 
@@ -45,45 +48,57 @@ def user_from_token(token: str) -> User | None:
         data = signing.loads(token, salt=_TOKEN_SALT, max_age=CONFIRMATION_MAX_AGE)
     except signing.BadSignature:  # comprend les liens expirés
         return None
-    user = User.objects.filter(pk=data.get("id"), email=data.get("email"), role=Role.CLIENT).first()
+    user = User.objects.filter(pk=data.get("id"), role=Role.CLIENT).first()
     if user is None or user.date_joined.isoformat() != data.get("joined"):
+        return None
+    if not constant_time_compare(str(data.get("address", "")), _address_fingerprint(user.email)):
         return None
     return user
 
 
-def request_sign_up(request, form) -> None:
-    """Traite un formulaire d'inscription valide, sans révéler si l'adresse existe."""
-    email = normalize_email_address(form.cleaned_data["email"])
+def _address_fingerprint(email: str) -> str:
+    return salted_hmac(_TOKEN_SALT, email).hexdigest()
+
+
+def request_sign_up(data: dict) -> None:
+    """Traite les données d'un formulaire d'inscription valide, sans révéler si l'adresse existe."""
+    email = normalize_email_address(data["email"])
     existing = User.objects.filter(email=email).first()
     if existing and not existing.is_awaiting_confirmation:
-        _notify(request, existing, EmailKind.SIGN_UP_EXISTING)
+        # Hachage sans usage : la réponse prend le même temps que pour une inscription nouvelle.
+        make_password(data["password1"])
+        _notify(existing, AccountEmail.SIGN_UP_EXISTING, account_fields(existing))
         return
 
     user = User(email=email, role=Role.CLIENT, consent_date=timezone.now())
     for field in _PERSONAL_FIELDS:
-        setattr(user, field, form.cleaned_data.get(field))
-    user.set_promotional_emails_consent(form.cleaned_data.get("promotional_emails", False))
-    user.set_password(form.cleaned_data["password1"])
-    with transaction.atomic():
-        if existing:
-            # Compte non confirmé : supprimé (sessions et favoris compris) et remplacé.
-            # Ses anciens liens de confirmation ne valent plus rien (autre compte).
-            existing.delete()
-        user.save()
-    send_confirmation(request, user)
+        setattr(user, field, data.get(field))
+    user.set_promotional_emails_consent(data.get("promotional_emails", False))
+    user.set_password(data["password1"])
+    try:
+        with transaction.atomic():
+            if existing:
+                # Compte non confirmé : supprimé (sessions et favoris compris) et remplacé.
+                # Ses anciens liens de confirmation ne valent plus rien (autre compte).
+                existing.delete()
+            user.save()
+    except IntegrityError:
+        # Inscription simultanée avec la même adresse : la première l'emporte. La page affichée
+        # reste la même que pour une adresse déjà inscrite : rien n'est révélé.
+        return
+    send_confirmation(user)
 
 
-def send_confirmation(request, user: User) -> bool:
+def send_confirmation(user: User) -> bool:
     """Envoie le lien de confirmation. Renvoie False s'il n'est pas parti (limite ou panne)."""
-    link = request.build_absolute_uri(reverse("confirm_sign_up", args=[make_confirmation_token(user)]))
-    return _notify(request, user, EmailKind.SIGN_UP_CONFIRMATION, {"lien": link})
+    return _notify(user, AccountEmail.SIGN_UP_CONFIRMATION, confirmation_fields(user))
 
 
-def resend_confirmation(request, email: str) -> None:
+def resend_confirmation(email: str) -> None:
     """Renvoie le lien si l'adresse attend sa confirmation ; sinon ne fait rien."""
     user = User.objects.filter(email=normalize_email_address(email)).first()
     if user and user.is_awaiting_confirmation:
-        send_confirmation(request, user)
+        send_confirmation(user)
 
 
 def confirm(user: User) -> None:
@@ -99,25 +114,29 @@ def purge_unconfirmed(now=None) -> int:
     # Un par un : chaque titulaire reçoit un dernier e-mail (quelques comptes par jour au plus).
     deleted = 0
     for user in accounts:
-        delete_account(user, EmailKind.UNCONFIRMED_ACCOUNT_DELETED)
+        delete_account(user, AccountEmail.UNCONFIRMED_ACCOUNT_DELETED)
         deleted += 1
     return deleted
 
 
-def notification_context(user: User, absolute_url: Callable[[str], str]) -> dict:
-    """Champs communs aux e-mails d'inscription ; `absolute_url` rend un chemin absolu
-    (request.build_absolute_uri pendant une requête, site_url hors requête)."""
+def account_fields(user: User) -> dict:
+    """Champs communs aux e-mails d'inscription : prénom, liens de connexion et « mot de passe oublié »."""
     return {
         "prénom": user.first_name,
-        "lien de connexion": absolute_url(reverse("login")),
-        "lien mot de passe oublié": absolute_url(reverse("password_reset")),
+        "lien de connexion": site_url(reverse("login")),
+        "lien mot de passe oublié": site_url(reverse("password_reset")),
     }
 
 
-def _notify(request, user: User, kind: EmailKind, extra: dict | None = None) -> bool:
+def confirmation_fields(user: User) -> dict:
+    """Champs de l'e-mail de confirmation, avec un lien neuf (valable CONFIRMATION_MAX_AGE)."""
+    link = site_url(reverse("confirm_sign_up", args=[make_confirmation_token(user)]))
+    return {**account_fields(user), "lien": link}
+
+
+def _notify(user: User, kind: AccountEmail, fields: dict) -> bool:
     # Limite par adresse : on ne peut pas se servir du site pour inonder une boîte e-mail.
     if confirmation_emails.is_locked(user.email):
         return False
     confirmation_emails.record(user.email)
-    fields = {**notification_context(user, request.build_absolute_uri), **(extra or {})}
     return send_email(user.email, kind, fields, user=user)

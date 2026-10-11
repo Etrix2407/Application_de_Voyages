@@ -11,11 +11,15 @@ Chaque action porte sur la version relue (`seen_version`, numéro de version de 
 si le client a modifié son avis entre-temps, l'action est refusée.
 """
 
+from django.core.exceptions import ValidationError
 from django.utils import timezone
 
-from orders.models import Status
-from reviews.models import STAFF_REFUSAL_REASONS, Review, ReviewStatus, refusal_problem
+from orders.models import OrderStatus
+from reviews.models import STAFF_REFUSAL_REASONS, RefusalReason, Review, ReviewStatus
 from reviews.services.notifications import notify_published, notify_refused
+
+
+REASONS_REQUIRING_DETAILS = {RefusalReason.OTHER}
 
 
 class ModerationNotAllowed(Exception):
@@ -30,7 +34,7 @@ def pending_reviews():
 
 
 def publish(review: Review, seen_version=None) -> None:
-    if review.order.status != Status.CONFIRMED:
+    if review.order.status != OrderStatus.CONFIRMED:
         raise ModerationNotAllowed("Le voyage a été annulé : cet avis ne peut pas être publié.")
     _move(review, ReviewStatus.PENDING, ReviewStatus.PUBLISHED, "Cet avis n'est plus en attente de validation.",
           seen_version, published_at=timezone.now(), refusal_reason="", refusal_details="")
@@ -54,11 +58,11 @@ def hide(review: Review, reason: str, details: str = "", seen_version=None) -> N
 
 
 def _check_reason(reason: str, details: str) -> None:
+    """Seule validation du motif d'un refus ou d'un masquage : erreurs rangées par champ de l'avis."""
     if reason not in STAFF_REFUSAL_REASONS:
-        raise ValueError("Choisissez un motif dans la liste.")
-    problem = refusal_problem(reason, details)
-    if problem:
-        raise ValueError(next(iter(problem.values())))
+        raise ValidationError({"refusal_reason": "Choisissez un motif dans la liste."})
+    if reason in REASONS_REQUIRING_DETAILS and not details.strip():
+        raise ValidationError({"refusal_details": "Précisez le motif quand vous choisissez « Autre »."})
 
 
 CHANGED_MESSAGE = "Le client a modifié cet avis pendant votre lecture : relisez-le avant de décider."

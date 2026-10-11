@@ -2,6 +2,7 @@ from datetime import timedelta
 from decimal import Decimal
 
 from django.core.exceptions import ValidationError
+from django.db import IntegrityError, transaction
 from django.db.models import ProtectedError
 from django.test import TestCase
 from django.urls import reverse
@@ -10,7 +11,7 @@ from django.utils import timezone
 from accounts.tests.factories import create_admin
 from catalog.models import Country, Destination
 from catalog.tests.factories import create_country, create_destination
-from promotions.models import Action, Kind, Promotion, Scope, State, targets_problem
+from promotions.models import Action, DiscountKind, Promotion, PromotionState, Scope, targets_problem
 from promotions.services.history import record
 from promotions.tests.factories import create_promotion
 
@@ -26,7 +27,9 @@ def errors_of(promotion: Promotion) -> dict:
 class ValidationTests(TestCase):
     def promotion(self, **fields) -> Promotion:
         today = timezone.localdate()
-        data = {"name": "Offre", "kind": Kind.PERCENT, "value": Decimal("10"), "starts_on": today, "ends_on": today}
+        data = {
+            "name": "Offre", "kind": DiscountKind.PERCENT, "value": Decimal("10"), "starts_on": today, "ends_on": today
+        }
         data.update(fields)
         return Promotion(**data)
 
@@ -37,8 +40,8 @@ class ValidationTests(TestCase):
                 self.assertEqual("value" not in errors, valid)
 
     def test_fixed_amount_above_zero(self):
-        self.assertIn("value", errors_of(self.promotion(kind=Kind.FIXED, value=Decimal("0"))))
-        self.assertNotIn("value", errors_of(self.promotion(kind=Kind.FIXED, value=Decimal("100"))))
+        self.assertIn("value", errors_of(self.promotion(kind=DiscountKind.FIXED, value=Decimal("0"))))
+        self.assertNotIn("value", errors_of(self.promotion(kind=DiscountKind.FIXED, value=Decimal("100"))))
 
     def test_end_not_before_start(self):
         today = timezone.localdate()
@@ -73,6 +76,21 @@ class ValidationTests(TestCase):
 
         self.assertEqual(Promotion.objects.automatic().count(), 2)
 
+    def test_rules_also_enforced_by_the_database(self):
+        today = timezone.localdate()
+        invalid = [
+            {"value": Decimal("500")},
+            {"kind": DiscountKind.FIXED, "value": Decimal("0")},
+            {"ends_on": today - timedelta(days=1)},
+            {"departure_from": today},
+            {"departure_from": today, "departure_until": today - timedelta(days=1)},
+            {"max_uses": 0},
+            {"max_uses_per_client": 0},
+        ]
+        for fields in invalid:
+            with self.subTest(fields=fields), self.assertRaises(IntegrityError), transaction.atomic():
+                self.promotion(**fields).save()
+
     def test_targets_required_for_country_or_destination_scope(self):
         self.assertIn("countries", targets_problem(Scope.COUNTRIES, [], []))
         self.assertIn("destinations", targets_problem(Scope.DESTINATIONS, [], []))
@@ -81,8 +99,12 @@ class ValidationTests(TestCase):
 
 class DiscountLabelTests(TestCase):
     def test_label_in_french_format(self):
-        for kind, value, label in [(Kind.PERCENT, "15.00", "-15 %"), (Kind.PERCENT, "12.50", "-12,5 %"),
-                                   (Kind.FIXED, "100.00", "-100,00 €"), (Kind.FIXED, "99.50", "-99,50 €")]:
+        for kind, value, label in [
+            (DiscountKind.PERCENT, "15.00", "-15 %"),
+            (DiscountKind.PERCENT, "12.50", "-12,5 %"),
+            (DiscountKind.FIXED, "100.00", "-100,00\u00a0€"),
+            (DiscountKind.FIXED, "99.50", "-99,50\u00a0€"),
+        ]:
             with self.subTest(label=label):
                 self.assertEqual(Promotion(kind=kind, value=Decimal(value)).discount_label, label)
 
@@ -95,9 +117,9 @@ class StateTests(TestCase):
     def test_state_follows_dates_last_day_included(self):
         ends_on = self.promotion.ends_on
 
-        self.assertEqual(self.promotion.state(self.today - timedelta(days=1)), State.UPCOMING)
-        self.assertEqual(self.promotion.state(ends_on), State.RUNNING)
-        self.assertEqual(self.promotion.state(ends_on + timedelta(days=1)), State.FINISHED)
+        self.assertEqual(self.promotion.state(self.today - timedelta(days=1)), PromotionState.UPCOMING)
+        self.assertEqual(self.promotion.state(ends_on), PromotionState.RUNNING)
+        self.assertEqual(self.promotion.state(ends_on + timedelta(days=1)), PromotionState.FINISHED)
         self.assertIn(self.promotion, Promotion.objects.running(ends_on))
         self.assertNotIn(self.promotion, Promotion.objects.running(ends_on + timedelta(days=1)))
 
@@ -105,7 +127,7 @@ class StateTests(TestCase):
         self.promotion.is_active = False
         self.promotion.save()
 
-        self.assertEqual(self.promotion.state(self.today), State.DISABLED)
+        self.assertEqual(self.promotion.state(self.today), PromotionState.DISABLED)
         self.assertNotIn(self.promotion, Promotion.objects.running(self.today))
 
 
@@ -144,5 +166,5 @@ class HistoryTests(TestCase):
 
         admin.delete()
 
-        self.assertEqual(promotion.created_by_name, "Marc Dupont")
+        self.assertEqual(promotion.history.get().author_name, "Marc Dupont")
         self.assertIsNone(promotion.history.get().author)

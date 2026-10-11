@@ -82,6 +82,11 @@ def offset_from_belgium(zone_name: str, moment: datetime) -> Decimal:
     return Decimal(int(difference.total_seconds())) / 3600
 
 
+def offset_on(zone_name: str, day: date) -> Decimal:
+    """Décalage avec la Belgique le jour donné (à midi, heure belge), changements d'heure compris."""
+    return offset_from_belgium(zone_name, datetime.combine(day, time(12), BELGIUM))
+
+
 @dataclass(frozen=True)
 class TimeOffsets:
     summer: Decimal
@@ -103,12 +108,8 @@ class TimeOffsets:
 
 def time_offsets(zone_name: str, today: date) -> TimeOffsets:
     """Décalages pendant l'été et l'hiver belges de l'année, et le jour donné (à midi)."""
-
-    def at_noon(day: date) -> datetime:
-        return datetime.combine(day, time(12), BELGIUM)
-
     return TimeOffsets(
-        summer=offset_from_belgium(zone_name, at_noon(date(today.year, *SUMMER_DAY))),
-        winter=offset_from_belgium(zone_name, at_noon(date(today.year, *WINTER_DAY))),
-        today=offset_from_belgium(zone_name, at_noon(today)),
+        summer=offset_on(zone_name, date(today.year, *SUMMER_DAY)),
+        winter=offset_on(zone_name, date(today.year, *WINTER_DAY)),
+        today=offset_on(zone_name, today),
     )

@@ -1,13 +1,14 @@
 """Reconstruction des e-mails des demandes de voyage, pour les nouvelles tentatives et le renvoi manuel.
 
 La demande est retrouvée par son numéro (noté au journal). Le message n'est reconstruit que s'il
-a toujours une raison d'être : demande encore là, client non supprimé (et toujours celui du journal),
+a toujours une raison d'être : demande encore là, client non supprimé (toujours celui du journal, à la même adresse),
 demande toujours dans l'état annoncé (ex. pas de « confirmée » pour une demande annulée depuis).
 """
 
-from accounts.models import EmailKind, EmailLog
+from accounts.models import EmailLog
+from accounts.services.email_rebuilders import account_at_recipient
 from accounts.services.email_retry import RebuiltEmail, rebuilder
-from orders.models import Order, Status, StatusChange
+from orders.models import Order, OrderEmail, OrderStatus, StatusChange
 from orders.services.emails import (
     cancelled_by_agency_context,
     client_context,
@@ -20,10 +21,14 @@ from orders.services.status import departure_passed
 
 
 def _order_of(log: EmailLog, status: str) -> Order | None:
-    """Demande liée, si elle appartient toujours au client du journal et a cet état."""
-    if log.user is None or log.order_number is None:
+    """Demande liée, si elle appartient toujours au client du journal et a cet état.
+
+    Jamais à une ancienne adresse : le client doit toujours avoir l'adresse du journal.
+    """
+    client = account_at_recipient(log)
+    if client is None or log.order_number is None:
         return None
-    return Order.objects.filter(pk=log.order_number, client=log.user, status=status).first()
+    return Order.objects.filter(pk=log.order_number, client=client, status=status).first()
 
 
 def _last_change(order: Order) -> StatusChange | None:
@@ -31,15 +36,15 @@ def _last_change(order: Order) -> StatusChange | None:
     return order.history.filter(status=order.status).last()
 
 
-@rebuilder(EmailKind.ORDER_PLACED)
+@rebuilder(OrderEmail.ORDER_PLACED)
 def _order_placed(log: EmailLog) -> RebuiltEmail | None:
-    order = _order_of(log, Status.PENDING)
+    order = _order_of(log, OrderStatus.PENDING)
     return RebuiltEmail(placed_context(order)) if order else None
 
 
-@rebuilder(EmailKind.ORDER_CONFIRMED)
+@rebuilder(OrderEmail.ORDER_CONFIRMED)
 def _order_confirmed(log: EmailLog) -> RebuiltEmail | None:
-    order = _order_of(log, Status.CONFIRMED)
+    order = _order_of(log, OrderStatus.CONFIRMED)
     change = _last_change(order) if order else None
     if change is None:
         return None
@@ -47,18 +52,18 @@ def _order_confirmed(log: EmailLog) -> RebuiltEmail | None:
     return RebuiltEmail(confirmed_context(order, change.author_name))
 
 
-@rebuilder(EmailKind.ORDER_CANCELLED_BY_CLIENT)
+@rebuilder(OrderEmail.ORDER_CANCELLED_BY_CLIENT)
 def _order_cancelled_by_client(log: EmailLog) -> RebuiltEmail | None:
-    order = _order_of(log, Status.CANCELLED)
+    order = _order_of(log, OrderStatus.CANCELLED)
     change = _last_change(order) if order else None
     if change is None or not change.by_client:
         return None
     return RebuiltEmail(client_context(order))
 
 
-@rebuilder(EmailKind.ORDER_CANCELLED_BY_AGENCY)
+@rebuilder(OrderEmail.ORDER_CANCELLED_BY_AGENCY)
 def _order_cancelled_by_agency(log: EmailLog) -> RebuiltEmail | None:
-    order = _order_of(log, Status.CANCELLED)
+    order = _order_of(log, OrderStatus.CANCELLED)
     change = _last_change(order) if order else None
     if change is None or change.by_client:
         return None
@@ -66,19 +71,19 @@ def _order_cancelled_by_agency(log: EmailLog) -> RebuiltEmail | None:
     return RebuiltEmail(cancelled_by_agency_context(order, change.reason))
 
 
-@rebuilder(EmailKind.NEW_ORDER_ALERT)
+@rebuilder(OrderEmail.NEW_ORDER_ALERT)
 def _new_order_alert(log: EmailLog) -> RebuiltEmail | None:
     # Envoyée à l'adresse commune (pas de compte lié) : reconstruite à partir de la demande seule.
     if log.order_number is None:
         return None
-    order = Order.objects.filter(pk=log.order_number, client__isnull=False, status=Status.PENDING).first()
+    order = Order.objects.filter(pk=log.order_number, client__isnull=False, status=OrderStatus.PENDING).first()
     return RebuiltEmail(new_order_alert_context(order)) if order else None
 
 
-@rebuilder(EmailKind.DEPARTURE_REMINDER)
+@rebuilder(OrderEmail.DEPARTURE_REMINDER)
 def _departure_reminder(log: EmailLog) -> RebuiltEmail | None:
     # Plus de raison d'être une fois le départ passé (fiche pays relue : informations à jour).
-    order = _order_of(log, Status.CONFIRMED)
+    order = _order_of(log, OrderStatus.CONFIRMED)
     if order is None or departure_passed(order):
         return None
     return RebuiltEmail(departure_reminder_context(order))

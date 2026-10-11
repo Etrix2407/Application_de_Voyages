@@ -3,21 +3,23 @@ from decimal import Decimal
 from unittest import mock
 
 from django.core.cache import cache
+from django.db import connection
 from django.test import TestCase
+from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 from django.utils import timezone
 
 from accounts.services.email_change import apply_email_change
 from accounts.tests.factories import create_admin, create_agent, create_client
 from catalog.tests.factories import create_country, create_destination
-from orders.models import Order, Status
+from orders.models import Order, OrderStatus
 from orders.services import promotions as messages
 from orders.services.placing import parts_for, place_order
 from orders.services.promotions import choose_promotion
-from promotions.models import Base, Kind, Promotion, Scope
+from promotions.models import DiscountBase, DiscountKind, Promotion, Scope
 from promotions.tests.factories import create_promotion
 
-from .factories import create_order, departure_in, review_tokens, submit_order
+from .factories import confirm_on_page, create_order, departure_in, review_tokens, submit_order
 
 
 class ChoosePromotionTests(TestCase):
@@ -42,7 +44,7 @@ class ChoosePromotionTests(TestCase):
 
     def test_best_automatic_offer_applied_without_code(self):
         create_promotion(name="-10 %", value=Decimal("10"))
-        create_promotion(name="-100 €", kind=Kind.FIXED, value=Decimal("100"))
+        create_promotion(name="-100 €", kind=DiscountKind.FIXED, value=Decimal("100"))
 
         self.assertEqual(self.choose().offer.promotion.name, "-100 €")
 
@@ -55,12 +57,12 @@ class ChoosePromotionTests(TestCase):
                          destinations=[create_destination(create_country("Portugal"), "Lisbonne")])
         create_promotion(code="AUTOMNE", departure_from=self.departure + timedelta(days=1),
                          departure_until=self.departure + timedelta(days=30))
-        create_promotion(code="ACTIVITES", base=Base.ACTIVITIES)
+        create_promotion(code="ACTIVITES", base=DiscountBase.ACTIVITIES)
         expected = {
             "INCONNU": messages.INVALID_CODE,
             "FUTUR1": messages.INVALID_CODE,
             "FINI01": messages.EXPIRED_CODE,
-            "ARRETE": messages.NO_LONGER_AVAILABLE,
+            "ARRETE": messages.INVALID_CODE,
             "PORTUGAL": messages.WRONG_DESTINATION,
             "AUTOMNE": messages.WRONG_DEPARTURE,
             "ACTIVITES": messages.NOT_FOR_THIS_ORDER,
@@ -74,7 +76,7 @@ class ChoosePromotionTests(TestCase):
         order = create_order(self.marie, self.kyoto, promotion=promotion)
 
         self.assertEqual(self.choose("unefois").code_error, messages.ALREADY_USED)
-        order.status = Status.CANCELLED
+        order.status = OrderStatus.CANCELLED
         order.save()
         self.assertTrue(self.choose("unefois").code_applied)
 
@@ -92,6 +94,21 @@ class ChoosePromotionTests(TestCase):
 
         self.assertEqual(self.choose("CINQUANTE").code_error, messages.NO_LONGER_AVAILABLE)
 
+    def test_queries_do_not_depend_on_the_number_of_automatic_promotions(self):
+        def add_promotion():
+            create_promotion(scope=Scope.COUNTRIES, countries=[self.kyoto.country], max_uses=5, max_uses_per_client=1)
+
+        add_promotion()
+        with CaptureQueriesContext(connection) as with_one:
+            self.choose()
+        for _ in range(4):
+            add_promotion()
+        with CaptureQueriesContext(connection) as with_five:
+            choice = self.choose()
+
+        self.assertIsNotNone(choice.offer)
+        self.assertEqual(len(with_five), len(with_one), "Une requête SQL est faite pour chaque promotion.")
+
     def test_code_beaten_by_automatic_offer_is_not_used(self):
         create_promotion(name="Automatique", value=Decimal("20"))
         create_promotion(code="PETIT", value=Decimal("5"))
@@ -99,7 +116,7 @@ class ChoosePromotionTests(TestCase):
         choice = self.choose("PETIT")
 
         self.assertEqual(choice.offer.promotion.name, "Automatique")
-        self.assertEqual(choice.code_note, "Une offre plus avantageuse s'applique déjà : -160,00 €")
+        self.assertEqual(choice.code_note, "Une offre plus avantageuse s'applique déjà : -160,00\u00a0€")
 
     def test_wrong_codes_limited(self):
         create_promotion(code="BIENVENUE15")
@@ -141,7 +158,7 @@ class OrderWithPromotionTests(TestCase):
         }
 
     def test_code_applied_and_frozen_in_the_order(self):
-        promotion = create_promotion(name="Bienvenue", code="BIENVENUE", kind=Kind.FIXED, value=Decimal("100"))
+        promotion = create_promotion(name="Bienvenue", code="BIENVENUE", kind=DiscountKind.FIXED, value=Decimal("100"))
 
         review = self.client.post(self.url, {**self.data, "promo_code": "bienvenue"})
         self.client.post(self.url, {**self.data, "promo_code": "bienvenue", **review_tokens(review), "confirm": ""})
@@ -149,11 +166,11 @@ class OrderWithPromotionTests(TestCase):
         promotion.save()
 
         order = Order.objects.get()
-        self.assertContains(review, "Code appliqué : -100,00 €")
+        self.assertContains(review, "Code appliqué : -100,00\u00a0€")
         self.assertEqual((order.estimated_price, order.discount), (Decimal("1900.00"), Decimal("100.00")))
         page = self.client.get(reverse("my_order_detail", args=[order.pk]))
-        self.assertContains(page, "2000,00 €")  # prix avant remise
-        self.assertContains(page, "-100,00 € — Bienvenue")
+        self.assertContains(page, "2\u00a0000,00\u00a0€")  # prix avant remise
+        self.assertContains(page, "-100,00\u00a0€ — Bienvenue")
 
     def test_refused_code_shown_on_the_form_and_nothing_sent(self):
         response = self.client.post(self.url, {**self.data, "promo_code": "INCONNU"})
@@ -170,7 +187,7 @@ class OrderWithPromotionTests(TestCase):
         response = self.client.post(self.url, {**self.data, **review_tokens(review), "confirm": ""})
 
         self.assertContains(response, "a changé depuis votre vérification")
-        self.assertContains(response, "2000,00 €")
+        self.assertContains(response, "2\u00a0000,00\u00a0€")
         self.assertFalse(Order.objects.exists())
 
     def used_just_before_saving(self, promotion, client):
@@ -187,7 +204,7 @@ class OrderWithPromotionTests(TestCase):
             response = submit_order(self.client, self.url, self.data)
 
         self.assertContains(response, "a changé depuis votre vérification")
-        self.assertContains(response, "2000,00 €")
+        self.assertContains(response, "2\u00a0000,00\u00a0€")
         self.assertFalse(Order.objects.filter(client=self.marie).exists())
 
     def test_last_code_use_taken_meanwhile_shown_on_the_form(self):
@@ -213,7 +230,7 @@ class OrderWithPromotionTests(TestCase):
     def test_limit_per_client_survives_account_deletion_and_new_sign_up(self):
         self.use_code_once()
         # Confirmée : elle reste comptée (une demande en attente est annulée si le compte est supprimé).
-        Order.objects.update(status=Status.CONFIRMED)
+        Order.objects.update(status=OrderStatus.CONFIRMED)
         self.marie.delete()
 
         response = self.try_code_again_as(self.marie.email)
@@ -236,7 +253,7 @@ class PublicOffersTests(TestCase):
         order = create_order(create_client(), kyoto, promotion=promotion)
 
         self.assertNotContains(self.client.get(reverse("offers")), "Dernières places")
-        order.status = Status.CANCELLED
+        order.status = OrderStatus.CANCELLED
         order.save()
         self.assertContains(self.client.get(reverse("offers")), "Dernières places")
 
@@ -254,21 +271,21 @@ class ConfirmationTests(TestCase):
         promotion.save()
         self.client.force_login(create_agent())
 
-        self.client.post(reverse("manage_confirm_order", args=[order.pk]))
+        confirm_on_page(self.client, order)
 
         order.refresh_from_db()
         self.assertEqual((order.confirmed_price, order.confirmed_discount), (Decimal("1080.00"), Decimal("120.00")))
 
     def test_stay_discount_not_applicable_once_destination_is_on_quote(self):
         kyoto = create_destination(create_country(), "Kyoto", price_from=Decimal("1000"))
-        promotion = create_promotion(base=Base.STAY, value=Decimal("10"))
+        promotion = create_promotion(base=DiscountBase.STAY, value=Decimal("10"))
         client = create_client()
         order = create_order(client, kyoto, adults=1, promotion=promotion, promotion_name=promotion.name,
                              estimated_price=Decimal("900"), discount=Decimal("100"))
         kyoto.price_from = None
         kyoto.save()
         self.client.force_login(create_agent())
-        self.client.post(reverse("manage_confirm_order", args=[order.pk]))
+        confirm_on_page(self.client, order)
         self.client.force_login(client)
 
         response = self.client.get(reverse("my_order_detail", args=[order.pk]))
@@ -297,7 +314,7 @@ class UsedPromotionTests(TestCase):
         self.promotion.refresh_from_db()
         self.assertEqual(self.promotion.name, "Nouveau nom")
         self.assertEqual(self.promotion.ends_on, today + timedelta(days=5))
-        self.assertEqual((self.promotion.kind, self.promotion.value), (Kind.PERCENT, Decimal("10")))
+        self.assertEqual((self.promotion.kind, self.promotion.value), (DiscountKind.PERCENT, Decimal("10")))
 
     def test_cannot_be_deleted(self):
         response = self.client.post(reverse("manage_delete_promotion", args=[self.promotion.pk]), follow=True)

@@ -7,7 +7,7 @@ from unittest import mock
 from django.apps import apps as django_apps
 from django.conf import settings
 from django.contrib.auth import get_user_model
-from django.core import mail
+from django.core import mail, signing
 from django.core.cache import cache
 from django.core.management import call_command
 from django.test import TestCase, TransactionTestCase
@@ -15,7 +15,14 @@ from django.urls import reverse
 from django.utils import timezone
 
 from accounts.services.sign_up import purge_unconfirmed
-from accounts.services.throttling import confirmation_emails, login_failures, password_reset_requests
+from accounts.services.password_links import password_link_path
+from accounts.services.throttling import (
+    confirmation_emails,
+    login_failures,
+    login_failures_by_account,
+    login_key,
+    password_reset_requests,
+)
 from accounts.models import EmailLog, Role
 
 from .email_delivery import SendEmailsImmediately
@@ -127,6 +134,20 @@ class SignUpTests(SendEmailsImmediately, TestCase):
         self.assertEqual(mail.outbox[-1].to, ["marie@example.com"])
         self.assertIn("Un compte existe déjà", mail.outbox[-1].body)
 
+    def test_simultaneous_sign_up_with_same_address(self):
+        set_password = User.set_password
+
+        def other_sign_up_meanwhile(user, password):
+            # Une autre inscription avec la même adresse est enregistrée pendant celle-ci.
+            User.objects.create(email="marie@example.com", role=Role.CLIENT)
+            set_password(user, password)
+
+        with mock.patch.object(User, "set_password", other_sign_up_meanwhile):
+            response = self.client.post(self.url, sign_up_data())
+
+        self.assertRedirects(response, reverse("sign_up_done"))
+        self.assertEqual(User.objects.count(), 1)
+
     def test_new_sign_up_replaces_unconfirmed_account(self):
         # Un tiers inscrit l'adresse de Marie avec son propre mot de passe.
         pirate_password = "tiers-connu-2026"
@@ -188,6 +209,12 @@ class ConfirmationLinkTests(SendEmailsImmediately, TestCase):
 
         self.assertRedirects(response, reverse("login"))
         self.assertFalse(User.objects.get().is_awaiting_confirmation)
+
+    def test_address_not_readable_in_link(self):
+        # Le jeton est signé mais lisible : il ne contient que l'empreinte de l'adresse.
+        payload = signing.b64_decode(self.link.split("/")[-2].split(":")[0].encode()).decode()
+
+        self.assertNotIn("@", payload)
 
     def test_link_valid_48_hours(self):
         now = timezone.now().timestamp()
@@ -295,8 +322,11 @@ class LoginTests(TestCase):
         cache.clear()
         self.user = create_client()
 
-    def log_in(self, email="client@example.com", password=PASSWORD):
-        return self.client.post(self.url, {"username": email, "password": password})
+    def log_in(self, email="client@example.com", password=PASSWORD, ip="127.0.0.1"):
+        return self.client.post(self.url, {"username": email, "password": password}, REMOTE_ADDR=ip)
+
+    def test_page_shows_agency_name(self):
+        self.assertEqual(self.client.get(self.url).context["site_name"], settings.SITE_NAME)
 
     def test_successful_login(self):
         response = self.log_in()
@@ -322,13 +352,18 @@ class LoginTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertNotIn("_auth_user_id", self.client.session)
 
+    def assert_account_locked(self, response):
+        # Blocage du compte (message « locked »), et non de la connexion (« locked_ip »).
+        self.assertContains(response, "Pour votre sécurité, réessayez dans")
+        self.assertNotContains(response, "depuis cette connexion")
+
     def test_locked_after_too_many_failures(self):
         for _ in range(login_failures.max_attempts):
             self.log_in(password="mauvais-mot-2026")
 
         response = self.log_in()
 
-        self.assertContains(response, "Trop de tentatives échouées")
+        self.assert_account_locked(response)
         self.assertNotIn("_auth_user_id", self.client.session)
 
     def test_lockout_is_per_email(self):
@@ -336,6 +371,32 @@ class LoginTests(TestCase):
             self.log_in(email="autre@example.com", password="mauvais-mot-2026")
 
         self.assertRedirects(self.log_in(), reverse("home"))
+
+    def test_lockout_does_not_block_other_ips(self):
+        # Un tiers qui se trompe exprès ne bloque pas le titulaire, qui se connecte d'ailleurs.
+        for _ in range(login_failures.max_attempts):
+            self.log_in(password="mauvais-mot-2026", ip="203.0.113.5")
+
+        self.assertRedirects(self.log_in(), reverse("home"))
+
+    def test_account_locked_from_all_ips_after_many_failures(self):
+        per_ip = login_failures.max_attempts - 1
+        for number in range(login_failures_by_account.max_attempts // per_ip + 1):
+            for _ in range(per_ip):
+                self.log_in(password="mauvais-mot-2026", ip=f"203.0.113.{number}")
+
+        self.assert_account_locked(self.log_in())
+
+    def test_password_reset_unlocks_login(self):
+        for _ in range(login_failures.max_attempts):
+            self.log_in(password="mauvais-mot-2026")
+        new_password = "montagne-lac-77"
+        form_page = self.client.get(password_link_path(self.user), follow=True)
+        self.client.post(
+            form_page.redirect_chain[-1][0], {"new_password1": new_password, "new_password2": new_password}
+        )
+
+        self.assertRedirects(self.log_in(password=new_password), reverse("home"))
 
     def test_success_resets_counter(self):
         for _ in range(login_failures.max_attempts - 1):
@@ -345,7 +406,7 @@ class LoginTests(TestCase):
 
         self.log_in(password="mauvais-mot-2026")
 
-        self.assertFalse(login_failures.is_locked("client@example.com"))
+        self.assertFalse(login_failures.is_locked(login_key("client@example.com", "127.0.0.1")))
 
     def test_logout(self):
         self.client.force_login(self.user)

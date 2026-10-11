@@ -7,17 +7,16 @@ Seulement pour une demande confirmée, dont le client a encore son compte. Le ra
 La date d'envoi, notée sur la demande, empêche tout doublon.
 """
 
-from datetime import datetime, time, timedelta
+from datetime import timedelta
 
 from django.db import transaction
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.formats import date_format
 
-from accounts.models import EmailKind
 from accounts.services.emails import send_email, site_url
-from catalog.services.time_zones import BELGIUM, format_offset, offset_from_belgium
-from orders.models import Order, Status
+from catalog.services.time_zones import format_offset, offset_on
+from orders.models import Order, OrderEmail, OrderStatus
 
 REMINDER_DAYS_BEFORE_DEPARTURE = 7
 
@@ -26,7 +25,7 @@ def due_departure_reminders():
     """Demandes confirmées dont le départ est dans 7 jours ou moins, sans rappel envoyé."""
     today = timezone.localdate()
     return Order.objects.filter(
-        status=Status.CONFIRMED,
+        status=OrderStatus.CONFIRMED,
         client__isnull=False,
         departure_reminder_sent_at__isnull=True,
         departure_date__gte=today,
@@ -52,10 +51,10 @@ def departure_reminder_context(order: Order) -> dict:
     # Fuseau non renseigné : la ligne du décalage horaire est omise.
     time_offset = ""
     if country.time_zone:
-        time_offset = f"- Décalage horaire le jour du départ : {_offset_on(country.time_zone, order.departure_date)}"
+        time_offset = f"- Décalage horaire le jour du départ : {format_offset(offset_on(country.time_zone, order.departure_date))}"
     return {
         "prénom": order.client.first_name,
-        "destination": f"{order.destination_name} ({order.country_name})",
+        "destination": order.destination_label,
         "date de départ": date_format(order.departure_date, "j F Y"),
         "date de retour": date_format(order.return_date, "j F Y"),
         "numéro": order.pk,
@@ -77,14 +76,9 @@ def _send_reminder(order: Order) -> bool:
         return False
     send_email(
         order.client.email,
-        EmailKind.DEPARTURE_REMINDER,
+        OrderEmail.DEPARTURE_REMINDER,
         departure_reminder_context(order),
         user=order.client,
         order_number=order.pk,
     )
     return True
-
-
-def _offset_on(zone_name: str, day) -> str:
-    """Décalage avec la Belgique le jour donné (à midi), changements d'heure compris."""
-    return format_offset(offset_from_belgium(zone_name, datetime.combine(day, time(12), BELGIUM)))

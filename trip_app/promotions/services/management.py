@@ -1,19 +1,23 @@
 """Gestion des promotions par l'administrateur : création, modification, désactivation, suppression.
 
 Chaque action est notée dans l'historique. Pas de suppression en principe : on désactive.
-Une promotion jamais utilisée peut être supprimée (celles déjà utilisées sont protégées
-par les demandes de voyage qui les gardent).
+Une promotion jamais utilisée ni envoyée par e-mail peut être supprimée (les autres sont
+protégées par les demandes de voyage qui les gardent et par l'historique de leurs envois).
 """
 
 from django.db import transaction
 from django.db.models import ProtectedError
 
-from promotions.models import Action, Promotion
+from promotions.models import Action, Promotion, PromotionMailing
 from promotions.services.history import record
 
 
 class PromotionInUse(Exception):
     """La promotion a déjà été utilisée : elle se désactive, elle ne se supprime pas."""
+
+
+class PromotionMailed(Exception):
+    """La promotion a déjà été envoyée par e-mail : elle se désactive, elle ne se supprime pas."""
 
 
 @transaction.atomic
@@ -45,5 +49,7 @@ def disable_promotion(promotion: Promotion, author) -> bool:
 def delete_promotion(promotion: Promotion) -> None:
     try:
         promotion.delete()
-    except ProtectedError:
+    except ProtectedError as error:
+        if all(isinstance(item, PromotionMailing) for item in error.protected_objects):
+            raise PromotionMailed from None
         raise PromotionInUse from None

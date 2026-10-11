@@ -6,7 +6,7 @@ from django.urls import reverse
 
 from accounts.tests.factories import create_agent, create_client
 from catalog.tests.factories import create_country, create_destination
-from orders.models import Order, Status
+from orders.models import Order, OrderStatus
 from orders.services.filtering import filter_orders
 from orders.views.manage import ORDERS_PER_PAGE
 
@@ -26,7 +26,7 @@ class StaffOrderListTests(TestCase):
         self.paul = create_client(email="paul@example.com", last_name="Durand", first_name="Paul")
         self.old = create_order(self.marie, self.kyoto, departure_date=departure_in(30))
         self.new = create_order(self.paul, self.cusco, departure_date=departure_in(90))
-        Order.objects.filter(pk=self.new.pk).update(status=Status.CONFIRMED)
+        Order.objects.filter(pk=self.new.pk).update(status=OrderStatus.CONFIRMED)
 
     def listed(self, **params):
         return list(self.client.get(self.url, params).context["page"].object_list)
@@ -41,7 +41,7 @@ class StaffOrderListTests(TestCase):
         self.assertEqual(self.listed(sort="ancien"), [self.old, self.new])
 
     def test_filter_by_status(self):
-        self.assertEqual(self.listed(status=Status.CONFIRMED), [self.new])
+        self.assertEqual(self.listed(status=OrderStatus.CONFIRMED), [self.new])
 
     def test_filter_by_country_and_destination(self):
         self.assertEqual(self.listed(country=self.japan.pk), [self.old])
@@ -70,7 +70,7 @@ class StaffOrderListTests(TestCase):
         self.assertContains(response, "La fin de la période doit être après son début.")
 
     def test_combined_filters(self):
-        self.assertEqual(self.listed(country=self.japan.pk, status=Status.CONFIRMED), [])
+        self.assertEqual(self.listed(country=self.japan.pk, status=OrderStatus.CONFIRMED), [])
 
     def test_anonymized_order_listed(self):
         self.marie.delete()

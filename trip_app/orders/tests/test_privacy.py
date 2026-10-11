@@ -4,10 +4,10 @@ from django.core import mail
 from django.test import TestCase
 from django.urls import reverse
 
-from accounts.models import EmailKind, EmailLog, EmailStatus
+from accounts.models import AccountEmail, EmailLog, EmailStatus
 from accounts.tests.factories import PASSWORD, create_agent, create_client
 from catalog.tests.factories import create_activity, create_country, create_destination
-from orders.models import Order, Status, StatusChange
+from orders.models import Order, OrderEmail, OrderStatus, StatusChange
 from orders.services.data_export import orders_data
 from orders.services.status import ACCOUNT_DELETED_REASON, cancel_by_staff, confirm_by_staff
 
@@ -29,7 +29,7 @@ class AccountDeletionAnonymizesOrdersTests(TestCase):
         )
         StatusChange.objects.create(
             order=self.order,
-            status=Status.PENDING,
+            status=OrderStatus.PENDING,
             author=self.marie,
             author_name=StatusChange.CLIENT_AUTHOR,
             by_client=True,
@@ -51,7 +51,7 @@ class AccountDeletionAnonymizesOrdersTests(TestCase):
         self.assertEqual(order.destination.name, "Kyoto")
         self.assertEqual((order.adults, order.children), (2, 0))
         self.assertEqual(order.estimated_price, Decimal("1900.00"))
-        self.assertEqual(order.status, Status.CANCELLED)
+        self.assertEqual(order.status, OrderStatus.CANCELLED)
         self.assertEqual(order.activities.get().activity, self.tea)
 
     def test_free_text_erased(self):
@@ -65,7 +65,7 @@ class AccountDeletionAnonymizesOrdersTests(TestCase):
         self.delete_account_through_the_site()
 
         history = Order.objects.get(pk=self.order.pk).history.all()
-        self.assertEqual([change.status for change in history], [Status.PENDING, Status.CONFIRMED, Status.CANCELLED])
+        self.assertEqual([change.status for change in history], [OrderStatus.PENDING, OrderStatus.CONFIRMED, OrderStatus.CANCELLED])
         self.assertEqual([change.author_name for change in history], ["Client", "Luc Martin", "Luc Martin"])
         self.assertIsNone(history[0].author)
 
@@ -138,10 +138,10 @@ class PendingOrdersOfDeletedAccountTests(TestCase):
         self.marie.delete()
 
         self.pending.refresh_from_db()
-        self.assertEqual(self.pending.status, Status.CANCELLED)
+        self.assertEqual(self.pending.status, OrderStatus.CANCELLED)
         self.assertEqual(self.pending.remarks, "")
         change = self.pending.history.get()
-        self.assertEqual(change.status, Status.CANCELLED)
+        self.assertEqual(change.status, OrderStatus.CANCELLED)
         self.assertEqual((change.internal_reason, change.reason), (ACCOUNT_DELETED_REASON, ""))
         self.assertTrue(change.by_client)
         self.assertIsNone(change.author)
@@ -150,7 +150,18 @@ class PendingOrdersOfDeletedAccountTests(TestCase):
         self.marie.delete()
 
         self.confirmed.refresh_from_db()
-        self.assertEqual(self.confirmed.status, Status.CONFIRMED)
+        self.assertEqual(self.confirmed.status, OrderStatus.CONFIRMED)
+
+    def test_confirmed_order_of_deleted_account_can_be_cancelled(self):
+        # Plus de client : l'annulation passe, sans e-mail à envoyer ni erreur.
+        self.marie.delete()
+        order = Order.objects.get(pk=self.confirmed.pk)  # rechargée, comme par la page du personnel
+
+        cancel_by_staff(order, create_agent(email="autre.agent@example.com"), "Voyage annulé par l'hôtel.")
+
+        self.confirmed.refresh_from_db()
+        self.assertEqual(self.confirmed.status, OrderStatus.CANCELLED)
+        self.assertFalse(EmailLog.objects.filter(order_number=order.pk, kind=OrderEmail.ORDER_CANCELLED_BY_AGENCY).exists())
 
     def test_staff_sees_why_and_cannot_confirm(self):
         self.marie.delete()
@@ -167,7 +178,7 @@ class PendingOrdersOfDeletedAccountTests(TestCase):
         self.client.post(reverse("delete_account"), {"password": PASSWORD})
 
         self.pending.refresh_from_db()
-        self.assertEqual(self.pending.status, Status.CANCELLED)
+        self.assertEqual(self.pending.status, OrderStatus.CANCELLED)
         self.assertEqual(self.pending.history.get().internal_reason, ACCOUNT_DELETED_REASON)
 
 
@@ -182,12 +193,12 @@ class AccountDeletionEmailTests(TestCase):
             self.client.post(reverse("delete_account"), {"password": PASSWORD})
 
         pending.refresh_from_db()
-        self.assertEqual(pending.status, Status.CANCELLED)
+        self.assertEqual(pending.status, OrderStatus.CANCELLED)
         # Aucun e-mail pour l'annulation de la demande : seulement le dernier message.
         self.assertEqual(
             [(message.to, message.subject) for message in mail.outbox],
             [(["client@example.com"], "Votre compte a été supprimé")],
         )
         # Le journal garde la ligne, sans l'adresse (RGPD), avec le résultat de l'envoi.
-        log = EmailLog.objects.get(kind=EmailKind.ACCOUNT_DELETED)
+        log = EmailLog.objects.get(kind=AccountEmail.ACCOUNT_DELETED)
         self.assertEqual((log.recipient, log.status), ("", EmailStatus.SENT))

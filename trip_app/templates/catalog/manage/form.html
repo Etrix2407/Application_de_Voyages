@@ -5,6 +5,7 @@
 {% block content %}
     <h1>{{ title }}</h1>
 
+    {% include "_form_errors.html" %}
     <form method="post" enctype="multipart/form-data" novalidate>
         {% csrf_token %}
         {{ form }}

@@ -1,15 +1,25 @@
 from datetime import timedelta
+from io import StringIO
 from unittest import mock
 
 from django.core import mail
+from django.core.management import call_command
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
-from accounts.models import EmailKind, EmailLog, EmailStatus
+from accounts.models import AccountEmail, EmailFailure, EmailLog, EmailStatus, TaskLock
 from accounts.services.account_deletion import delete_account
-from accounts.services.email_retry import NOT_REBUILDABLE, OBSOLETE, retry_due_emails
+from accounts.services.email_retry import (
+    _REBUILDERS,
+    NOT_REBUILDABLE,
+    OBSOLETE,
+    AlreadyResent,
+    resend,
+    retry_due_emails,
+)
 from accounts.services.privacy import purge_old_email_log
+from accounts.services.task_lock import task_lock
 
 from .factories import create_admin, create_agent, create_client
 
@@ -20,7 +30,7 @@ SMTP_DOWN = mock.patch(
 
 def pending_log(user, attempts, minutes_ago, **fields):
     """E-mail déjà tenté `attempts` fois, la dernière fois il y a `minutes_ago` minutes."""
-    fields.setdefault("kind", EmailKind.CLIENT_PASSWORD_LINK)
+    fields.setdefault("kind", AccountEmail.CLIENT_PASSWORD_LINK)
     return EmailLog.objects.create(
         recipient=user.email,
         subject="Changement de votre mot de passe",
@@ -29,6 +39,22 @@ def pending_log(user, attempts, minutes_ago, **fields):
         last_attempt_at=timezone.now() - timedelta(minutes=minutes_ago),
         **fields,
     )
+
+
+def account_for(kind, number):
+    """Compte qui peut recevoir ce type d'e-mail : agent invité, agent avec mot de passe, client
+    non confirmé (confirmation d'inscription) ou client confirmé."""
+    email = f"compte{number}@example.com"
+    if kind == AccountEmail.AGENT_ACTIVATION:
+        agent = create_agent(email=email)
+        agent.set_unusable_password()
+        agent.save()
+        return agent
+    if kind == AccountEmail.STAFF_PASSWORD_LINK:
+        return create_agent(email=email)
+    if kind == AccountEmail.SIGN_UP_CONFIRMATION:
+        return create_client(email=email, email_confirmed_at=None)
+    return create_client(email=email)
 
 
 class RetryTests(TestCase):
@@ -68,6 +94,21 @@ class RetryTests(TestCase):
         log.refresh_from_db()
         self.assertEqual((log.status, log.attempts, log.last_error), (EmailStatus.FAILED, 3, "serveur injoignable"))
 
+    def test_error_on_one_email_does_not_block_the_next(self):
+        broken = pending_log(self.marie, attempts=1, minutes_ago=6)
+        next_one = pending_log(self.marie, attempts=1, minutes_ago=6, kind=AccountEmail.PASSWORD_CHANGED)
+
+        def crash(log):
+            raise RuntimeError("bogue de reconstruction")
+
+        with mock.patch.dict(_REBUILDERS, {AccountEmail.CLIENT_PASSWORD_LINK: crash}):
+            with self.assertLogs("accounts.services.email_retry", level="ERROR") as logs:
+                self.assertEqual(retry_due_emails(), 2)
+
+        self.assertIn(f"n° {broken.pk}", logs.output[0])
+        next_one.refresh_from_db()
+        self.assertEqual(next_one.status, EmailStatus.SENT)
+
     def test_no_security_link_to_a_former_address(self):
         log = pending_log(self.marie, attempts=1, minutes_ago=6)
         self.marie.email = "marie.nouvelle@example.com"
@@ -80,13 +121,54 @@ class RetryTests(TestCase):
         self.assertEqual(mail.outbox, [])
 
     def test_email_change_confirmation_never_rebuilt(self):
-        log = pending_log(self.marie, attempts=1, minutes_ago=6, kind=EmailKind.EMAIL_CHANGE_CONFIRMATION)
+        log = pending_log(self.marie, attempts=1, minutes_ago=6, kind=AccountEmail.EMAIL_CHANGE_CONFIRMATION)
 
         retry_due_emails()
 
         log.refresh_from_db()
         self.assertEqual((log.status, log.last_error), (EmailStatus.FAILED, NOT_REBUILDABLE))
         self.assertEqual(mail.outbox, [])
+
+
+class ServerUnreachableTests(TestCase):
+    def test_no_attempt_consumed_when_server_unreachable_at_start(self):
+        log = pending_log(create_client(), attempts=1, minutes_ago=6)
+        connection = mock.Mock()
+        connection.open.side_effect = OSError("serveur injoignable")
+
+        with mock.patch("accounts.services.email_retry.get_connection", return_value=connection):
+            with self.assertLogs("accounts.services.email_retry", level="ERROR"):
+                self.assertEqual(retry_due_emails(), 0)
+
+        log.refresh_from_db()
+        self.assertEqual((log.status, log.attempts), (EmailStatus.PENDING, 1))
+        connection.send_messages.assert_not_called()
+
+
+class ProcessEmailsLockTests(TestCase):
+    def run_command(self):
+        output = StringIO()
+        call_command("process_emails", stdout=output)
+        return output.getvalue()
+
+    def test_one_pass_at_a_time_and_lock_expires(self):
+        log = pending_log(create_client(), attempts=1, minutes_ago=6)
+
+        with task_lock("process_emails", timedelta(minutes=30)):
+            self.assertIn("Un autre passage est en cours", self.run_command())
+        self.assertEqual(mail.outbox, [])
+
+        # Verrou rendu à la fin du passage précédent : le suivant passe tout de suite.
+        self.assertIn("E-mails envoyés ou retentés : 1", self.run_command())
+        log.refresh_from_db()
+        self.assertEqual(log.status, EmailStatus.SENT)
+
+        # Passage interrompu sans rendre le verrou : il est repris une fois expiré.
+        pending_log(create_client(email="paul@example.com"), attempts=1, minutes_ago=6)
+        TaskLock.objects.filter(name="process_emails").update(
+            locked_until=timezone.now() - timedelta(seconds=1), holder="passage interrompu"
+        )
+        self.assertIn("E-mails envoyés ou retentés : 1", self.run_command())
 
 
 class ManualResendTests(TestCase):
@@ -106,6 +188,15 @@ class ManualResendTests(TestCase):
         self.assertEqual(mail.outbox[0].to, ["marie@example.com"])
         self.assertEqual(EmailLog.objects.count(), 1)  # même ligne du journal, remise en attente
 
+    def test_kind_label_from_registry_or_raw_value(self):
+        """Libellé déclaré par l'application ; une ligne ancienne d'un type retiré garde sa valeur brute."""
+        pending_log(self.marie, attempts=3, minutes_ago=90, status=EmailStatus.FAILED, kind="ancien_type")
+
+        response = self.client.get(reverse("email_failure_list"))
+
+        self.assertContains(response, "Lien de mot de passe envoyé par un agent")
+        self.assertContains(response, "ancien_type")
+
     def test_failed_resend_goes_back_to_automatic_attempts(self):
         with SMTP_DOWN, self.assertLogs("accounts.services.emails", level="ERROR"):
             self.client.post(reverse("resend_email", args=[self.log.pk]))
@@ -113,8 +204,17 @@ class ManualResendTests(TestCase):
         self.log.refresh_from_db()
         self.assertEqual((self.log.status, self.log.attempts), (EmailStatus.PENDING, 1))
 
+    def test_resend_already_taken_is_not_sent_twice(self):
+        stale = EmailLog.objects.get(pk=self.log.pk)  # ligne lue avant le renvoi d'un collègue
+        resend(self.log)
+
+        with self.assertRaises(AlreadyResent):
+            resend(stale)
+
+        self.assertEqual(len(mail.outbox), 1)
+
     def test_emails_that_cannot_be_resent_are_not_listed(self):
-        self.log.last_error = OBSOLETE
+        self.log.failure = EmailFailure.OBSOLETE
         self.log.save()
 
         self.assertNotContains(self.client.get(reverse("email_failure_list")), "marie@example.com")
@@ -126,7 +226,7 @@ class AgentActivationResendTests(TestCase):
         self.new_agent.set_unusable_password()  # invité : pas encore de mot de passe
         self.new_agent.save()
         self.log = pending_log(
-            self.new_agent, attempts=3, minutes_ago=60, status=EmailStatus.FAILED, kind=EmailKind.AGENT_ACTIVATION
+            self.new_agent, attempts=3, minutes_ago=60, status=EmailStatus.FAILED, kind=AccountEmail.AGENT_ACTIVATION
         )
         self.url = reverse("resend_email", args=[self.log.pk])
 
@@ -150,7 +250,9 @@ class AgentActivationResendTests(TestCase):
 class AccountEmailsRetryTests(TestCase):
     def test_staff_password_link_resent_by_administrator_only(self):
         agent = create_agent(email="luc@example.com")
-        log = pending_log(agent, attempts=3, minutes_ago=60, status=EmailStatus.FAILED, kind=EmailKind.STAFF_PASSWORD_LINK)
+        log = pending_log(
+            agent, attempts=3, minutes_ago=60, status=EmailStatus.FAILED, kind=AccountEmail.STAFF_PASSWORD_LINK
+        )
         url = reverse("resend_email", args=[log.pk])
 
         self.client.force_login(create_agent())
@@ -161,17 +263,50 @@ class AccountEmailsRetryTests(TestCase):
         self.assertEqual(mail.outbox[0].to, ["luc@example.com"])
         self.assertRegex(mail.outbox[0].body, r"/activation/[\w-]+/[\w-]+/")
 
-    def test_password_changed_notice_retried(self):
-        log = pending_log(create_client(), attempts=1, minutes_ago=6, kind=EmailKind.PASSWORD_CHANGED)
+    def test_account_emails_rebuilt_on_retry(self):
+        # Type → texte attendu dans le message reconstruit (lien neuf pour les liens de sécurité).
+        cases = {
+            AccountEmail.PASSWORD_RESET: r"/reinitialisation/[\w-]+/[\w-]+/",
+            AccountEmail.SIGN_UP_CONFIRMATION: r"/inscription/confirmer/[\w:-]+/",
+            AccountEmail.SIGN_UP_EXISTING: "Un compte existe déjà",
+            AccountEmail.EMAIL_CHANGE_NOTICE: "Une demande de changement de l'adresse e-mail",
+            AccountEmail.PASSWORD_CHANGED: "vient d'être modifié",
+        }
+        for number, (kind, expected) in enumerate(cases.items()):
+            with self.subTest(kind=kind):
+                mail.outbox.clear()
+                log = pending_log(account_for(kind, number), attempts=1, minutes_ago=6, kind=kind)
 
-        retry_due_emails()
+                retry_due_emails()
 
-        log.refresh_from_db()
-        self.assertEqual(log.status, EmailStatus.SENT)
-        self.assertIn("vient d'être modifié", mail.outbox[0].body)
+                log.refresh_from_db()
+                self.assertEqual(log.status, EmailStatus.SENT)
+                self.assertRegex(mail.outbox[0].body, expected)
+
+    def test_not_rebuilt_for_a_disabled_account_or_a_former_address(self):
+        disabled = [AccountEmail.PASSWORD_RESET, AccountEmail.AGENT_ACTIVATION, AccountEmail.STAFF_PASSWORD_LINK]
+        moved = [*disabled, AccountEmail.SIGN_UP_CONFIRMATION, AccountEmail.SIGN_UP_EXISTING]
+        cases = [("compte désactivé", kind) for kind in disabled] + [("adresse changée", kind) for kind in moved]
+        for number, (change, kind) in enumerate(cases):
+            with self.subTest(change=change, kind=kind):
+                user = account_for(kind, number)
+                log = pending_log(user, attempts=1, minutes_ago=6, kind=kind)
+                if change == "compte désactivé":
+                    user.is_active = False
+                else:
+                    user.email = f"nouvelle.{user.email}"
+                user.save()
+
+                retry_due_emails()
+
+                log.refresh_from_db()
+                self.assertEqual((log.status, log.last_error), (EmailStatus.FAILED, OBSOLETE))
+        self.assertEqual(mail.outbox, [])
 
     def test_deletion_emails_never_resent_nor_listed(self):
-        kinds = [EmailKind.ACCOUNT_DELETED, EmailKind.UNCONFIRMED_ACCOUNT_DELETED, EmailKind.STAFF_ACCOUNT_DELETED]
+        kinds = [
+            AccountEmail.ACCOUNT_DELETED, AccountEmail.UNCONFIRMED_ACCOUNT_DELETED, AccountEmail.STAFF_ACCOUNT_DELETED
+        ]
         for number, kind in enumerate(kinds):
             user = create_client(email=f"parti{number}@example.com")
             with SMTP_DOWN, self.assertLogs("accounts.services.emails", level="ERROR"):
@@ -195,7 +330,9 @@ class AddressToCheckTests(TestCase):
 
     def fail(self, count):
         for _ in range(count):
-            pending_log(self.marie, attempts=3, minutes_ago=30, status=EmailStatus.FAILED)
+            pending_log(
+                self.marie, attempts=3, minutes_ago=30, status=EmailStatus.FAILED, failure=EmailFailure.RECIPIENT_REFUSED
+            )
 
     def is_marked(self):
         return "Adresse à vérifier" in self.client.get(reverse("client_list")).content.decode()
@@ -226,8 +363,10 @@ class AddressToCheckTests(TestCase):
 class EmailLogRetentionTests(TestCase):
     def test_log_kept_one_year(self):
         now = timezone.now()
-        kept = EmailLog.objects.create(kind=EmailKind.PASSWORD_RESET, subject="Objet", created_at=now - timedelta(days=364))
-        EmailLog.objects.create(kind=EmailKind.PASSWORD_RESET, subject="Objet", created_at=now - timedelta(days=366))
+        kept = EmailLog.objects.create(
+            kind=AccountEmail.PASSWORD_RESET, subject="Objet", created_at=now - timedelta(days=364)
+        )
+        EmailLog.objects.create(kind=AccountEmail.PASSWORD_RESET, subject="Objet", created_at=now - timedelta(days=366))
 
         self.assertEqual(purge_old_email_log(now), 1)
         self.assertEqual(list(EmailLog.objects.all()), [kept])

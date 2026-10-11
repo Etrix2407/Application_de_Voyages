@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load money %}
 
 {% block title %}{{ country.name }} — Gestion du catalogue{% endblock %}
 
@@ -8,15 +9,7 @@
     <h1>{{ country.name }}{% if not country.active %} (désactivé){% endif %}</h1>
 
     <dl class="details">
-        <dt>Continent</dt>
-        <dd>{{ country.get_continent_display }}</dd>
-        <dt>Langue principale</dt>
-        <dd>{{ country.main_language }}</dd>
-        <dt>Monnaie</dt>
-        <dd>{{ country.currency }}</dd>
-        <dt>Visa pour les Belges</dt>
-        <dd>{{ country.get_visa_display }}</dd>
-        {% include "catalog/_time_offsets.html" %}
+        {% include "catalog/_country_facts.html" %}
         <dt>Description</dt>
         <dd>{{ country.description|linebreaksbr }}</dd>
     </dl>
@@ -29,7 +22,7 @@
     <h2>Destinations</h2>
     <p><a class="button" href="{% url 'manage_create_destination' country.pk %}">Ajouter une destination</a></p>
     {% if destinations %}
-        <div class="table-scroll">
+        <div class="table-scroll" tabindex="0" role="region" aria-label="Tableau des destinations">
             <table>
                 <caption>Destinations de {{ country.name }}</caption>
                 <thead>
@@ -47,17 +40,17 @@
                         <tr>
                             <td>
                                 {% if destination.photo %}
-                                    <img class="thumbnail" src="{{ destination.photo.url }}" alt="Photo : {{ destination.name }}" loading="lazy">
+                                    <img class="thumbnail" src="{{ destination.photo.url }}" alt="" loading="lazy">
                                 {% endif %}
                             </td>
                             <td>{{ destination.name }}</td>
                             <td>{{ destination.ideal_period|default:"—" }}</td>
-                            <td>{% if destination.price_from is not None %}{{ destination.price_from }} €{% else %}—{% endif %}</td>
+                            <td>{% if destination.price_from is not None %}{{ destination.price_from|euros }}{% else %}—{% endif %}</td>
                             <td>{{ destination.active|yesno:"Active,Désactivée" }}</td>
                             <td>
                                 <ul class="actions table-actions">
-                                    <li><a href="{% url 'manage_edit_destination' destination.pk %}">Modifier</a></li>
-                                    <li><a href="{% url 'manage_delete_destination' destination.pk %}">Supprimer</a></li>
+                                    <li><a href="{% url 'manage_edit_destination' destination.pk %}">Modifier<span class="sr-only"> {{ destination.name }}</span></a></li>
+                                    <li><a href="{% url 'manage_delete_destination' destination.pk %}">Supprimer<span class="sr-only"> {{ destination.name }}</span></a></li>
                                 </ul>
                             </td>
                         </tr>
@@ -72,7 +65,7 @@
     <h2>Activités</h2>
     <p><a class="button" href="{% url 'manage_create_activity' country.pk %}">Ajouter une activité</a></p>
     {% if activities %}
-        <div class="table-scroll">
+        <div class="table-scroll" tabindex="0" role="region" aria-label="Tableau des activités">
             <table>
                 <caption>Activités de {{ country.name }}</caption>
                 <thead>
@@ -93,12 +86,12 @@
                             <td>{{ activity.get_category_display }}</td>
                             <td>{{ activity.destination|default:"—" }}</td>
                             <td>{{ activity.duration_display }}</td>
-                            <td>{{ activity.price_per_person }} €</td>
+                            <td>{{ activity.price_per_person|euros }}</td>
                             <td>{{ activity.active|yesno:"Active,Désactivée" }}</td>
                             <td>
                                 <ul class="actions table-actions">
-                                    <li><a href="{% url 'manage_edit_activity' activity.pk %}">Modifier</a></li>
-                                    <li><a href="{% url 'manage_delete_activity' activity.pk %}">Supprimer</a></li>
+                                    <li><a href="{% url 'manage_edit_activity' activity.pk %}">Modifier<span class="sr-only"> {{ activity.name }}</span></a></li>
+                                    <li><a href="{% url 'manage_delete_activity' activity.pk %}">Supprimer<span class="sr-only"> {{ activity.name }}</span></a></li>
                                 </ul>
                             </td>
                         </tr>

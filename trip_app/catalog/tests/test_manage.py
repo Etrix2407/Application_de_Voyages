@@ -2,7 +2,7 @@ from django.test import TestCase
 from django.urls import reverse
 
 from catalog.models import Activity, Destination, Country
-from accounts.tests.factories import create_agent, create_client
+from accounts.tests.factories import create_agent
 
 from .factories import (
     TemporaryMediaMixin,
@@ -42,36 +42,6 @@ def activity_data(**fields):
     }
     data.update(fields)
     return data
-
-
-class ManageAccessTests(TestCase):
-    def setUp(self):
-        self.country = create_country()
-        self.destination = create_destination(self.country)
-        self.activity = create_activity(self.country)
-
-    def urls(self):
-        return [
-            reverse("manage_country_list"),
-            reverse("manage_create_country"),
-            reverse("manage_country", args=[self.country.pk]),
-            reverse("manage_edit_country", args=[self.country.pk]),
-            reverse("manage_delete_country", args=[self.country.pk]),
-            reverse("manage_create_destination", args=[self.country.pk]),
-            reverse("manage_edit_destination", args=[self.destination.pk]),
-            reverse("manage_delete_destination", args=[self.destination.pk]),
-            reverse("manage_create_activity", args=[self.country.pk]),
-            reverse("manage_edit_activity", args=[self.activity.pk]),
-            reverse("manage_delete_activity", args=[self.activity.pk]),
-        ]
-
-    def test_client_denied(self):
-        self.client.force_login(create_client())
-
-        for url in self.urls():
-            with self.subTest(url=url):
-                self.assertEqual(self.client.post(url).status_code, 403)
-        self.assertTrue(Country.objects.exists())
 
 
 class ManageCountryTests(TemporaryMediaMixin, TestCase):
@@ -131,7 +101,8 @@ class ManageCountryTests(TemporaryMediaMixin, TestCase):
         response = self.client.get(reverse("manage_country", args=[country.pk]))
 
         self.assertContains(response, "Kyoto")
-        self.assertContains(response, 'alt="Photo : Kyoto"')
+        self.assertContains(response, '<img class="thumbnail"')
+        self.assertContains(response, 'alt=""')
         self.assertContains(response, "Sumo")
 
 

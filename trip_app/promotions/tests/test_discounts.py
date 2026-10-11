@@ -5,7 +5,7 @@ from django.test import TestCase
 from django.utils import timezone
 
 from catalog.tests.factories import create_country, create_destination
-from promotions.models import Base, Kind, Promotion, Scope
+from promotions.models import DiscountBase, DiscountKind, Promotion, Scope
 from promotions.services.discounts import Offer, PriceParts, best_offer, covers, discount_amount, offer_for
 from promotions.tests.factories import create_promotion
 
@@ -13,15 +13,15 @@ from promotions.tests.factories import create_promotion
 LISBON_TRIP = PriceParts(stay=Decimal("800"), activities=Decimal("60"))
 
 
-def promotion(kind=Kind.PERCENT, value="10", base=Base.TOTAL) -> Promotion:
+def promotion(kind=DiscountKind.PERCENT, value="10", base=DiscountBase.TOTAL) -> Promotion:
     return Promotion(kind=kind, value=Decimal(value), base=base)
 
 
 class DiscountAmountTests(TestCase):
     def test_percent_applies_to_its_base_only(self):
-        self.assertEqual(discount_amount(promotion(base=Base.STAY), LISBON_TRIP), Decimal("80.00"))
-        self.assertEqual(discount_amount(promotion(base=Base.ACTIVITIES), LISBON_TRIP), Decimal("6.00"))
-        self.assertEqual(discount_amount(promotion(base=Base.TOTAL), LISBON_TRIP), Decimal("86.00"))
+        self.assertEqual(discount_amount(promotion(base=DiscountBase.STAY), LISBON_TRIP), Decimal("80.00"))
+        self.assertEqual(discount_amount(promotion(base=DiscountBase.ACTIVITIES), LISBON_TRIP), Decimal("6.00"))
+        self.assertEqual(discount_amount(promotion(base=DiscountBase.TOTAL), LISBON_TRIP), Decimal("86.00"))
 
     def test_percent_rounded_to_the_cent(self):
         prices = PriceParts(stay=Decimal("33.33"), activities=Decimal("0"))
@@ -29,17 +29,17 @@ class DiscountAmountTests(TestCase):
         self.assertEqual(discount_amount(promotion(value="15"), prices), Decimal("5.00"))
 
     def test_fixed_amount_once_per_order(self):
-        self.assertEqual(discount_amount(promotion(Kind.FIXED, "100"), LISBON_TRIP), Decimal("100.00"))
+        self.assertEqual(discount_amount(promotion(DiscountKind.FIXED, "100"), LISBON_TRIP), Decimal("100.00"))
 
     def test_fixed_amount_capped_at_its_base(self):
-        capped = promotion(Kind.FIXED, "100", Base.ACTIVITIES)
+        capped = promotion(DiscountKind.FIXED, "100", DiscountBase.ACTIVITIES)
 
         self.assertEqual(discount_amount(capped, LISBON_TRIP), Decimal("60.00"))
 
     def test_no_discount_means_not_applicable(self):
         no_activity = PriceParts(stay=Decimal("800"), activities=Decimal("0"))
 
-        self.assertIsNone(offer_for(promotion(base=Base.ACTIVITIES), no_activity))
+        self.assertIsNone(offer_for(promotion(base=DiscountBase.ACTIVITIES), no_activity))
 
 
 class BestOfferTests(TestCase):

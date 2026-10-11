@@ -5,29 +5,29 @@ accounts/services/email_texts.py. « Rétablir le texte d'origine » supprime le
 """
 
 from django.contrib import messages
+from django.db.models import TextChoices
 from django.http import Http404
 from django.shortcuts import redirect, render
 from django.utils import timezone
-from django.views.decorators.http import require_POST
 
 from accounts.decorators import administrator_required
 from accounts.forms import EmailTextForm
-from accounts.models import EmailKind, EmailText
-from accounts.services.email_texts import DEFAULT_TEXTS
+from accounts.models import EmailText
+from accounts.services.email_texts import DEFAULT_TEXTS, email_kinds, find_email_kind
 
 
-def _email_kind(value: str) -> EmailKind:
-    try:
-        return EmailKind(value)
-    except ValueError:
-        raise Http404 from None
+def _email_kind(value: str) -> TextChoices:
+    kind = find_email_kind(value)
+    if kind is None:
+        raise Http404
+    return kind
 
 
 @administrator_required
 def email_text_list(request):
     custom_texts = {text.kind: text for text in EmailText.objects.all()}
     rows = []
-    for kind in EmailKind:
+    for kind in email_kinds():
         custom = custom_texts.get(kind)
         subject = custom.subject if custom else DEFAULT_TEXTS[kind].subject
         rows.append({"kind": kind, "subject": subject, "custom": custom})
@@ -56,9 +56,15 @@ def edit_email_text(request, kind):
 
 
 @administrator_required
-@require_POST
 def reset_email_text(request, kind):
+    """Page de confirmation (GET), puis suppression du texte modifié (POST) : l'action est irréversible."""
     kind = _email_kind(kind)
-    EmailText.objects.filter(kind=kind).delete()
-    messages.success(request, f"Le texte d'origine de l'e-mail « {kind.label} » est rétabli.")
-    return redirect("email_text_list")
+    custom = EmailText.objects.filter(kind=kind).first()
+    if custom is None:
+        messages.info(request, f"L'e-mail « {kind.label} » a déjà son texte d'origine.")
+        return redirect("email_text_list")
+    if request.method == "POST":
+        custom.delete()
+        messages.success(request, f"Le texte d'origine de l'e-mail « {kind.label} » est rétabli.")
+        return redirect("email_text_list")
+    return render(request, "accounts/email_texts/reset.html", {"kind": kind, "custom": custom})

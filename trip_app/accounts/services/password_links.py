@@ -8,8 +8,8 @@ from django.utils.crypto import constant_time_compare
 from django.utils.encoding import force_bytes
 from django.utils.http import base36_to_int, urlsafe_base64_encode
 
-from accounts.models import EmailKind, User
-from accounts.services.emails import send_email
+from accounts.models import AccountEmail, User
+from accounts.services.emails import send_email, site_url
 
 # Invitation d'un agent : 7 jours (Recap 5). Les autres liens gardent 1 heure (PASSWORD_RESET_TIMEOUT).
 INVITATION_LINK_MAX_AGE = timedelta(days=7)
@@ -49,12 +49,12 @@ def password_token(user: User) -> dict:
 
 
 def password_link_path(user: User) -> str:
-    """Chemin du lien pour choisir un mot de passe, valable 1 heure (à rendre absolu)."""
+    """Chemin du lien pour choisir un mot de passe, valable 1 heure (à rendre absolu avec site_url)."""
     return reverse("password_reset_confirm", kwargs=password_token(user))
 
 
 def staff_link_path(member: User) -> str:
-    """Chemin du lien envoyé à un membre du personnel, valable 7 jours (à rendre absolu)."""
+    """Chemin du lien envoyé à un membre du personnel, valable 7 jours (à rendre absolu avec site_url)."""
     return reverse(
         "activate_account",
         kwargs={
@@ -64,15 +64,15 @@ def staff_link_path(member: User) -> str:
     )
 
 
-def send_password_link(request, user: User, kind: EmailKind) -> bool:
+def send_password_link(user: User, kind: AccountEmail) -> bool:
     """Envoie un lien valable 1 heure (PASSWORD_RESET_TIMEOUT) ; personne d'autre ne voit le mot de passe."""
-    link = request.build_absolute_uri(password_link_path(user))
+    link = site_url(password_link_path(user))
     return send_email(user.email, kind, {"prénom": user.first_name, "lien": link}, user=user)
 
 
-def send_staff_link(request, member: User, kind: EmailKind) -> bool:
+def send_staff_link(member: User, kind: AccountEmail) -> bool:
     """Envoie à un membre du personnel un lien valable 7 jours pour choisir son mot de passe (pas de mot de passe provisoire)."""
-    link = request.build_absolute_uri(staff_link_path(member))
+    link = site_url(staff_link_path(member))
     return send_email(member.email, kind, staff_link_fields(member, link), user=member)
 
 

@@ -10,7 +10,7 @@
         <ul class="actions">
             {% for order in to_review %}
                 <li>
-                    {{ order.destination_name }} ({{ order.country_name }}), retour le {{ order.return_date|date:"j F Y" }} :
+                    {{ order.destination_label }}, retour le {{ order.return_date|date:"j F Y" }} :
                     <a class="button" href="{% url 'create_review' order.pk %}">Donner mon avis</a>
                 </li>
             {% endfor %}
@@ -19,8 +19,8 @@
 
     <h2>Vos avis</h2>
     {% if reviews %}
-        <div class="table-scroll">
-            <table>
+        <div class="table-scroll" tabindex="0" role="region" aria-label="Tableau de vos avis">
+            <table class="table-cards">
                 <caption>Vos avis, du plus récent au plus ancien</caption>
                 <thead>
                     <tr>
@@ -34,26 +34,26 @@
                 <tbody>
                     {% for review, can_edit in reviews %}
                         <tr>
-                            <td>{{ review.order.destination_name }} ({{ review.order.country_name }})</td>
-                            <td>{{ review.order.departure_date|date:"F Y" }}</td>
-                            <td>
+                            <td data-label="Destination">{{ review.order.destination_label }}</td>
+                            <td data-label="Séjour">{{ review.order.departure_date|date:"F Y" }}</td>
+                            <td data-label="Note et titre">
                                 {% include "reviews/_rating.html" %}<br>« {{ review.title }} »
                                 {% if review.response %}{% include "reviews/_response.html" with response=review.response %}{% endif %}
                             </td>
-                            <td>
+                            <td data-label="État">
                                 <span class="status status-{{ review.status }}">{{ review.get_status_display }}</span>
                                 {% if review.refusal_reason %}
-                                    <br>Motif : {{ review.get_refusal_reason_display }}{% if review.refusal_details %} — {{ review.refusal_details }}{% endif %}
+                                    <br>Motif : {{ review.refusal_label }}
                                 {% endif %}
                             </td>
-                            <td>
+                            <td data-label="Actions">
                                 {% if can_edit %}
-                                    <a href="{% url 'edit_review' review.pk %}">Modifier</a>
+                                    <a href="{% url 'edit_review' review.pk %}">Modifier<span class="sr-only"> l'avis « {{ review.title }} »</span></a>
                                     (jusqu'au {{ review.editable_until|date:"j F Y" }})
                                 {% else %}
                                     Plus modifiable
                                 {% endif %}
-                                <br><a href="{% url 'remove_review' review.pk %}">Supprimer</a>
+                                <br><a href="{% url 'remove_review' review.pk %}">Supprimer<span class="sr-only"> l'avis « {{ review.title }} »</span></a>
                             </td>
                         </tr>
                     {% endfor %}

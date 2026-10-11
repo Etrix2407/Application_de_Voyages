@@ -21,11 +21,11 @@ from django.utils import timezone
 
 from accounts.models import Role
 from catalog.models import Activity, Category, Continent, Destination, Difficulty, Month, Country, Visa
-from orders.models import Order, Status, StatusChange
+from orders.models import Order, OrderStatus, StatusChange
 from orders.services.placing import parts_for, place_order
 from orders.services.promotions import choose_promotion
 from orders.services.status import cancel_by_client, confirm_by_staff
-from promotions.models import Base, Kind, Promotion, Scope
+from promotions.models import DiscountBase, DiscountKind, Promotion, Scope
 from reviews.models import Review
 from reviews.services.moderation import publish
 from reviews.services.writing import ReviewNotAllowed, write_review
@@ -71,8 +71,9 @@ INACTIVE_COUNTRY = {
     "activities": [],
 }
 
-CLIENT_EMAIL = "client.demo@example.com"
-AGENT_EMAIL = "agent.demo@example.com"
+DEMO_EMAIL_DOMAIN = "@example.com"
+CLIENT_EMAIL = f"client.demo{DEMO_EMAIL_DOMAIN}"
+AGENT_EMAIL = f"agent.demo{DEMO_EMAIL_DOMAIN}"
 
 ACCOUNTS = [
     (CLIENT_EMAIL, Role.CLIENT, "Client", "Démo"),
@@ -85,7 +86,7 @@ PROMO_CODE = "EXEMPLE10"
 PROMOTIONS = [
     {
         "name": "Exemple — Offre des Lacs",
-        "kind": Kind.PERCENT,
+        "kind": DiscountKind.PERCENT,
         "value": Decimal("10"),
         "scope": Scope.COUNTRIES,
         "country": "Exemple — Pays des Lacs",
@@ -93,7 +94,7 @@ PROMOTIONS = [
     },
     {
         "name": "Exemple — Code de bienvenue",
-        "kind": Kind.FIXED,
+        "kind": DiscountKind.FIXED,
         "value": Decimal("10"),
         "scope": Scope.CATALOG,
         "country": None,
@@ -112,28 +113,28 @@ DEMO_ORDERS = [
         "destination": "Exemple — Ville des Ponts",
         "activities": ["Exemple — Visite du musée"],
         "code": "",
-        "status": Status.PENDING,
+        "status": OrderStatus.PENDING,
     },
     {
         "remarks": f"Exemple — demande confirmée avec le code promo {PROMO_CODE}.",
         "destination": "Exemple — Cité du Marché",
         "activities": ["Exemple — Cours de cuisine"],
         "code": PROMO_CODE,
-        "status": Status.CONFIRMED,
+        "status": OrderStatus.CONFIRMED,
     },
     {
         "remarks": "Exemple — demande annulée par le client.",
         "destination": "Exemple — Vallée Verte",
         "activities": ["Exemple — Croisière sur le lac"],
         "code": "",
-        "status": Status.CANCELLED,
+        "status": OrderStatus.CANCELLED,
     },
     {
         "remarks": TRIP_DONE_REMARKS,
         "destination": "Exemple — Cité du Marché",
         "activities": [],
         "code": "",
-        "status": Status.CONFIRMED,
+        "status": OrderStatus.CONFIRMED,
     },
 ]
 CANCEL_REASON = "Exemple — projet reporté."
@@ -157,6 +158,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         if not settings.DEBUG:
             raise CommandError("Données de démonstration refusées : DJANGO_DEBUG doit valoir 1.")
+        _refuse_real_accounts()
         User = get_user_model()
         with transaction.atomic():
             for data in COUNTRIES:
@@ -237,7 +239,7 @@ class Command(BaseCommand):
             kind=data["kind"],
             value=data["value"],
             scope=data["scope"],
-            base=Base.TOTAL,
+            base=DiscountBase.TOTAL,
             starts_on=today,
             ends_on=today + timedelta(days=PROMOTION_DAYS),
             code=data["code"],
@@ -245,7 +247,7 @@ class Command(BaseCommand):
         promotion.full_clean()
         promotion.save()
         if data["country"]:
-            promotion.countries.add(Country.objects.get(name=data["country"]))
+            promotion.countries.add(_get_demo(Country, name=data["country"]))
         # Pas d'entrée d'historique : l'historique exige un administrateur comme auteur et la
         # démonstration n'en crée pas. La fiche affiche alors « Créée par — » et « Aucun historique ».
         self.stdout.write(f"Créé : {promotion.name}")
@@ -256,9 +258,9 @@ class Command(BaseCommand):
             self.stdout.write(f"Déjà présent : {data['remarks']}")
             return
         order = _place_order(client, data)
-        if data["status"] == Status.CONFIRMED:
+        if data["status"] == OrderStatus.CONFIRMED:
             confirm_by_staff(order, agent)
-        elif data["status"] == Status.CANCELLED:
+        elif data["status"] == OrderStatus.CANCELLED:
             cancel_by_client(order, CANCEL_REASON)
         if data["remarks"] == TRIP_DONE_REMARKS:
             _move_to_past(order)
@@ -279,8 +281,39 @@ class Command(BaseCommand):
         self.stdout.write(f"Créé : avis publié « {review.title} »")
 
 
+def _refuse_real_accounts() -> None:
+    """Refuse une base qui contient de vrais comptes (et donc de vraies demandes).
+
+    Sécurité en plus de DJANGO_DEBUG : lancée par erreur sur la base de l'agence, la commande
+    créerait un agent et le code promo public EXEMPLE10. Toutes les adresses de démonstration
+    sont en @example.com, domaine réservé aux exemples qui n'appartient à personne. Les comptes
+    administrateurs ne comptent pas : le premier est créé avant la démonstration (README).
+    """
+    real_accounts = (
+        get_user_model().objects.exclude(email__iendswith=DEMO_EMAIL_DOMAIN).exclude(role=Role.ADMINISTRATOR)
+    )
+    if real_accounts.exists():
+        raise CommandError(
+            "Données de démonstration refusées : la base contient des comptes clients ou agents "
+            f"réels (adresse qui ne se termine pas par {DEMO_EMAIL_DOMAIN}). Utilisez une base de "
+            "développement."
+        )
+
+
+def _get_demo(model, **lookup):
+    """Élément de démonstration retrouvé par son nom fixe, avec un message clair s'il manque."""
+    try:
+        return model.objects.get(**lookup)
+    except model.DoesNotExist:
+        name = next(iter(lookup.values()))
+        raise CommandError(
+            f"Élément de démonstration introuvable : « {name} » ({model._meta.verbose_name}). "
+            "A-t-il été renommé ou supprimé ? Rétablissez-le ou repartez d'une base vide."
+        ) from None
+
+
 def _place_order(client, data: dict) -> Order:
-    destination = Destination.objects.get(name=data["destination"])
+    destination = _get_demo(Destination, name=data["destination"])
     activities = list(Activity.objects.filter(country=destination.country, name__in=data["activities"]))
     departure = timezone.localdate() + DEPARTURE_DELAY
     adults, children = 2, 0

@@ -5,7 +5,7 @@ from django.urls import reverse
 
 from accounts.tests.factories import create_agent, create_client
 from catalog.tests.factories import create_country, create_destination
-from orders.models import Status
+from orders.models import OrderStatus
 from orders.services.promotion_statistics import promotion_statistics
 from promotions.tests.factories import create_promotion
 
@@ -25,7 +25,7 @@ class PromotionStatisticsTests(TestCase):
     def test_figures(self):
         self.add_order(self.marie, discount="50")
         # Confirmée : la remise recalculée à la confirmation remplace celle de la demande.
-        self.add_order(self.marie, discount="50", status=Status.CONFIRMED, confirmed_discount=Decimal("60"))
+        self.add_order(self.marie, discount="50", status=OrderStatus.CONFIRMED, confirmed_discount=Decimal("60"))
         self.add_order(self.paul, discount="30")
         self.add_order(None, discount="20")
         create_order(self.paul, self.kyoto, discount=Decimal("99"))  # autre demande, sans cette promotion
@@ -39,7 +39,7 @@ class PromotionStatisticsTests(TestCase):
 
     def test_cancelled_orders_excluded_from_all_figures(self):
         kept = self.add_order(self.marie)
-        cancelled = self.add_order(self.paul, status=Status.CANCELLED)
+        cancelled = self.add_order(self.paul, status=OrderStatus.CANCELLED)
 
         statistics = promotion_statistics(self.promotion)
 
@@ -61,6 +61,6 @@ class PromotionStatisticsTests(TestCase):
 
         response = self.client.get(reverse("manage_promotion_statistics", args=[self.promotion.pk]))
 
-        self.assertContains(response, "50,00 €")
+        self.assertContains(response, "50,00\u00a0€")
         self.assertContains(response, reverse("manage_order_detail", args=[order.pk]))
         self.assertContains(response, "Aucune demande annulée.")

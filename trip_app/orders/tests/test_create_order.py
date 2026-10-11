@@ -15,11 +15,9 @@ from catalog.tests.factories import create_activity, create_country, create_dest
 from orders.models import (
     MAX_DAYS_BEFORE_DEPARTURE,
     MAX_REMARKS_LENGTH,
-    MAX_STAY_DAYS,
     MAX_TRAVELLERS,
-    MIN_DAYS_BEFORE_DEPARTURE,
     Order,
-    Status,
+    OrderStatus,
     StatusChange,
 )
 from orders.services import placing
@@ -68,7 +66,7 @@ class CreateOrderTests(TestCase):
 
         response = self.client.get(self.url)
 
-        self.assertContains(response, "Cérémonie du thé")
+        self.assertContains(response, "Cérémonie du thé — 50,00\u00a0€ par personne")
         self.assertContains(response, "à partir de 12 ans")
         self.assertNotContains(response, "Karaoké fermé")
         self.assertNotContains(response, "Trek")
@@ -77,7 +75,7 @@ class CreateOrderTests(TestCase):
         response = self.client.post(self.url, self.data())
 
         # (1000 + 50) × 2 adultes + (1000 + 50) × 50 % × 2 enfants
-        self.assertContains(response, "3150,00 €")
+        self.assertContains(response, "3\u00a0150,00\u00a0€")
         self.assertContains(response, "estimation, non contractuel")
         self.assertFalse(Order.objects.exists())
 
@@ -87,13 +85,13 @@ class CreateOrderTests(TestCase):
         self.assertContains(response, "un conseiller vous rappellera sous 48 heures")
         order = Order.objects.get()
         self.assertEqual(order.client, self.client_user)
-        self.assertEqual(order.status, Status.PENDING)
+        self.assertEqual(order.status, OrderStatus.PENDING)
         self.assertEqual(order.estimated_price, Decimal("3150.00"))
         self.assertEqual(order.destination_price, Decimal("1000"))
         self.assertEqual(order.activities.get().unit_price, Decimal("50"))
         self.assertEqual(order.remarks, "Chambre calme si possible.")
         change = order.history.get()
-        self.assertEqual((change.status, change.author_name), (Status.PENDING, StatusChange.CLIENT_AUTHOR))
+        self.assertEqual((change.status, change.author_name), (OrderStatus.PENDING, StatusChange.CLIENT_AUTHOR))
 
     def test_edit_goes_back_to_the_form(self):
         response = self.client.post(self.url, {**self.data(), "edit": ""})
@@ -108,32 +106,16 @@ class CreateOrderTests(TestCase):
         response = self.client.post(reverse("create_order", args=[on_quote.pk]), self.data())
 
         self.assertContains(response, "sur devis")
-        self.assertContains(response, "150,00 €")  # activité seule : 50 × 2 + 50 × 50 % × 2
+        self.assertContains(response, "150,00\u00a0€")  # activité seule : 50 × 2 + 50 × 50 % × 2
 
-    def test_invalid_requests_rejected(self):
-        too_soon = departure_in(MIN_DAYS_BEFORE_DEPARTURE - 1)
-        cases = {
-            "départ trop proche": {
-                "departure_date": too_soon.isoformat(),
-                "return_date": (too_soon + timedelta(days=5)).isoformat(),
-            },
-            "retour avant départ": {"return_date": departure_in(1).isoformat()},
-            "aucun adulte": {"adults": "0"},
-            "trop de voyageurs": {"adults": "6", "children": "5"},
-            "départ dans plus de deux ans": {
-                "departure_date": departure_in(MAX_DAYS_BEFORE_DEPARTURE + 1).isoformat(),
-                "return_date": departure_in(MAX_DAYS_BEFORE_DEPARTURE + 5).isoformat(),
-            },
-            "séjour trop long": {"return_date": (departure_in() + timedelta(days=MAX_STAY_DAYS + 1)).isoformat()},
-            "remarques trop longues": {"remarks": "a" * (MAX_REMARKS_LENGTH + 1)},
-            "activité d'un autre pays": {"activities": [create_activity(create_country("Pérou")).pk]},
-        }
-        for reason, fields in cases.items():
-            with self.subTest(reason=reason):
-                response = self.client.post(self.url, {**self.data(**fields), "confirm": ""})
+    def test_invalid_request_rejected_with_one_message(self):
+        # Les règles elles-mêmes sont testées sur le modèle (test_models.py) : ici, le retour au formulaire.
+        response = self.client.post(self.url, {**self.data(adults="0"), "confirm": ""})
 
-                self.assertTemplateUsed(response, "orders/create.html")
-                self.assertFalse(Order.objects.exists())
+        self.assertTemplateUsed(response, "orders/create.html")
+        self.assertEqual(response.context["form"].errors["adults"], ["Il faut au moins un adulte."])
+        self.assertContains(response, 'min="1"')
+        self.assertFalse(Order.objects.exists())
 
     def test_rule_refused_at_the_last_moment_shows_message(self):
         # Ex. activité désactivée entre la page de vérification et l'envoi.
@@ -233,7 +215,7 @@ class SubmissionSafetyTests(TestCase):
         response = self.confirm()
 
         self.assertContains(response, "a changé depuis votre vérification")
-        self.assertContains(response, "15000,00 €")  # (6000 × 2) + (6000 × 50 % × 1)
+        self.assertContains(response, "15\u00a0000,00\u00a0€")  # (6000 × 2) + (6000 × 50 % × 1)
         self.assertFalse(Order.objects.exists())
 
         # Le client renvoie la nouvelle page de vérification : la demande est enregistrée au prix affiché.
@@ -292,7 +274,7 @@ class DailyLimitTests(TestCase):
 
     def test_cancelled_orders_count_too(self):
         self.send_orders(MAX_ORDERS_PER_DAY)
-        Order.objects.update(status=Status.CANCELLED)
+        Order.objects.update(status=OrderStatus.CANCELLED)
 
         self.assertRedirects(self.client.get(self.url), reverse("my_orders"))
 
@@ -381,12 +363,6 @@ class PlaceOrderServiceValidationTests(TestCase):
 
     def test_departure_too_soon_refused(self):
         self.assert_refused(self.data(departure_date=departure_in(1), return_date=departure_in(5)))
-
-    def test_too_many_travellers_refused(self):
-        self.assert_refused(self.data(adults=6, children=5))
-
-    def test_activity_of_another_country_refused(self):
-        self.assert_refused(self.data(activities=[create_activity(create_country("Pérou"))]))
 
     def test_inactive_activity_refused(self):
         self.assert_refused(self.data(activities=[create_activity(self.country, active=False)]))

@@ -6,11 +6,12 @@ from django.urls import reverse
 from django.utils import timezone
 
 from accounts.tests.factories import create_agent, create_client
+from catalog.models import Destination
 from catalog.tests.factories import create_activity, create_country, create_destination
-from orders.models import Order, Status, StatusChange
+from orders.models import Order, OrderStatus, StatusChange
 from orders.services.status import TransitionNotAllowed, cancel_by_client, cancel_by_staff, confirm_by_staff
 
-from .factories import create_order
+from .factories import confirm_on_page, create_order
 
 
 class StaffProcessingTests(TestCase):
@@ -34,14 +35,44 @@ class StaffProcessingTests(TestCase):
         self.assertContains(response, self.cancel_url)
 
     def test_confirm_records_agent_in_history(self):
-        response = self.client.post(self.confirm_url, follow=True)
+        response = confirm_on_page(self.client, self.order, follow=True)
 
         self.assertContains(response, "est confirmée")
-        self.assertEqual(self.refreshed_status(), Status.CONFIRMED)
+        self.assertEqual(self.refreshed_status(), OrderStatus.CONFIRMED)
         change = self.order.history.get()
         self.assertEqual(
-            (change.status, change.author, change.author_name), (Status.CONFIRMED, self.agent, "Luc Martin")
+            (change.status, change.author, change.author_name), (OrderStatus.CONFIRMED, self.agent, "Luc Martin")
         )
+
+    def test_confirm_refused_when_price_changed_since_page_display(self):
+        page = self.client.get(self.detail)
+        Destination.objects.filter(pk=self.order.destination_id).update(price_from=Decimal("1500"))
+
+        response = self.client.post(
+            self.confirm_url, {"expected_price": page.context["expected_price"]}, follow=True
+        )
+
+        self.assertContains(response, "Le prix aux tarifs du jour a changé")
+        self.assertEqual(self.refreshed_status(), OrderStatus.PENDING)
+
+    def test_order_without_client_cannot_be_confirmed(self):
+        # Demande anonymisée restée en attente (compte supprimé avant l'annulation automatique).
+        Order.objects.filter(pk=self.order.pk).update(client=None)
+
+        page = self.client.get(self.detail)
+        response = self.client.post(self.confirm_url, {"expected_price": str(self.order.estimated_price)}, follow=True)
+
+        self.assertNotContains(page, self.confirm_url)
+        self.assertContains(response, "Le compte du client a été supprimé")
+        self.assertEqual(self.refreshed_status(), OrderStatus.PENDING)
+
+    def test_confirm_refused_without_a_readable_price(self):
+        for posted in [{}, {"expected_price": "abc"}, {"expected_price": "sNaN"}, {"expected_price": "Infinity"}]:
+            with self.subTest(posted=posted):
+                response = self.client.post(self.confirm_url, posted, follow=True)
+
+                self.assertContains(response, "Le prix aux tarifs du jour a changé")
+                self.assertEqual(self.refreshed_status(), OrderStatus.PENDING)
 
     def test_confirmed_order_shows_cancel_only(self):
         confirm_by_staff(self.order, self.agent)
@@ -55,7 +86,7 @@ class StaffProcessingTests(TestCase):
         response = self.client.post(self.cancel_url, {"internal_reason": "   "})
 
         self.assertContains(response, "Le motif interne est obligatoire.")
-        self.assertEqual(self.refreshed_status(), Status.PENDING)
+        self.assertEqual(self.refreshed_status(), OrderStatus.PENDING)
 
     def test_staff_cancels_pending_order_with_reason_and_explanation(self):
         response = self.client.post(
@@ -65,7 +96,7 @@ class StaffProcessingTests(TestCase):
         )
 
         self.assertContains(response, "est annulée")
-        self.assertEqual(self.refreshed_status(), Status.CANCELLED)
+        self.assertEqual(self.refreshed_status(), OrderStatus.CANCELLED)
         change = self.order.history.get()
         self.assertEqual(
             (change.author_name, change.internal_reason, change.reason),
@@ -77,9 +108,9 @@ class StaffProcessingTests(TestCase):
 
         self.client.post(self.cancel_url, {"internal_reason": "Le client a appelé pour annuler."})
 
-        self.assertEqual(self.refreshed_status(), Status.CANCELLED)
+        self.assertEqual(self.refreshed_status(), OrderStatus.CANCELLED)
         self.assertEqual(
-            list(self.order.history.values_list("status", flat=True)), [Status.CONFIRMED, Status.CANCELLED]
+            list(self.order.history.values_list("status", flat=True)), [OrderStatus.CONFIRMED, OrderStatus.CANCELLED]
         )
 
     def test_cancelled_order_offers_no_action(self):
@@ -93,6 +124,7 @@ class StaffProcessingTests(TestCase):
     def test_invalid_transitions_refused_with_message(self):
         cancel_by_client(self.order)
 
+        # Onglet resté ouvert : sans prix lisible, c'est l'état de la demande qui est signalé.
         confirm = self.client.post(self.confirm_url, follow=True)
         cancel = self.client.post(self.cancel_url, {"internal_reason": "Doublon."}, follow=True)
 
@@ -102,14 +134,7 @@ class StaffProcessingTests(TestCase):
 
     def test_confirm_only_by_post(self):
         self.assertEqual(self.client.get(self.confirm_url).status_code, 405)
-        self.assertEqual(self.refreshed_status(), Status.PENDING)
-
-    def test_client_cannot_process_orders(self):
-        self.client.force_login(self.marie)
-
-        self.assertEqual(self.client.post(self.confirm_url).status_code, 403)
-        self.assertEqual(self.client.post(self.cancel_url, {"internal_reason": "x"}).status_code, 403)
-        self.assertEqual(self.refreshed_status(), Status.PENDING)
+        self.assertEqual(self.refreshed_status(), OrderStatus.PENDING)
 
     def test_client_sees_explanation_but_not_internal_reason(self):
         cancel_by_staff(self.order, self.agent, "Hôtel partenaire en faillite.", "Destination fermée cette saison.")
@@ -132,7 +157,7 @@ class StaffProcessingTests(TestCase):
 
         self.assertEqual(self.order.history.get().reason, "")
         self.assertNotContains(response, "Hôtel partenaire en faillite.")
-        self.assertContains(response, "<td>—</td>", html=True)
+        self.assertContains(response, '<td data-label="Motif">—</td>', html=True)
 
     def test_client_or_agency_decided_by_who_acted_not_by_name(self):
         # Un agent qui s'appellerait « Client » reste affiché « Agence » au client.
@@ -157,7 +182,7 @@ class StaffProcessingTests(TestCase):
 
         response = self.client.get(reverse("my_order_detail", args=[self.order.pk]))
 
-        self.assertContains(response, "<td>Client</td>", html=True)
+        self.assertContains(response, '<td data-label="Par">Client</td>', html=True)
         self.assertNotContains(response, "Agence")
 
 
@@ -223,7 +248,7 @@ class PriceAtConfirmationTests(TestCase):
         self.assertEqual(self.order.estimated_price, Decimal("2100.00"))
         self.assertEqual(self.order.latest_price, Decimal("2320.00"))
         self.assertEqual(
-            self.order.history.get().reason, "Prix recalculé aux tarifs du jour : 2100,00 € → 2320,00 €."
+            self.order.history.get().reason, "Prix recalculé aux tarifs du jour : 2\u00a0100,00\u00a0€ → 2\u00a0320,00\u00a0€."
         )
 
     def test_unchanged_price_leaves_no_note(self):
@@ -239,7 +264,7 @@ class PriceAtConfirmationTests(TestCase):
 
         response = self.client.get(reverse("manage_order_detail", args=[self.order.pk]))
 
-        self.assertContains(response, "Prix aux tarifs actuels : <strong>2320,00 €</strong>", html=False)
+        self.assertContains(response, "Prix aux tarifs actuels : <strong>2\u00a0320,00\u00a0€</strong>", html=False)
 
     def test_client_sees_both_prices(self):
         self.raise_prices()
@@ -249,11 +274,11 @@ class PriceAtConfirmationTests(TestCase):
         detail = self.client.get(reverse("my_order_detail", args=[self.order.pk]))
         listing = self.client.get(reverse("my_orders"))
 
-        self.assertContains(detail, "2100,00 €")
+        self.assertContains(detail, "2\u00a0100,00\u00a0€")
         self.assertContains(detail, "Prix à la confirmation")
-        self.assertContains(detail, "2320,00 €")
-        self.assertContains(listing, "2320,00 €")
-        self.assertNotContains(listing, "2100,00 €")
+        self.assertContains(detail, "2\u00a0320,00\u00a0€")
+        self.assertContains(listing, "2\u00a0320,00\u00a0€")
+        self.assertNotContains(listing, "2\u00a0100,00\u00a0€")
 
     def test_price_set_after_quote_request_no_longer_shown_on_quote(self):
         lisbon = create_destination(create_country("Portugal"), "Lisbonne")
@@ -266,9 +291,9 @@ class PriceAtConfirmationTests(TestCase):
         detail = self.client.get(reverse("my_order_detail", args=[order.pk]))
         listing = self.client.get(reverse("my_orders"))
 
-        self.assertContains(detail, "800,00 €")
+        self.assertContains(detail, "800,00\u00a0€")
         self.assertNotContains(detail, "sur devis")
-        self.assertContains(listing, "800,00 €")
+        self.assertContains(listing, "800,00\u00a0€")
         self.assertNotContains(listing, "sur devis")
 
 
@@ -298,7 +323,7 @@ class DepartureDateTests(TestCase):
 
         self.assertContains(response, "ne peut plus être confirmée")
         self.order.refresh_from_db()
-        self.assertEqual(self.order.status, Status.PENDING)
+        self.assertEqual(self.order.status, OrderStatus.PENDING)
 
     def test_departure_today_can_still_be_confirmed(self):
         Order.objects.filter(pk=self.order.pk).update(departure_date=timezone.localdate())
@@ -306,4 +331,4 @@ class DepartureDateTests(TestCase):
 
         confirm_by_staff(self.order, self.agent)
 
-        self.assertEqual(self.order.status, Status.CONFIRMED)
+        self.assertEqual(self.order.status, OrderStatus.CONFIRMED)

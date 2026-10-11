@@ -5,13 +5,13 @@ from django.core import mail
 from django.test import TestCase
 from django.utils import timezone
 
-from accounts.models import EmailKind, EmailLog, EmailStatus
+from accounts.models import EmailLog, EmailStatus
 from accounts.services.email_retry import retry_due_emails
 from accounts.tests.email_delivery import SendEmailsImmediately
 from accounts.tests.factories import create_agent, create_client
 from catalog.models import Visa
 from catalog.tests.factories import create_country, create_destination
-from orders.models import Order, Status
+from orders.models import Order, OrderEmail, OrderStatus
 from orders.services.reminders import send_departure_reminders
 from orders.services.status import confirm_by_staff
 
@@ -31,7 +31,7 @@ class DepartureReminderTests(SendEmailsImmediately, TestCase):
         send_departure_reminders()
 
     def confirmed_order(self, days: int, **fields):
-        fields.setdefault("status", Status.CONFIRMED)
+        fields.setdefault("status", OrderStatus.CONFIRMED)
         return create_order(self.marie, self.kyoto, departure_date=departure_in(days), **fields)
 
     def test_reminder_seven_days_before_departure(self):
@@ -48,7 +48,7 @@ class DepartureReminderTests(SendEmailsImmediately, TestCase):
         self.assertIn(f"{OFFSET_LINE}+", message.body)
         self.assertIn("Monnaie : yen", message.body)
         log = EmailLog.objects.get()
-        self.assertEqual((log.kind, log.user, log.order_number), (EmailKind.DEPARTURE_REMINDER, self.marie, order.pk))
+        self.assertEqual((log.kind, log.user, log.order_number), (OrderEmail.DEPARTURE_REMINDER, self.marie, order.pk))
 
     def test_passport_required_text(self):
         self.country.passport_required = True
@@ -79,17 +79,17 @@ class DepartureReminderTests(SendEmailsImmediately, TestCase):
         self.assertEqual(len(mail.outbox), 1)
 
     def test_only_confirmed_orders_of_existing_clients(self):
-        self.confirmed_order(5, status=Status.PENDING)
-        self.confirmed_order(5, status=Status.CANCELLED)
-        create_order(None, self.kyoto, departure_date=departure_in(5), status=Status.CONFIRMED)
+        self.confirmed_order(5, status=OrderStatus.PENDING)
+        self.confirmed_order(5, status=OrderStatus.CANCELLED)
+        create_order(None, self.kyoto, departure_date=departure_in(5), status=OrderStatus.CONFIRMED)
 
         self.run_command()
 
         self.assertEqual(len(mail.outbox), 0)
 
     def test_late_confirmation_sends_reminder_at_once(self):
-        soon = self.confirmed_order(5, status=Status.PENDING)
-        later = self.confirmed_order(30, status=Status.PENDING)
+        soon = self.confirmed_order(5, status=OrderStatus.PENDING)
+        later = self.confirmed_order(30, status=OrderStatus.PENDING)
         agent = create_agent()
 
         confirm_by_staff(soon, agent)
@@ -98,21 +98,21 @@ class DepartureReminderTests(SendEmailsImmediately, TestCase):
         # « Demande confirmée » d'abord, puis le rappel ; rien d'autre pour le départ lointain.
         sent = list(EmailLog.objects.order_by("pk").values_list("order_number", "kind"))
         self.assertEqual(sent, [
-            (soon.pk, EmailKind.ORDER_CONFIRMED),
-            (soon.pk, EmailKind.DEPARTURE_REMINDER),
-            (later.pk, EmailKind.ORDER_CONFIRMED),
+            (soon.pk, OrderEmail.ORDER_CONFIRMED),
+            (soon.pk, OrderEmail.DEPARTURE_REMINDER),
+            (later.pk, OrderEmail.ORDER_CONFIRMED),
         ])
         self.run_command()
-        self.assertEqual(EmailLog.objects.filter(kind=EmailKind.DEPARTURE_REMINDER).count(), 1)
+        self.assertEqual(EmailLog.objects.filter(kind=OrderEmail.DEPARTURE_REMINDER).count(), 1)
 
     def test_retry_rebuilds_reminder_unless_cancelled(self):
         kept = self.confirmed_order(5)
         cancelled = self.confirmed_order(5)
         with mock.patch(
             "accounts.services.emails.EmailMultiAlternatives.send", side_effect=OSError("serveur injoignable")
-        ):
+        ), self.assertLogs("accounts.services.emails", level="ERROR"):
             self.run_command()
-        Order.objects.filter(pk=cancelled.pk).update(status=Status.CANCELLED)
+        Order.objects.filter(pk=cancelled.pk).update(status=OrderStatus.CANCELLED)
         EmailLog.objects.update(last_attempt_at=timezone.now() - timedelta(minutes=6))
 
         retry_due_emails()

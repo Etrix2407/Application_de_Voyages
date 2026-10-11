@@ -10,6 +10,7 @@
     </p>
     <p><strong>L'annulation est définitive.</strong></p>
 
+    {% include "_form_errors.html" %}
     <form method="post" novalidate>
         {% csrf_token %}
         {{ form }}

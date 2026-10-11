@@ -1,0 +1,24 @@
+{% comment %}
+Récapitulatif des erreurs d'un formulaire, à placer juste avant la balise <form>.
+Paramètre : form. Chaque erreur de champ renvoie au champ concerné.
+{% endcomment %}
+{% if form.errors %}
+    <div class="form-errors" role="alert">
+        <p>Veuillez corriger les erreurs suivantes :</p>
+        <ul>
+            {% for error in form.non_field_errors %}
+                <li>{{ error }}</li>
+            {% endfor %}
+            {% for field in form.hidden_fields %}
+                {% for error in field.errors %}
+                    <li>{{ error }}</li>
+                {% endfor %}
+            {% endfor %}
+            {% for field in form.visible_fields %}
+                {% if field.errors %}
+                    <li><a href="#{% firstof field.id_for_label field.auto_id %}">{{ field.label }} : {{ field.errors|first }}</a></li>
+                {% endif %}
+            {% endfor %}
+        </ul>
+    </div>
+{% endif %}

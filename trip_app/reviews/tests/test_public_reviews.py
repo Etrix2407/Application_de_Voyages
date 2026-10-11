@@ -69,7 +69,7 @@ class DestinationPageTests(ReviewsMixin, TestCase):
 
         self.assertContains(response, "4,5 sur 5 (2 avis)")
         self.assertContains(response, "Riad magnifique.")
-        self.assertContains(response, "✓ Voyage vérifié — séjour de")
+        self.assertContains(response, '<span aria-hidden="true">✓</span> Voyage vérifié — séjour de')
         self.assertContains(response, "Julie D.")
 
     def test_anonymous_review(self):

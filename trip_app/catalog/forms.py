@@ -1,4 +1,4 @@
-"""Formulaires du catalogue : gestion (personnel) et recherche."""
+"""Formulaires du catalogue : gestion (personnel), recherche, et base des filtres des listes du personnel."""
 
 from django import forms
 from django.utils.html import format_html, format_html_join
@@ -7,7 +7,7 @@ from .models import Activity, Category, Continent, Destination, Difficulty, Mont
 from .services.photos import without_metadata
 from .services.time_zones import time_zone_choices, time_zone_from_input, time_zone_label
 from .services.search import Criteria
-from .validators import PHOTO_FORMATS
+from .validators import PHOTO_FORMATS, validate_photo_pixels, validate_photo_size
 
 
 class TimeZoneInput(forms.TextInput):
@@ -107,6 +107,9 @@ class DestinationForm(_CountryContentForm):
             return photo  # pas de nouvelle photo : celle déjà enregistrée est gardée
         if image.format not in PHOTO_FORMATS:
             raise forms.ValidationError("Formats acceptés : JPEG, PNG ou WebP.", code="invalid_photo_format")
+        # Contrôles sur le fichier envoyé, avant de le décoder et de le réencoder.
+        validate_photo_size(photo)
+        validate_photo_pixels(*image.size)
         return without_metadata(photo)
 
 
@@ -186,3 +189,33 @@ class SearchForm(forms.Form):
     def criteria(self) -> Criteria:
         """À appeler après is_valid()."""
         return Criteria(**self.cleaned_data)
+
+
+PERIOD_ERROR = "La fin de la période doit être après son début."
+
+
+class StaffFilterForm(forms.Form):
+    """Filtres communs aux listes du personnel (demandes, avis), tous facultatifs.
+
+    Pays et destination, et contrôle des périodes : chaque sous-classe déclare les siennes
+    dans `periods`, sous la forme (champ de début, champ de fin).
+    """
+
+    periods: tuple[tuple[str, str], ...] = ()
+
+    country = forms.ModelChoiceField(
+        label="Pays", required=False, queryset=Country.objects.all(), empty_label="Tous les pays"
+    )
+    destination = forms.ModelChoiceField(
+        label="Destination",
+        required=False,
+        queryset=Destination.objects.select_related("country").order_by("country__name", "name", "pk"),
+        empty_label="Toutes les destinations",
+    )
+
+    def clean(self):
+        data = super().clean()
+        for start, end in self.periods:
+            if data.get(start) and data.get(end) and data[end] < data[start]:
+                self.add_error(end, PERIOD_ERROR)
+        return data

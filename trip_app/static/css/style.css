@@ -11,6 +11,13 @@
     --color-background-soft: #f2f5f8;
     /* Contour de focus : orange foncé, contraste supérieur à 3:1 sur le blanc (WCAG). */
     --color-focus: #b35c00;
+    --color-warning: #b35c00;
+    /* Contour de focus sur l'en-tête bleu : blanc, contraste 8,4:1. */
+    --color-focus-on-primary: #ffffff;
+    /* Texte orangé foncé (états « en attente », « à venir », étoiles) : contraste supérieur à 4,5:1. */
+    --color-warning-text: #8a4b00;
+    /* Texte secondaire gris foncé : contraste supérieur à 4,5:1 sur le blanc. */
+    --color-text-muted: #444444;
 }
 
 *,
@@ -42,6 +49,24 @@ select:focus-visible,
 textarea:focus-visible {
     outline: 3px solid var(--color-focus);
     outline-offset: 2px;
+}
+
+.site-header a:focus-visible,
+.site-header button:focus-visible {
+    outline-color: var(--color-focus-on-primary);
+}
+
+/* Masqué à l'écran, lu par les lecteurs d'écran (précise un lien « Modifier », « Voir »...). */
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
 }
 
 .skip-link {
@@ -79,10 +104,18 @@ textarea:focus-visible {
 .menu {
     display: flex;
     flex-wrap: wrap;
-    gap: 1rem;
+    gap: 0 1rem;
     margin: 0;
     padding: 0;
     list-style: none;
+}
+
+/* Cibles d'au moins 44 px de haut, faciles à toucher. */
+.menu a,
+.logout-form button {
+    display: inline-block;
+    min-height: 44px;
+    padding: 0.5rem 0.25rem;
 }
 
 .content {
@@ -118,7 +151,7 @@ textarea:focus-visible {
 }
 
 .message-warning {
-    border-color: #b35c00;
+    border-color: var(--color-warning);
 }
 
 /* Formulaires */
@@ -140,8 +173,55 @@ textarea {
     border-radius: 4px;
 }
 
+/* Cases à cocher : grandes, placées devant leur libellé, sur la même ligne. */
 input[type="checkbox"] {
-    width: auto;
+    flex-shrink: 0;
+    width: 1.5rem;
+    height: 1.5rem;
+    margin: 0.15rem 0 0;
+    accent-color: var(--color-primary);
+}
+
+form div:has(> input[type="checkbox"]) {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 0 0.75rem;
+    margin-top: 1rem;
+}
+
+form div:has(> input[type="checkbox"]) > input[type="checkbox"] {
+    order: -1;
+}
+
+form div:has(> input[type="checkbox"]) > label {
+    flex: 1;
+    margin-top: 0;
+    font-weight: normal;
+}
+
+/* Aide et erreurs de la case : sous la ligne case + libellé. */
+form div:has(> input[type="checkbox"]) > :not(label, input) {
+    flex-basis: 100%;
+}
+
+/* Choix multiples (activités) : la case est dans son libellé. */
+label:has(> input[type="checkbox"]) {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    margin-top: 0.5rem;
+    font-weight: normal;
+}
+
+fieldset {
+    margin-top: 1rem;
+    border: 2px solid var(--color-border);
+    border-radius: 4px;
+}
+
+legend {
+    font-weight: bold;
 }
 
 .button,
@@ -168,10 +248,30 @@ button:hover {
     padding-left: 1rem;
 }
 
+/* Récapitulatif des erreurs, en haut du formulaire. */
+.form-errors {
+    margin: 1rem 0;
+    padding: 0.75rem 1rem;
+    border: 3px solid var(--color-error);
+    border-radius: 6px;
+    background: var(--color-background-soft);
+}
+
+.form-errors p {
+    margin-top: 0;
+    font-weight: bold;
+    color: var(--color-error);
+}
+
+/* Les erreurs hors champ sont déjà dans le récapitulatif : pas de doublon dans le formulaire. */
+.form-errors + form > .errorlist.nonfield {
+    display: none;
+}
+
 .helptext {
     display: block;
     margin-top: 0.25rem;
-    color: #444444;
+    color: var(--color-text-muted);
 }
 
 .helptext ul {
@@ -180,7 +280,6 @@ button:hover {
 
 .logout-form button {
     margin: 0;
-    padding: 0;
     color: #ffffff;
     text-decoration: underline;
     background: none;
@@ -264,7 +363,7 @@ td {
 
 .cards {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(16rem, 100%), 1fr));
     gap: 1rem;
     padding: 0;
     list-style: none;
@@ -299,7 +398,8 @@ td {
     max-width: 40rem;
 }
 
-.search-form {
+.search-form,
+.filters {
     padding: 1rem;
     background: var(--color-background-soft);
     border-radius: 6px;
@@ -323,7 +423,7 @@ td {
 
 .unavailable {
     font-style: italic;
-    color: #444444;
+    color: var(--color-text-muted);
 }
 
 /* États des demandes de voyage : toujours écrits en toutes lettres, la couleur n'est qu'un repère. */
@@ -337,7 +437,7 @@ td {
 }
 
 .status-pending {
-    color: #8a4b00;
+    color: var(--color-warning-text);
 }
 
 .status-confirmed {
@@ -361,7 +461,7 @@ td {
 /* États des promotions. */
 
 .status-upcoming {
-    color: #8a4b00;
+    color: var(--color-warning-text);
 }
 
 .status-running {
@@ -370,28 +470,26 @@ td {
 
 .status-finished,
 .status-disabled {
-    color: #444444;
+    color: var(--color-text-muted);
+}
+
+/* Étiquettes : texte toujours présent, la couleur n'est qu'un repère. */
+
+.badge {
+    display: inline-block;
+    padding: 0.1rem 0.5rem;
+    font-weight: bold;
+    color: #ffffff;
+    border-radius: 4px;
 }
 
 .badge-negative,
 .badge-warning {
-    display: inline-block;
-    padding: 0.1rem 0.5rem;
-    font-weight: bold;
-    color: #ffffff;
     background: var(--color-error);
-    border-radius: 4px;
 }
 
-/* Promotions visibles par le public : texte toujours présent, la couleur n'est qu'un repère. */
-
 .badge-promo {
-    display: inline-block;
-    padding: 0.1rem 0.5rem;
-    font-weight: bold;
-    color: #ffffff;
     background: var(--color-success);
-    border-radius: 4px;
 }
 
 .promo-banner {
@@ -428,7 +526,7 @@ td {
 }
 
 .review-meta {
-    color: #444444;
+    color: var(--color-text-muted);
 }
 
 .agency-response {
@@ -439,6 +537,38 @@ td {
 }
 
 .stars {
-    color: #8a4b00;
+    color: var(--color-warning-text);
     letter-spacing: 0.1em;
+}
+
+/* Tableaux du client sur téléphone : chaque ligne devient une carte, chaque cellule
+   précédée du nom de sa colonne (attribut data-label). */
+
+@media (max-width: 40rem) {
+    .table-cards thead {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+    }
+
+    .table-cards tr {
+        display: block;
+        margin-bottom: 1rem;
+        padding: 0.5rem;
+        border: 2px solid var(--color-border);
+        border-radius: 6px;
+    }
+
+    .table-cards td {
+        display: block;
+        border-bottom: none;
+    }
+
+    .table-cards td::before {
+        content: attr(data-label);
+        display: block;
+        font-weight: bold;
+    }
 }

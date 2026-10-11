@@ -33,8 +33,16 @@ def can_write_response(review: Review, staff_member) -> bool:
     return response.author_id == staff_member.pk
 
 
-def save_response(review: Review, staff_member, text: str) -> AgencyResponse:
-    """Crée la réponse, ou modifie celle de son auteur."""
+CHANGED_MESSAGE = "Le client a modifié cet avis pendant votre lecture : relisez-le avant de répondre."
+
+
+def save_response(review: Review, staff_member, text: str, seen_version: int | None = None) -> AgencyResponse:
+    """Crée la réponse, ou modifie celle de son auteur.
+
+    `seen_version` : version de l'avis lue par l'agent (champ caché du formulaire). Si le client a
+    modifié son avis depuis, même republié entre-temps, la réponse est refusée : elle porterait sur
+    un texte que l'agent n'a pas lu. Sans `seen_version`, la version de `review` sert de référence.
+    """
     if not can_write_response(review, staff_member):
         raise ResponseNotAllowed
     response = existing_response(review) or AgencyResponse(
@@ -47,11 +55,17 @@ def save_response(review: Review, staff_member, text: str) -> AgencyResponse:
         # Même instant à la création : une réponse jamais modifiée se reconnaît (nouvelles tentatives d'envoi).
         response.created_at = response.updated_at
     response.full_clean(exclude=["review"])
+    version = review.version if seen_version is None else seen_version
     try:
         with transaction.atomic():
+            # Revérifié dans la transaction, qui détient déjà le verrou d'écriture (réglage « IMMEDIATE »
+            # de settings.py) : si le client a modifié son avis entre-temps, la version a changé et
+            # sa modification a supprimé la réponse ; elle ne doit pas être recréée sous le nouveau texte.
+            if not Review.objects.filter(pk=review.pk, status=ReviewStatus.PUBLISHED, version=version).exists():
+                raise ResponseNotAllowed(CHANGED_MESSAGE)
             response.save()
     except IntegrityError:
-        # Deux agents ont répondu au même instant : la base garde une seule réponse.
+        # Deux agents ont répondu au même instant : la base garde une seule réponse par avis.
         raise ResponseNotAllowed from None
     # Le client est prévenu à la création comme à chaque modification de la réponse.
     notify_response(response, created)

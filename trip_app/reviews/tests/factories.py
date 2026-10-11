@@ -4,7 +4,7 @@ from datetime import timedelta
 
 from django.utils import timezone
 
-from orders.models import Order, Status
+from orders.models import Order, OrderStatus
 from orders.tests.factories import create_order
 from reviews.models import Review
 
@@ -12,10 +12,10 @@ from reviews.models import Review
 def create_trip_done(client, destination, **fields) -> Order:
     """Demande confirmée dont le voyage est terminé : elle peut recevoir un avis."""
     today = timezone.localdate()
-    fields.setdefault("departure_date", today - timedelta(days=20))
     fields.setdefault("return_date", today - timedelta(days=10))
+    fields.setdefault("departure_date", fields["return_date"] - timedelta(days=10))
     # Dates passées : créées directement, sans les règles d'une nouvelle demande.
-    fields.setdefault("status", Status.CONFIRMED)
+    fields.setdefault("status", OrderStatus.CONFIRMED)
     return create_order(client, destination, **fields)
 
 

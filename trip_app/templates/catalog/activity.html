@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load money %}
 
 {% block title %}{{ activity.name }}{% endblock %}
 
@@ -15,7 +16,7 @@
         <dt>Durée</dt>
         <dd>{{ activity.duration_display }}</dd>
         <dt>Prix</dt>
-        <dd>{{ activity.price_per_person }} € par personne</dd>
+        <dd>{{ activity.price_per_person|euros }} par personne</dd>
         <dt>Niveau de difficulté</dt>
         <dd>{{ activity.get_difficulty_display }}</dd>
         <dt>Âge minimum</dt>

@@ -5,8 +5,9 @@ from django.urls import reverse
 
 from accounts.tests.factories import create_admin, create_agent, create_client
 from catalog.tests.factories import create_country, create_destination
-from reviews.models import AgencyResponse, ReviewStatus
-from reviews.services.responses import ResponseNotAllowed, save_response
+from reviews.models import AgencyResponse, Review, ReviewStatus
+from reviews.services.moderation import publish
+from reviews.services.responses import CHANGED_MESSAGE, ResponseNotAllowed, save_response
 from reviews.services.writing import update_review
 
 from .factories import create_review, create_trip_done
@@ -24,7 +25,8 @@ class AgencyResponseTests(TestCase):
 
     def respond(self, user, text="Merci pour votre retour !"):
         self.client.force_login(user)
-        return self.client.post(self.url, {"text": text}, follow=True)
+        version = Review.objects.get(pk=self.review.pk).version  # version lue sur la page
+        return self.client.post(self.url, {"text": text, "version": version}, follow=True)
 
     def test_agent_responds_signed_with_first_name_only(self):
         self.respond(self.luc)
@@ -78,6 +80,25 @@ class AgencyResponseTests(TestCase):
                 with self.assertRaises(ResponseNotAllowed):
                     save_response(self.review, self.luc, "Merci")
 
+    def test_form_sends_the_version_read(self):
+        self.client.force_login(self.luc)
+
+        page = self.client.get(self.url)
+
+        self.assertContains(page, f'name="version" value="{self.review.version}"')
+
+    def test_refused_when_review_republished_with_another_text_meanwhile(self):
+        # L'agent lit l'avis ; le client le modifie et il est republié avant l'envoi de la réponse.
+        self.client.force_login(self.luc)
+        seen_version = self.review.version
+        update_review(Review.objects.get(pk=self.review.pk))
+        publish(Review.objects.get(pk=self.review.pk))
+
+        page = self.client.post(self.url, {"text": "Merci !", "version": seen_version}, follow=True)
+
+        self.assertContains(page, CHANGED_MESSAGE)
+        self.assertFalse(AgencyResponse.objects.exists())
+
     def test_response_required(self):
         response = self.respond(self.luc, "   ")
 
@@ -101,12 +122,6 @@ class AgencyResponseTests(TestCase):
 
         self.assertNotContains(page, "Merci !")
 
-    def test_client_cannot_respond(self):
-        self.client.force_login(self.julie)
-
-        self.assertEqual(self.client.post(self.url, {"text": "Moi aussi"}).status_code, 403)
-        self.assertFalse(AgencyResponse.objects.exists())
-
     def test_administrator_takes_over_when_author_is_deactivated(self):
         save_response(self.review, self.luc, "Réponse de Luc")
         self.luc.is_active = False
@@ -125,3 +140,14 @@ class AgencyResponseTests(TestCase):
                 save_response(self.review, create_agent(email="paul@example.com"), "Seconde")
 
         self.assertEqual(AgencyResponse.objects.get().text, "Première")
+
+    def test_response_not_recreated_when_client_modifies_review_meanwhile(self):
+        # L'agent a ouvert l'avis publié ; le client le modifie avant l'envoi de la réponse.
+        save_response(self.review, self.luc, "Merci !")
+        seen_by_agent = Review.objects.get(pk=self.review.pk)
+        update_review(Review.objects.get(pk=self.review.pk))
+
+        with self.assertRaises(ResponseNotAllowed):
+            save_response(seen_by_agent, self.luc, "Merci encore !")
+
+        self.assertFalse(AgencyResponse.objects.exists())

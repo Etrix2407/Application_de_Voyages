@@ -7,7 +7,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from catalog.tests.factories import create_country, create_destination
-from promotions.models import Base, Scope
+from promotions.models import DiscountBase, Scope
 from promotions.tests.factories import create_promotion
 
 
@@ -46,7 +46,7 @@ class PublicPromotionsTests(TestCase):
         create_promotion(
             name="Semaine du Japon",
             value=Decimal("15"),
-            base=Base.STAY,
+            base=DiscountBase.STAY,
             scope=Scope.COUNTRIES,
             countries=[self.japan],
             departure_from=departure_from,
@@ -77,4 +77,4 @@ class PublicPromotionsTests(TestCase):
         self.assertEqual(
             [destination.has_promotion for destination in response.context["destinations"]], [True, False]
         )
-        self.assertContains(response, '<span class="badge-promo">Promo</span>', count=1)
+        self.assertContains(response, '<span class="badge badge-promo">Promo</span>', count=1)

@@ -17,7 +17,7 @@ from datetime import date
 from decimal import ROUND_HALF_UP, Decimal
 
 from catalog.models import Destination
-from promotions.models import Base, Kind, Promotion, Scope
+from promotions.models import DiscountBase, DiscountKind, Promotion, Scope
 
 _CENT = Decimal("0.01")
 
@@ -43,10 +43,12 @@ class Offer:
 
 
 def discount_amount(promotion: Promotion, prices: PriceParts) -> Decimal:
-    base_amount = {Base.STAY: prices.stay, Base.ACTIVITIES: prices.activities, Base.TOTAL: prices.total}[
-        promotion.base
-    ]
-    if promotion.kind == Kind.PERCENT:
+    base_amount = {
+        DiscountBase.STAY: prices.stay,
+        DiscountBase.ACTIVITIES: prices.activities,
+        DiscountBase.TOTAL: prices.total,
+    }[promotion.base]
+    if promotion.kind == DiscountKind.PERCENT:
         discount = base_amount * promotion.value / 100
     else:
         discount = min(promotion.value, base_amount)
@@ -54,10 +56,16 @@ def discount_amount(promotion: Promotion, prices: PriceParts) -> Decimal:
 
 
 def in_scope(promotion: Promotion, destination: Destination) -> bool:
+    """La destination est dans la portée de la promotion.
+
+    Les pays et destinations visés sont lus dans le préchargement (prefetch_related) s'il existe,
+    sinon en une requête. Un préchargement limité aux éléments proposés (voir public.py) écarte
+    donc aussi les pays et destinations désactivés.
+    """
     if promotion.scope == Scope.COUNTRIES:
-        return promotion.countries.filter(pk=destination.country_id).exists()
+        return any(country.pk == destination.country_id for country in promotion.countries.all())
     if promotion.scope == Scope.DESTINATIONS:
-        return promotion.destinations.filter(pk=destination.pk).exists()
+        return any(target.pk == destination.pk for target in promotion.destinations.all())
     return True
 
 

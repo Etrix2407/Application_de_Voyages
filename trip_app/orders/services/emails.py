@@ -4,47 +4,50 @@ Tous passent par accounts.services.emails.send_email, avec le numéro de la dema
 Le motif interne d'une annulation n'apparaît jamais dans un e-mail au client.
 Une demande dont le client a supprimé son compte n'a plus de destinataire : aucun e-mail client.
 Les fonctions *_context donnent la valeur des champs variables de chaque e-mail (voir
-accounts/services/email_texts.py) ; elles servent aussi à reconstruire un message pour une
+orders/services/email_texts.py) ; elles servent aussi à reconstruire un message pour une
 nouvelle tentative (voir orders/services/email_rebuilders.py).
 """
+
+from collections.abc import Callable
 
 from django.conf import settings
 from django.urls import reverse
 from django.utils.formats import date_format
 from django.utils.text import capfirst
 
-from accounts.models import EmailKind
 from accounts.services.emails import send_email, site_url
 from common.text import euros
-from orders.models import Order
+from orders.models import Order, OrderEmail
 
 QUOTE_NOTE = "Le prix de la destination sera donné sur devis par votre conseiller."
 
 
 def send_order_placed(order: Order) -> None:
     """Accusé de réception au client, avec le récapitulatif et le prix estimé."""
-    _send_to_client(order, EmailKind.ORDER_PLACED, placed_context(order))
+    _send_to_client(order, OrderEmail.ORDER_PLACED, lambda: placed_context(order))
 
 
 def send_order_confirmed(order: Order, staff_member) -> None:
     """Confirmation au client : récapitulatif au prix confirmé et nom du conseiller."""
-    _send_to_client(order, EmailKind.ORDER_CONFIRMED, confirmed_context(order, staff_member.get_full_name()))
+    _send_to_client(order, OrderEmail.ORDER_CONFIRMED, lambda: confirmed_context(order, staff_member.get_full_name()))
 
 
 def send_order_cancelled_by_client(order: Order) -> None:
     """Accusé de réception de l'annulation faite par le client."""
-    _send_to_client(order, EmailKind.ORDER_CANCELLED_BY_CLIENT, client_context(order))
+    _send_to_client(order, OrderEmail.ORDER_CANCELLED_BY_CLIENT, lambda: client_context(order))
 
 
 def send_order_cancelled_by_agency(order: Order, explanation: str) -> None:
     """Annulation par l'agence : l'explication pour le client, s'il y en a une, et un mot d'excuse."""
-    _send_to_client(order, EmailKind.ORDER_CANCELLED_BY_AGENCY, cancelled_by_agency_context(order, explanation))
+    _send_to_client(
+        order, OrderEmail.ORDER_CANCELLED_BY_AGENCY, lambda: cancelled_by_agency_context(order, explanation)
+    )
 
 
 def send_new_order_alert(order: Order) -> None:
     """Alerte à l'adresse commune du personnel, sans le téléphone ni l'e-mail du client."""
     send_email(
-        settings.RESERVATIONS_EMAIL, EmailKind.NEW_ORDER_ALERT, new_order_alert_context(order), order_number=order.pk
+        settings.RESERVATIONS_EMAIL, OrderEmail.NEW_ORDER_ALERT, new_order_alert_context(order), order_number=order.pk
     )
 
 
@@ -53,7 +56,7 @@ def client_context(order: Order) -> dict:
     return {
         "prénom": order.client.first_name,
         "numéro": order.pk,
-        "destination": f"{order.destination_name} ({order.country_name})",
+        "destination": order.destination_label,
         "dates": order_dates(order),
     }
 
@@ -78,7 +81,7 @@ def cancelled_by_agency_context(order: Order, explanation: str) -> dict:
 def new_order_alert_context(order: Order) -> dict:
     return {
         "numéro": order.pk,
-        "destination": f"{order.destination_name} ({order.country_name})",
+        "destination": order.destination_label,
         "dates": capfirst(order_dates(order)),
         "client": order.client.get_full_name(),
         "lien": site_url(reverse("manage_order_detail", args=[order.pk])),
@@ -90,11 +93,13 @@ def order_dates(order: Order) -> str:
     return f"du {date_format(order.departure_date, 'j F Y')} au {date_format(order.return_date, 'j F Y')}"
 
 
-def _send_to_client(order: Order, kind: EmailKind, fields: dict) -> None:
+def _send_to_client(order: Order, kind: OrderEmail, build_fields: Callable[[], dict]) -> None:
+    # Champs construits après le contrôle : une demande anonymisée (compte supprimé) n'a plus de
+    # client, ni de prénom à lire. Rien n'est envoyé.
     client = order.client
     if client is None:
         return
-    send_email(client.email, kind, fields, user=client, order_number=order.pk)
+    send_email(client.email, kind, build_fields(), user=client, order_number=order.pk)
 
 
 def _lines(summary: list[tuple[str, str]]) -> str:
@@ -110,7 +115,7 @@ def _summary(order: Order) -> list[tuple[str, str]]:
     activities = [line.activity_name for line in order.activities.all()]
     return [
         ("N° de demande", str(order.pk)),
-        ("Destination", f"{order.destination_name} ({order.country_name})"),
+        ("Destination", order.destination_label),
         ("Dates", order_dates(order).capitalize()),
         ("Voyageurs", travellers),
         ("Activités", ", ".join(activities) or "Aucune"),

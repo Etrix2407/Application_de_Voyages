@@ -1,17 +1,21 @@
-"""Formulaire de demande de voyage (client)."""
+"""Formulaires des demandes de voyage : demande et annulation (client), filtres et annulation (personnel)."""
 
 from datetime import timedelta
 
 from django import forms
 
-from catalog.models import Activity, Country, Destination
+from catalog.forms import StaffFilterForm
+from catalog.models import Activity, Destination
+from common.forms import DateInput, optional_date_field
+from common.text import euros
 from orders.models import (
+    AT_LEAST_ONE_ADULT,
     MAX_REMARKS_LENGTH,
     MAX_STAY_DAYS,
     MAX_TRAVELLERS,
     MIN_DAYS_BEFORE_DEPARTURE,
     Order,
-    Status,
+    OrderStatus,
     departure_window,
 )
 from orders.services.filtering import NEWEST_FIRST, OLDEST_FIRST
@@ -21,10 +25,17 @@ class ActivityChoiceField(forms.ModelMultipleChoiceField):
     def label_from_instance(self, activity: Activity) -> str:
         # L'âge minimum est affiché pour information, il n'est pas vérifié.
         age = f", à partir de {activity.minimum_age} ans" if activity.minimum_age else ""
-        return f"{activity.name} — {activity.price_per_person} € par personne ({activity.duration_display()}{age})"
+        return f"{activity.name} — {euros(activity.price_per_person)} par personne ({activity.duration_display()}{age})"
 
 
 class OrderForm(forms.ModelForm):
+    # Déclaré ici : le champ du modèle (entier positif) donnerait un minimum de 0 au formulaire.
+    adults = forms.IntegerField(
+        label="Adultes",
+        min_value=1,
+        max_value=MAX_TRAVELLERS,
+        error_messages={"min_value": AT_LEAST_ONE_ADULT},
+    )
     activities = ActivityChoiceField(
         label="Activités souhaitées",
         queryset=Activity.objects.none(),
@@ -43,9 +54,8 @@ class OrderForm(forms.ModelForm):
         model = Order
         fields = ("departure_date", "return_date", "adults", "children", "remarks")
         widgets = {
-            "departure_date": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
-            "return_date": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
-            "adults": forms.NumberInput(attrs={"min": 1, "max": MAX_TRAVELLERS}),
+            "departure_date": DateInput,
+            "return_date": DateInput,
             "children": forms.NumberInput(attrs={"min": 0, "max": MAX_TRAVELLERS - 1}),
             "remarks": forms.Textarea(attrs={"rows": 4}),
         }
@@ -81,28 +91,18 @@ class ClientCancelForm(forms.Form):
     )
 
 
-class StaffOrderFilterForm(forms.Form):
+class StaffOrderFilterForm(StaffFilterForm):
     """Filtres de la liste des demandes (personnel). Tous facultatifs."""
 
-    status = forms.ChoiceField(label="État", required=False, choices=[("", "Tous les états"), *Status.choices])
-    country = forms.ModelChoiceField(
-        label="Pays", required=False, queryset=Country.objects.all(), empty_label="Tous les pays"
-    )
-    destination = forms.ModelChoiceField(
-        label="Destination",
-        required=False,
-        queryset=Destination.objects.select_related("country").order_by("country__name", "name", "pk"),
-        empty_label="Toutes les destinations",
-    )
+    field_order = ["status", "country", "destination"]
+    periods = (("departure_from", "departure_to"),)
+
+    status = forms.ChoiceField(label="État", required=False, choices=[("", "Tous les états"), *OrderStatus.choices])
     client = forms.CharField(
         label="Client", required=False, max_length=100, help_text="Nom, prénom ou e-mail."
     )
-    departure_from = forms.DateField(
-        label="Départ à partir du", required=False, widget=forms.DateInput(attrs={"type": "date"})
-    )
-    departure_to = forms.DateField(
-        label="Départ jusqu'au", required=False, widget=forms.DateInput(attrs={"type": "date"})
-    )
+    departure_from = optional_date_field("Départ à partir du")
+    departure_to = optional_date_field("Départ jusqu'au")
     sort = forms.ChoiceField(
         label="Tri",
         required=False,
@@ -112,20 +112,16 @@ class StaffOrderFilterForm(forms.Form):
         ],
     )
 
-    def clean(self):
-        data = super().clean()
-        start, end = data.get("departure_from"), data.get("departure_to")
-        if start and end and end < start:
-            raise forms.ValidationError("La fin de la période doit être après son début.")
-        return data
-
 
 class StaffCancelForm(forms.Form):
     internal_reason = forms.CharField(
         label="Motif interne",
         max_length=1000,
         widget=forms.Textarea(attrs={"rows": 3}),
-        help_text="Obligatoire. Réservé au personnel : le client ne le voit pas.",
+        help_text=(
+            "Obligatoire. Il n'apparaît ni sur le site ni dans les e-mails, "
+            "mais figure dans les données que le client peut télécharger."
+        ),
         error_messages={"required": "Le motif interne est obligatoire."},
     )
     explanation = forms.CharField(

@@ -5,7 +5,7 @@ from django.urls import reverse
 
 from accounts.tests.factories import PASSWORD, create_agent, create_client
 from catalog.tests.factories import create_country, create_destination
-from orders.models import Status
+from orders.models import OrderStatus
 from reviews.models import ANONYMOUS_NAME, Review, ReviewStatus
 from reviews.services.ratings import attach_ratings
 from reviews.services.writing import update_review
@@ -52,7 +52,7 @@ class DeletedAccountTests(TestCase):
         self.delete_account()
 
         review = Review.objects.select_related("order").get(pk=self.review.pk)
-        self.assertEqual(review.order.status, Status.CONFIRMED)
+        self.assertEqual(review.order.status, OrderStatus.CONFIRMED)
         self.assertEqual(review.status, ReviewStatus.PUBLISHED)
 
     def test_name_removed_for_staff_too(self):
@@ -123,10 +123,13 @@ class ReviewJourneyTests(TestCase):
         self.client.force_login(luc)
         self.assertContains(self.client.get(reverse("home")), "Avis à modérer (1)")
         self.client.post(reverse("manage_publish_review", args=[review.pk]), {"version": review.version})
-        self.client.post(reverse("manage_respond_review", args=[review.pk]), {"text": "Merci Julie, à bientôt !"})
+        self.client.post(
+            reverse("manage_respond_review", args=[review.pk]),
+            {"text": "Merci Julie, à bientôt !", "version": review.version},
+        )
         page = self.client.get(public_page)
         self.assertContains(page, "Très beau voyage")
-        self.assertContains(page, "✓ Voyage vérifié")
+        self.assertContains(page, '<span aria-hidden="true">✓</span> Voyage vérifié')
         self.assertContains(page, "Julie D.")
         self.assertContains(page, "Merci Julie, à bientôt !")
         self.assertContains(page, "4,0 sur 5 (1 avis)")

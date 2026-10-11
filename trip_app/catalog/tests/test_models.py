@@ -1,6 +1,7 @@
 from decimal import Decimal
 
 from django.core.exceptions import ValidationError
+from django.db import IntegrityError
 from django.db.models import ProtectedError
 from django.test import SimpleTestCase, TestCase
 
@@ -93,11 +94,6 @@ class IdealPeriodTests(SimpleTestCase):
 
 
 class DestinationTests(TestCase):
-    def test_optional_fields(self):
-        destination = Destination(country=create_country(), name="Kyoto", description="x")
-
-        destination.full_clean()
-
     def test_incomplete_period_rejected(self):
         destination = Destination(
             country=create_country(), name="Kyoto", description="x", start_month=Month.APRIL
@@ -136,6 +132,19 @@ class ActivityTests(TestCase):
         with self.assertRaises(ValidationError) as error:
             activity.full_clean()
         self.assertIn("destination", error.exception.message_dict)
+
+    def test_duration_over_30_days_rejected(self):
+        activity = create_activity(create_country())
+        activity.duration_minutes = 30 * 24 * 60 + 1
+
+        with self.assertRaises(ValidationError) as error:
+            activity.full_clean()
+        self.assertEqual(
+            error.exception.message_dict["duration_minutes"],
+            ["La durée ne peut pas dépasser 30 jours (43 200 minutes)."],
+        )
+        with self.assertRaises(IntegrityError):
+            activity.save()
 
     def test_duration_display(self):
         cases = {45: "45 min", 60: "1 h", 90: "1 h 30", 125: "2 h 05"}

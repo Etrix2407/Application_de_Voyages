@@ -2,11 +2,11 @@
 
 from django.db import transaction
 
-from accounts.models import EmailKind, User
+from accounts.models import AccountEmail, User
 from accounts.services.emails import send_email
 
 
-def delete_account(user: User, kind: EmailKind = EmailKind.ACCOUNT_DELETED) -> None:
+def delete_account(user: User, kind: AccountEmail = AccountEmail.ACCOUNT_DELETED) -> None:
     """Supprime le compte et prévient son titulaire : ce message est le dernier qu'il reçoit.
 
     `kind` : suppression par le client (défaut), purge d'un compte jamais confirmé,

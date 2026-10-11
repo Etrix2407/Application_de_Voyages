@@ -14,6 +14,27 @@ from django.db.models import Prefetch
 
 from catalog.models import Country, Destination
 from promotions.models import Promotion, Scope
+from promotions.services.discounts import in_scope
+
+
+def visible_targets(scope: str | None = None) -> list[Prefetch]:
+    """Préchargement des pays et destinations visés, limité à ceux qui sont proposés.
+
+    Avec ce préchargement, targets_label ne cite que des éléments proposés.
+    `scope` : seulement la liste utile à cette portée (aucune pour tout le catalogue).
+    """
+    prefetches = {
+        Scope.COUNTRIES: Prefetch("countries", queryset=Country.objects.visible().order_by("name")),
+        Scope.DESTINATIONS: Prefetch("destinations", queryset=Destination.objects.visible().order_by("name")),
+    }
+    if scope is None:
+        return list(prefetches.values())
+    return [prefetches[scope]] if scope in prefetches else []
+
+
+def offers_something(promotion: Promotion) -> bool:
+    """La promotion vise encore quelque chose de proposé (cibles préchargées avec visible_targets)."""
+    return promotion.scope == Scope.CATALOG or bool(promotion.targets_label)
 
 
 def current_offers(today=None, exclude=()) -> list[Promotion]:
@@ -22,32 +43,20 @@ def current_offers(today=None, exclude=()) -> list[Promotion]:
         Promotion.objects.running(today)
         .automatic()
         .exclude(pk__in=exclude)
-        .prefetch_related(
-            Prefetch("countries", queryset=Country.objects.visible().order_by("name")),
-            Prefetch("destinations", queryset=Destination.objects.visible().order_by("name")),
-        )
+        .prefetch_related(*visible_targets())
         .order_by("ends_on", "name", "pk")
     )
-    return [promotion for promotion in promotions if promotion.scope == Scope.CATALOG or promotion.targets_label]
-
-
-def targets(promotion: Promotion, destination: Destination) -> bool:
-    """La destination est dans la portée (pays et destinations préchargés par current_offers)."""
-    if promotion.scope == Scope.COUNTRIES:
-        return any(country.pk == destination.country_id for country in promotion.countries.all())
-    if promotion.scope == Scope.DESTINATIONS:
-        return any(target.pk == destination.pk for target in promotion.destinations.all())
-    return True
+    return [promotion for promotion in promotions if offers_something(promotion)]
 
 
 def offers_for(destination: Destination, offers: list[Promotion]) -> list[Promotion]:
     """Offres (current_offers) qui visent cette destination (bandeau de la fiche)."""
-    return [promotion for promotion in offers if targets(promotion, destination)]
+    return [promotion for promotion in offers if in_scope(promotion, destination)]
 
 
 def mark_promoted(destinations, offers: list[Promotion]) -> list:
     """Ajoute `has_promotion` à chaque destination (étiquette « Promo » des cartes)."""
     destinations = list(destinations)
     for destination in destinations:
-        destination.has_promotion = any(targets(promotion, destination) for promotion in offers)
+        destination.has_promotion = any(in_scope(promotion, destination) for promotion in offers)
     return destinations

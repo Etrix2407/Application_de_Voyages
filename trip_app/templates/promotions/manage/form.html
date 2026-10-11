@@ -8,6 +8,7 @@
         <p>Cette promotion a déjà été utilisée : seuls le nom, la description et la date de fin peuvent être modifiés. Pour changer le reste, créez une nouvelle promotion.</p>
     {% endif %}
 
+    {% include "_form_errors.html" %}
     <form method="post" novalidate>
         {% csrf_token %}
         {{ form }}

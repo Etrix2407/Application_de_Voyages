@@ -8,8 +8,10 @@
     <p>{{ review.comment|default:"(pas de commentaire)"|linebreaksbr }}</p>
     <p>Une seule réponse par avis, publique et signée de votre prénom. Si le client modifie son avis, la réponse est supprimée.</p>
 
+    {% include "_form_errors.html" %}
     <form method="post" novalidate>
         {% csrf_token %}
+        <input type="hidden" name="version" value="{{ review.version }}">
         {{ form }}
         <button type="submit">Publier la réponse</button>
     </form>

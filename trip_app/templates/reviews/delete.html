@@ -7,10 +7,6 @@
     <p>Avis sur <strong>{{ review.order.destination_name }}</strong> : « {{ review.title }} » ({% include "reviews/_rating.html" %}).</p>
     <p><strong>La suppression est définitive</strong> : vous ne pourrez plus donner d'avis sur ce voyage.</p>
 
-    <form method="post">
-        {% csrf_token %}
-        <button type="submit" class="button-danger">Supprimer définitivement</button>
-    </form>
-
-    <p><a href="{% url 'my_reviews' %}">Ne pas supprimer et revenir à mes avis</a></p>
+    {% url 'my_reviews' as cancel_url %}
+    {% include "_confirm_delete.html" with cancel_label="Ne pas supprimer et revenir à mes avis" %}
 {% endblock %}

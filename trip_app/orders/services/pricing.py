@@ -37,8 +37,11 @@ def estimate_price(
     adults: int,
     children: int,
 ) -> Decimal:
-    total = price_parts(destination_price, activity_prices, adults, children).total
-    return total.quantize(_CENT, rounding=ROUND_HALF_UP)
+    return round_to_cent(price_parts(destination_price, activity_prices, adults, children).total)
+
+
+def round_to_cent(amount: Decimal) -> Decimal:
+    return amount.quantize(_CENT, rounding=ROUND_HALF_UP)
 
 
 @dataclass(frozen=True)

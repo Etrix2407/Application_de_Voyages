@@ -4,6 +4,8 @@ Le client ressaisit son mot de passe (formulaire), puis :
 - la nouvelle adresse reçoit un lien ; l'adresse ne change qu'au clic ;
 - l'ancienne adresse est prévenue (si ce n'est pas lui, il change son mot de passe) ;
 - la réponse est toujours la même : rien ne révèle si la nouvelle adresse est déjà prise.
+Le lien vaut 24 heures, pour l'ancienne adresse et le mot de passe d'alors : il ne sert plus
+si l'adresse ou le mot de passe ont changé entre-temps (compte repris par son titulaire).
 """
 
 from datetime import timedelta
@@ -12,9 +14,10 @@ from django.core import signing
 from django.db import IntegrityError, transaction
 from django.urls import reverse
 from django.utils import timezone
+from django.utils.crypto import constant_time_compare, salted_hmac
 
-from accounts.models import EmailKind, Role, User, normalize_email_address
-from accounts.services.emails import send_email
+from accounts.models import AccountEmail, Role, User, normalize_email_address
+from accounts.services.emails import send_email, site_url
 from accounts.signals import email_changed
 from accounts.services.throttling import confirmation_emails
 
@@ -22,15 +25,23 @@ LINK_MAX_AGE = timedelta(hours=24)
 _TOKEN_SALT = "accounts.email-change"
 
 
-def request_email_change(request, user: User, new_email: str) -> None:
+def request_email_change(user: User, new_email: str) -> None:
     new_email = normalize_email_address(new_email)
     _notify_current_address(user)
     if User.objects.filter(email=new_email).exists() or confirmation_emails.is_locked(new_email):
         return
     confirmation_emails.record(new_email)
-    token = signing.dumps({"id": user.pk, "old": user.email, "new": new_email}, salt=_TOKEN_SALT)
-    link = request.build_absolute_uri(reverse("confirm_email_change", args=[token]))
-    send_email(new_email, EmailKind.EMAIL_CHANGE_CONFIRMATION, {"prénom": user.first_name, "lien": link}, user=user)
+    link = site_url(reverse("confirm_email_change", args=[make_email_change_token(user, new_email)]))
+    send_email(new_email, AccountEmail.EMAIL_CHANGE_CONFIRMATION, {"prénom": user.first_name, "lien": link}, user=user)
+
+
+def make_email_change_token(user: User, new_email: str) -> str:
+    return signing.dumps(
+        # Ancienne adresse et mot de passe : seulement leur empreinte (le jeton est lisible dans l'URL).
+        # La nouvelle adresse y reste : c'est elle que le lien confirme, et il n'est envoyé qu'à elle.
+        {"id": user.pk, "old": _fingerprint(user.email), "new": new_email, "password": _fingerprint(user.password)},
+        salt=_TOKEN_SALT,
+    )
 
 
 def pending_email_change(token: str) -> tuple[User, str] | None:
@@ -41,8 +52,13 @@ def pending_email_change(token: str) -> tuple[User, str] | None:
         return None
     # L'ancienne adresse doit être inchangée : un lien plus ancien ne s'applique plus.
     # Réservé aux clients : le personnel ne change pas d'adresse par ce parcours.
-    user = User.objects.filter(pk=data.get("id"), email=data.get("old"), role=Role.CLIENT).first()
+    user = User.objects.filter(pk=data.get("id"), role=Role.CLIENT).first()
     if user is None or User.objects.filter(email=data.get("new")).exists():
+        return None
+    if not constant_time_compare(str(data.get("old", "")), _fingerprint(user.email)):
+        return None
+    # Le mot de passe doit être inchangé : un lien demandé avant une reprise du compte ne sert plus.
+    if not constant_time_compare(str(data.get("password", "")), _fingerprint(user.password)):
         return None
     return user, data["new"]
 
@@ -70,5 +86,10 @@ def apply_email_change(user: User, new_email: str) -> bool:
     return True
 
 
+def _fingerprint(value: str) -> str:
+    """Empreinte d'une adresse ou du mot de passe haché : elle change avec eux, sans les révéler."""
+    return salted_hmac(_TOKEN_SALT, value).hexdigest()
+
+
 def _notify_current_address(user: User) -> None:
-    send_email(user.email, EmailKind.EMAIL_CHANGE_NOTICE, {"prénom": user.first_name}, user=user)
+    send_email(user.email, AccountEmail.EMAIL_CHANGE_NOTICE, {"prénom": user.first_name}, user=user)

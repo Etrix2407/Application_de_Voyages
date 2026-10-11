@@ -12,7 +12,7 @@ from django.db.models import Avg, Count
 from reviews.models import MAX_RATING, Review
 
 # Tri des avis d'une destination : clé dans l'URL -> ordre.
-NEWEST_REVIEWS_FIRST = "recents"
+NEWEST_REVIEWS_FIRST = "recent"  # même clé que la liste des demandes (orders/services/filtering.py)
 BEST_REVIEWS_FIRST = "meilleures-notes"
 REVIEW_ORDERS = {
     NEWEST_REVIEWS_FIRST: ("-published_at", "-pk"),

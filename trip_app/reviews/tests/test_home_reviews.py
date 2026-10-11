@@ -63,7 +63,7 @@ class HomeTopReviewsTests(TestCase):
         response = self.client.get(reverse("home"))
 
         self.assertContains(response, "Ils sont partis avec nous")
-        self.assertContains(response, "✓ Voyage vérifié")
+        self.assertContains(response, '<span aria-hidden="true">✓</span> Voyage vérifié')
         self.assertContains(response, "Julie D.")
         self.assertContains(response, reverse("destination_detail", args=[self.destination.pk]) + "#avis")
 

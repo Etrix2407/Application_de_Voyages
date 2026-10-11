@@ -1,6 +1,7 @@
 """RGPD (portabilité) : informations du compte d'un utilisateur, prêtes à être exportées."""
 
 from accounts.models import EmailLog, User
+from accounts.services.email_texts import email_kind_label
 
 
 def profile_data(user: User) -> dict:
@@ -32,7 +33,7 @@ def emails_data(user: User) -> list[dict]:
     return [
         {
             "created_at": log.created_at,
-            "kind": log.get_kind_display(),
+            "kind": email_kind_label(log.kind),
             "subject": log.subject,
             "status": log.get_status_display(),
         }

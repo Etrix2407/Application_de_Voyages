@@ -6,7 +6,7 @@ from django.urls import reverse
 
 from accounts.tests.factories import create_client
 from catalog.tests.factories import create_activity, create_country, create_destination
-from orders.models import Order, Status, StatusChange
+from orders.models import Order, OrderStatus, StatusChange
 from orders.services.status import TransitionNotAllowed, cancel_by_client
 
 from .factories import create_order, departure_in, submit_order
@@ -20,7 +20,7 @@ class MyOrdersTests(TestCase):
         self.destination = create_destination(self.country, "Kyoto", price_from=Decimal("1000"))
         self.order = create_order(self.marie, self.destination, estimated_price=Decimal("2100.00"))
         StatusChange.objects.create(
-            order=self.order, status=Status.PENDING, author_name=StatusChange.CLIENT_AUTHOR, by_client=True
+            order=self.order, status=OrderStatus.PENDING, author_name=StatusChange.CLIENT_AUTHOR, by_client=True
         )
 
     def test_menu_link_for_clients(self):
@@ -31,7 +31,7 @@ class MyOrdersTests(TestCase):
 
         self.assertContains(response, "Kyoto")
         self.assertContains(response, "En attente")
-        self.assertContains(response, "2100,00 €")
+        self.assertContains(response, "2\u00a0100,00\u00a0€")
         self.assertContains(response, reverse("my_order_detail", args=[self.order.pk]))
 
     def test_list_most_recent_first(self):
@@ -49,7 +49,7 @@ class MyOrdersTests(TestCase):
         self.assertEqual(self.client.get(reverse("my_order_detail", args=[foreign.pk])).status_code, 404)
         self.assertEqual(self.client.post(reverse("cancel_my_order", args=[foreign.pk])).status_code, 404)
         foreign.refresh_from_db()
-        self.assertEqual(foreign.status, Status.PENDING)
+        self.assertEqual(foreign.status, OrderStatus.PENDING)
 
     def test_detail_shows_frozen_prices_activities_and_history(self):
         tea = create_activity(self.country, "Cérémonie du thé", price_per_person=Decimal("50"))
@@ -59,7 +59,7 @@ class MyOrdersTests(TestCase):
 
         response = self.client.get(reverse("my_order_detail", args=[order.pk]))
 
-        self.assertContains(response, "Cérémonie du thé (50,00 € par personne)")
+        self.assertContains(response, "Cérémonie du thé (50,00\u00a0€ par personne)")
         self.assertContains(response, "Chambre calme")
         self.assertContains(response, "estimation, non contractuel")
         self.assertContains(self.client.get(reverse("my_order_detail", args=[self.order.pk])), "Client")
@@ -84,22 +84,22 @@ class ClientCancellationTests(TestCase):
 
         self.assertContains(response, "Votre demande a été annulée.")
         self.order.refresh_from_db()
-        self.assertEqual(self.order.status, Status.CANCELLED)
+        self.assertEqual(self.order.status, OrderStatus.CANCELLED)
         change = self.order.history.get()
         self.assertEqual(
             (change.status, change.author_name, change.reason),
-            (Status.CANCELLED, StatusChange.CLIENT_AUTHOR, "Dates impossibles finalement."),
+            (OrderStatus.CANCELLED, StatusChange.CLIENT_AUTHOR, "Dates impossibles finalement."),
         )
 
     def test_cancel_without_reason(self):
         self.client.post(self.url, {"reason": ""})
 
         self.order.refresh_from_db()
-        self.assertEqual(self.order.status, Status.CANCELLED)
+        self.assertEqual(self.order.status, OrderStatus.CANCELLED)
         self.assertEqual(self.order.history.get().reason, "")
 
     def test_confirmed_order_cannot_be_cancelled_by_client(self):
-        Order.objects.filter(pk=self.order.pk).update(status=Status.CONFIRMED)
+        Order.objects.filter(pk=self.order.pk).update(status=OrderStatus.CONFIRMED)
 
         detail = self.client.get(reverse("my_order_detail", args=[self.order.pk]))
         self.assertContains(detail, "appelez l'agence")
@@ -108,7 +108,7 @@ class ClientCancellationTests(TestCase):
 
         self.assertContains(response, "ne peut plus être annulée en ligne")
         self.order.refresh_from_db()
-        self.assertEqual(self.order.status, Status.CONFIRMED)
+        self.assertEqual(self.order.status, OrderStatus.CONFIRMED)
 
     def test_cancelling_twice_is_refused_and_recorded_once(self):
         cancel_by_client(self.order)
@@ -121,7 +121,7 @@ class ClientCancellationTests(TestCase):
         self.client.get(self.url)
 
         self.order.refresh_from_db()
-        self.assertEqual(self.order.status, Status.PENDING)
+        self.assertEqual(self.order.status, OrderStatus.PENDING)
 
 
 class AfterCreationTests(TestCase):

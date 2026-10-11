@@ -5,9 +5,10 @@ from django.core.management import CommandError, call_command
 from django.test import TestCase, override_settings
 from django.utils import timezone
 
-from catalog.models import Activity, Destination, Country
-from orders.models import Order, Status
-from promotions.models import Promotion, State
+from accounts.tests.factories import create_client
+from catalog.models import Activity, Country, Destination
+from orders.models import Order, OrderStatus
+from promotions.models import Promotion
 from reviews.models import Review, ReviewStatus
 
 User = get_user_model()
@@ -21,6 +22,17 @@ def load_demo() -> str:
 
 @override_settings(DEBUG=True)
 class LoadDemoTests(TestCase):
+    def test_rerun_creates_no_duplicate(self):
+        load_demo()
+        output = load_demo()
+
+        self.assertEqual(Country.objects.count(), 3)
+        self.assertEqual(User.objects.count(), 2)
+        self.assertEqual(Promotion.objects.count(), 2)
+        self.assertEqual(Order.objects.count(), 4)
+        self.assertEqual(Review.objects.count(), 1)
+        self.assertIn("Déjà présent", output)
+
     def test_fictional_data_marked_as_example(self):
         load_demo()
 
@@ -48,29 +60,25 @@ class LoadDemoTests(TestCase):
         load_demo()
 
         today = timezone.localdate()
-        self.assertEqual(
-            [promotion.state(today) for promotion in Promotion.objects.all()], [State.RUNNING, State.RUNNING]
-        )
         orders = Order.objects.filter(client__email="client.demo@example.com")
-        self.assertEqual(set(orders.values_list("status", flat=True)), set(Status.values))
-        self.assertTrue(orders.filter(promotion__code="EXEMPLE10", status=Status.CONFIRMED).exists())
+        self.assertEqual(set(orders.values_list("status", flat=True)), set(OrderStatus.values))
+        self.assertTrue(orders.filter(promotion__code="EXEMPLE10", status=OrderStatus.CONFIRMED).exists())
         review = Review.objects.get()
         self.assertEqual(review.status, ReviewStatus.PUBLISHED)
         self.assertLess(review.order.return_date, today)
-
-    def test_rerun_creates_no_duplicate(self):
-        load_demo()
-        output = load_demo()
-
-        self.assertEqual(Country.objects.count(), 3)
-        self.assertEqual(User.objects.count(), 2)
-        self.assertEqual(Promotion.objects.count(), 2)
-        self.assertEqual(Order.objects.count(), 4)
-        self.assertEqual(Review.objects.count(), 1)
-        self.assertIn("Déjà présent", output)
 
     @override_settings(DEBUG=False)
     def test_refused_outside_development(self):
         with self.assertRaises(CommandError):
             load_demo()
         self.assertFalse(Country.objects.exists())
+
+    def test_refused_on_database_with_real_accounts(self):
+        # Le compte administrateur, créé avant la démonstration, ne bloque pas ; un vrai client, si.
+        User.objects.create_superuser("gerante@agence.be", "mot-de-passe-123", last_name="G", first_name="G")
+        create_client(email="marie@agence.be")
+
+        with self.assertRaisesMessage(CommandError, "réels"):
+            load_demo()
+        self.assertFalse(Country.objects.exists())
+        self.assertFalse(Promotion.objects.exists())

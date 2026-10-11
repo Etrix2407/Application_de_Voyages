@@ -5,13 +5,15 @@ page ne peut être publiée par oubli sans contrôle d'accès.
 """
 
 from django.conf import settings
+from django.db import transaction
 from django.test import TestCase
 from django.urls import URLResolver, get_resolver, reverse
 
-from accounts.models import EmailKind, EmailLog, EmailStatus
+from accounts.models import AccountEmail, EmailLog, EmailStatus
 from accounts.tests.factories import create_admin, create_agent, create_client
 from catalog.tests.factories import create_activity, create_country, create_destination
 from orders.tests.factories import create_order
+from promotions.models import PromotionEmail
 from promotions.tests.factories import create_promotion
 from reviews.tests.factories import create_review, create_trip_done
 
@@ -137,7 +139,10 @@ class AccessMatrixTests(TestCase):
         cls.review = create_review(create_trip_done(cls.client_user, cls.destination))
         cls.promotion = create_promotion()
         cls.failed_email = EmailLog.objects.create(
-            recipient=cls.client_user.email, kind=EmailKind.CLIENT_PASSWORD_LINK, subject="Objet", status=EmailStatus.FAILED
+            recipient=cls.client_user.email,
+            kind=AccountEmail.CLIENT_PASSWORD_LINK,
+            subject="Objet",
+            status=EmailStatus.FAILED,
         )
 
     def url_kwargs(self, name):
@@ -151,8 +156,8 @@ class AccessMatrixTests(TestCase):
             "reactivate_staff_member": {"pk": member},
             "resend_staff_link": {"pk": member},
             "delete_staff_member": {"pk": member},
-            "edit_email_text": {"kind": EmailKind.PROMOTION},
-            "reset_email_text": {"kind": EmailKind.PROMOTION},
+            "edit_email_text": {"kind": PromotionEmail.PROMOTION},
+            "reset_email_text": {"kind": PromotionEmail.PROMOTION},
             "country_detail": {"pk": self.country.pk},
             "destination_detail": {"pk": self.destination.pk},
             "activity_detail": {"pk": self.activity.pk},
@@ -213,8 +218,14 @@ class AccessMatrixTests(TestCase):
                     if user:
                         self.client.force_login(user)
 
-                    # GET uniquement : aucune page ne doit modifier des données en GET.
+                    # GET d'abord : aucune page ne doit modifier des données en GET. Une route
+                    # réservée à POST répond 405 : elle est rejouée en POST (sans données) pour
+                    # vérifier le même contrôle d'accès, puis ses effets sont annulés.
                     response = self.client.get(url)
+                    if response.status_code == 405:
+                        with transaction.atomic():
+                            response = self.client.post(url)
+                            transaction.set_rollback(True)
 
                     redirected_to_login = response.status_code == 302 and response["Location"].startswith(login_url)
                     denied = response.status_code in (403, 404) or redirected_to_login
