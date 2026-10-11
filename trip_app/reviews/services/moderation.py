@@ -13,7 +13,7 @@ si le client a modifié son avis entre-temps, l'action est refusée.
 
 from django.utils import timezone
 
-from orders.models import Status
+from orders.models import OrderStatus
 from reviews.models import STAFF_REFUSAL_REASONS, Review, ReviewStatus, refusal_problem
 from reviews.services.notifications import notify_published, notify_refused
 
@@ -30,7 +30,7 @@ def pending_reviews():
 
 
 def publish(review: Review, seen_version=None) -> None:
-    if review.order.status != Status.CONFIRMED:
+    if review.order.status != OrderStatus.CONFIRMED:
         raise ModerationNotAllowed("Le voyage a été annulé : cet avis ne peut pas être publié.")
     _move(review, ReviewStatus.PENDING, ReviewStatus.PUBLISHED, "Cet avis n'est plus en attente de validation.",
           seen_version, published_at=timezone.now(), refusal_reason="", refusal_details="")

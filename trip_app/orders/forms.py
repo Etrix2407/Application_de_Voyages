@@ -11,7 +11,7 @@ from orders.models import (
     MAX_TRAVELLERS,
     MIN_DAYS_BEFORE_DEPARTURE,
     Order,
-    Status,
+    OrderStatus,
     departure_window,
 )
 from orders.services.filtering import NEWEST_FIRST, OLDEST_FIRST
@@ -84,7 +84,7 @@ class ClientCancelForm(forms.Form):
 class StaffOrderFilterForm(forms.Form):
     """Filtres de la liste des demandes (personnel). Tous facultatifs."""
 
-    status = forms.ChoiceField(label="État", required=False, choices=[("", "Tous les états"), *Status.choices])
+    status = forms.ChoiceField(label="État", required=False, choices=[("", "Tous les états"), *OrderStatus.choices])
     country = forms.ModelChoiceField(
         label="Pays", required=False, queryset=Country.objects.all(), empty_label="Tous les pays"
     )

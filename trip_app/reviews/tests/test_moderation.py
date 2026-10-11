@@ -6,7 +6,7 @@ from django.utils import timezone
 
 from accounts.tests.factories import create_admin, create_agent, create_client
 from catalog.tests.factories import create_country, create_destination
-from orders.models import Status
+from orders.models import OrderStatus
 from reviews.models import RefusalReason, Review, ReviewStatus
 from reviews.services.moderation import ModerationNotAllowed, hide, pending_reviews, publish, refuse
 from reviews.services.writing import update_review
@@ -161,7 +161,7 @@ class ModerationServiceTests(TestCase):
             hide(self.review, RefusalReason.ABUSIVE)
 
     def test_cannot_publish_review_of_cancelled_trip(self):
-        self.trip.status = Status.CANCELLED
+        self.trip.status = OrderStatus.CANCELLED
         self.trip.save()
 
         with self.assertRaises(ModerationNotAllowed):

@@ -7,7 +7,7 @@ from django.db import IntegrityError, transaction
 from django.utils import timezone
 
 from catalog.models import Destination
-from orders.models import Order, OrderActivity, Status, StatusChange, client_fingerprint
+from orders.models import Order, OrderActivity, OrderStatus, StatusChange, client_fingerprint
 from orders.services.emails import send_new_order_alert, send_order_placed
 from orders.services.pricing import Quote, estimate_price, price_parts
 from orders.services.promotions import limit_problem
@@ -50,7 +50,7 @@ def find_pending_duplicates(client, destination: Destination, departure_date, re
         destination=destination,
         departure_date=departure_date,
         return_date=return_date,
-        status=Status.PENDING,
+        status=OrderStatus.PENDING,
     )
 
 
@@ -149,6 +149,6 @@ def _create_order(client, destination: Destination, data: dict, offer: Offer | N
         line.full_clean()
     OrderActivity.objects.bulk_create(lines)
     StatusChange.objects.create(
-        order=order, status=Status.PENDING, author=client, author_name=StatusChange.CLIENT_AUTHOR, by_client=True
+        order=order, status=OrderStatus.PENDING, author=client, author_name=StatusChange.CLIENT_AUTHOR, by_client=True
     )
     return order

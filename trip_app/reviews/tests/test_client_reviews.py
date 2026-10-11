@@ -6,7 +6,7 @@ from django.utils import timezone
 
 from accounts.tests.factories import create_agent, create_client
 from catalog.tests.factories import create_country, create_destination
-from orders.models import Status
+from orders.models import OrderStatus
 from orders.services.status import cancel_by_staff
 from orders.tests.factories import create_order
 from reviews.models import EDIT_PERIOD, RefusalReason, Review, ReviewStatus
@@ -44,7 +44,7 @@ class WriteReviewTests(TestCase):
         self.assertNotIn(review, Review.objects.public())
 
     def test_trip_not_done_cannot_be_reviewed(self):
-        upcoming = create_order(self.marie, self.destination, status=Status.CONFIRMED)
+        upcoming = create_order(self.marie, self.destination, status=OrderStatus.CONFIRMED)
         url = reverse("create_review", args=[upcoming.pk])
 
         self.assertNotContains(self.client.get(reverse("my_order_detail", args=[upcoming.pk])), url)
@@ -138,7 +138,7 @@ class EditReviewTests(TestCase):
 
     def test_review_of_cancelled_trip_cannot_be_republished(self):
         review = create_review(self.trip, status=ReviewStatus.PUBLISHED)
-        self.trip.status = Status.CANCELLED
+        self.trip.status = OrderStatus.CANCELLED
         self.trip.save()
 
         self.edit(review)

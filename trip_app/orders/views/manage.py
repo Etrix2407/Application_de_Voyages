@@ -7,7 +7,7 @@ from django.views.decorators.http import require_POST
 
 from accounts.decorators import staff_required
 from orders.forms import StaffCancelForm, StaffOrderFilterForm
-from orders.models import Order, Status
+from orders.models import Order, OrderStatus
 from orders.services.filtering import filter_orders
 from orders.services.placing import price_at_current_rates
 from orders.services.status import (
@@ -40,7 +40,7 @@ def order_detail(request, pk):
         "show_staff_names": True,
         "show_internal_reasons": True,
         "can_confirm": staff_can_confirm(order),
-        "departure_passed": order.status == Status.PENDING and departure_passed(order),
+        "departure_passed": order.status == OrderStatus.PENDING and departure_passed(order),
         "can_cancel": staff_can_cancel(order),
     }
     if context["can_confirm"]:

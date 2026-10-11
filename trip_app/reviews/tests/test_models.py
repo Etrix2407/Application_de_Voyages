@@ -8,7 +8,7 @@ from django.utils import timezone
 
 from accounts.tests.factories import create_agent, create_client
 from catalog.tests.factories import create_country, create_destination
-from orders.models import Status
+from orders.models import OrderStatus
 from orders.services.status import cancel_by_staff
 from orders.tests.factories import create_order
 from reviews.models import ANONYMOUS_NAME, EDIT_PERIOD, RefusalReason, Review, ReviewStatus
@@ -113,8 +113,8 @@ class VerifiedTripTests(TestCase):
         today = timezone.localdate()
         cases = {
             "en attente": create_order(self.marie, self.destination),
-            "annulée": create_trip_done(self.marie, self.destination, status=Status.CANCELLED),
-            "confirmée, à venir": create_order(self.marie, self.destination, status=Status.CONFIRMED),
+            "annulée": create_trip_done(self.marie, self.destination, status=OrderStatus.CANCELLED),
+            "confirmée, à venir": create_order(self.marie, self.destination, status=OrderStatus.CONFIRMED),
             "retour aujourd'hui": create_trip_done(self.marie, self.destination, return_date=today),
         }
         for case, order in cases.items():

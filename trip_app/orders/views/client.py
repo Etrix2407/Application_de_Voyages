@@ -10,7 +10,7 @@ from accounts.decorators import client_required
 from accounts.services.throttling import get_client_ip
 from catalog.models import Destination
 from orders.forms import ClientCancelForm, OrderForm
-from orders.models import Order, Status
+from orders.models import Order, OrderStatus
 from orders.services.placing import (
     NO_DISCOUNT,
     AlreadySubmitted,
@@ -166,7 +166,7 @@ def my_order_detail(request, pk):
         "activities": order.activities.select_related("activity"),
         "history": order.history.all(),
         "can_cancel": client_can_cancel(order),
-        "is_confirmed": order.status == Status.CONFIRMED,
+        "is_confirmed": order.status == OrderStatus.CONFIRMED,
         "can_review": can_review(request.user, order),
         "review": getattr(order, "review", None),
     }

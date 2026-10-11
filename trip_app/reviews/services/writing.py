@@ -9,7 +9,7 @@ un voyage dont l'avis a été retiré ne peut plus en recevoir.
 from django.db import IntegrityError, transaction
 from django.utils import timezone
 
-from orders.models import Order, Status
+from orders.models import Order, OrderStatus
 from reviews.models import AgencyResponse, Review, ReviewStatus, ReviewWithdrawal
 from reviews.services.eligibility import can_review
 
@@ -24,7 +24,7 @@ class ReviewLocked(Exception):
 
 def client_can_edit(review: Review) -> bool:
     # Un voyage annulé après coup ne se « répare » pas en modifiant l'avis.
-    return review.can_be_changed_by_client() and review.order.status == Status.CONFIRMED
+    return review.can_be_changed_by_client() and review.order.status == OrderStatus.CONFIRMED
 
 
 def write_review(client, review: Review) -> Review:
@@ -62,7 +62,7 @@ def update_review(review: Review) -> Review:
         # Revérifié dans la transaction, qui détient déjà le verrou d'écriture (réglage « IMMEDIATE »
         # de settings.py) : un voyage annulé entre-temps (avis passé « Refusé », motif « Voyage annulé »)
         # n'est pas écrasé par la modification du client.
-        if not Order.objects.filter(pk=review.order_id, status=Status.CONFIRMED).exists():
+        if not Order.objects.filter(pk=review.order_id, status=OrderStatus.CONFIRMED).exists():
             raise ReviewLocked
         review.save()
         AgencyResponse.objects.filter(review=review).delete()

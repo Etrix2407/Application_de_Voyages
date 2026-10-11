@@ -19,7 +19,7 @@ from orders.models import (
     MAX_TRAVELLERS,
     MIN_DAYS_BEFORE_DEPARTURE,
     Order,
-    Status,
+    OrderStatus,
     StatusChange,
 )
 from orders.services import placing
@@ -87,13 +87,13 @@ class CreateOrderTests(TestCase):
         self.assertContains(response, "un conseiller vous rappellera sous 48 heures")
         order = Order.objects.get()
         self.assertEqual(order.client, self.client_user)
-        self.assertEqual(order.status, Status.PENDING)
+        self.assertEqual(order.status, OrderStatus.PENDING)
         self.assertEqual(order.estimated_price, Decimal("3150.00"))
         self.assertEqual(order.destination_price, Decimal("1000"))
         self.assertEqual(order.activities.get().unit_price, Decimal("50"))
         self.assertEqual(order.remarks, "Chambre calme si possible.")
         change = order.history.get()
-        self.assertEqual((change.status, change.author_name), (Status.PENDING, StatusChange.CLIENT_AUTHOR))
+        self.assertEqual((change.status, change.author_name), (OrderStatus.PENDING, StatusChange.CLIENT_AUTHOR))
 
     def test_edit_goes_back_to_the_form(self):
         response = self.client.post(self.url, {**self.data(), "edit": ""})
@@ -292,7 +292,7 @@ class DailyLimitTests(TestCase):
 
     def test_cancelled_orders_count_too(self):
         self.send_orders(MAX_ORDERS_PER_DAY)
-        Order.objects.update(status=Status.CANCELLED)
+        Order.objects.update(status=OrderStatus.CANCELLED)
 
         self.assertRedirects(self.client.get(self.url), reverse("my_orders"))
 

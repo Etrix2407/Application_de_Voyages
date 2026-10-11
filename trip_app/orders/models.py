@@ -38,10 +38,15 @@ def client_fingerprint(email: str) -> str:
     return salted_hmac(CLIENT_FINGERPRINT_SALT, f"{local}{at}{domain}", algorithm="sha256").hexdigest()
 
 
-class Status(models.TextChoices):
+class OrderStatus(models.TextChoices):
     PENDING = "pending", "En attente"
     CONFIRMED = "confirmed", "Confirmée"
     CANCELLED = "cancelled", "Annulée"
+
+
+# Ancien nom, gardé pour les modules qui l'importent encore (e-mails, promotions, démonstration) :
+# à retirer quand plus aucun import ne l'utilise.
+Status = OrderStatus
 
 
 def departure_window():
@@ -107,7 +112,7 @@ class Order(models.Model):
     promotion_name = models.CharField("nom de la promotion au moment de la demande", max_length=100, blank=True)
     discount = _price_field("remise à la demande", default=Decimal("0.00"))
     confirmed_discount = _price_field("remise à la confirmation", null=True, blank=True)
-    status = models.CharField("état", max_length=20, choices=Status.choices, default=Status.PENDING)
+    status = models.CharField("état", max_length=20, choices=OrderStatus.choices, default=OrderStatus.PENDING)
     created_at = models.DateTimeField("date de la demande", default=timezone.now)
     # Jeton de la page de vérification : unique, il empêche qu'un double clic crée deux demandes.
     submission_token = models.UUIDField(null=True, blank=True, unique=True, editable=False)
@@ -149,7 +154,7 @@ class Order(models.Model):
                 ),
                 name="order_prices_not_negative",
             ),
-            models.CheckConstraint(condition=models.Q(status__in=Status.values), name="order_status_valid"),
+            models.CheckConstraint(condition=models.Q(status__in=OrderStatus.values), name="order_status_valid"),
         ]
 
     def __str__(self) -> str:
@@ -264,7 +269,7 @@ class StatusChange(models.Model):
     AGENCY_AUTHOR = "Agence"
 
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name="history")
-    status = models.CharField("état", max_length=20, choices=Status.choices)
+    status = models.CharField("état", max_length=20, choices=OrderStatus.choices)
     changed_at = models.DateTimeField("date", default=timezone.now)
     # Nom figé au moment de l'action : reste lisible si le compte de l'agent est supprimé.
     author_name = models.CharField("auteur", max_length=210)

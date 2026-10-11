@@ -16,16 +16,16 @@ from django.db import transaction
 from django.utils import timezone
 
 from common.text import euros
-from orders.models import Order, Status, StatusChange
+from orders.models import Order, OrderStatus, StatusChange
 from orders.services.emails import send_order_cancelled_by_agency, send_order_cancelled_by_client, send_order_confirmed
 from orders.services.placing import price_at_current_rates
 from orders.services.reminders import send_departure_reminders
 
 
 # États de départ permis pour chaque action : seule source de ces règles (services et pages).
-CLIENT_CANCELLABLE = frozenset({Status.PENDING})
-CONFIRMABLE = frozenset({Status.PENDING})
-STAFF_CANCELLABLE = frozenset({Status.PENDING, Status.CONFIRMED})
+CLIENT_CANCELLABLE = frozenset({OrderStatus.PENDING})
+CONFIRMABLE = frozenset({OrderStatus.PENDING})
+STAFF_CANCELLABLE = frozenset({OrderStatus.PENDING, OrderStatus.CONFIRMED})
 
 
 class TransitionNotAllowed(Exception):
@@ -51,7 +51,7 @@ def staff_can_cancel(order: Order) -> bool:
 
 def cancel_by_client(order: Order, reason: str = "") -> None:
     _change_status(
-        order, Status.CANCELLED,
+        order, OrderStatus.CANCELLED,
         allowed_from=CLIENT_CANCELLABLE,
         author=order.client,
         author_name=StatusChange.CLIENT_AUTHOR,
@@ -81,7 +81,7 @@ def confirm_by_staff(order: Order, staff_member) -> None:
         "has_confirmed_destination_price": True,
     }
     _change_status(
-        order, Status.CONFIRMED,
+        order, OrderStatus.CONFIRMED,
         allowed_from=CONFIRMABLE,
         author=staff_member,
         author_name=staff_member.get_full_name(),
@@ -105,7 +105,7 @@ def cancel_by_staff(order: Order, staff_member, internal_reason: str, explanatio
     if not internal_reason.strip():
         raise ValueError("Le motif interne est obligatoire quand le personnel annule une demande.")
     _change_status(
-        order, Status.CANCELLED,
+        order, OrderStatus.CANCELLED,
         allowed_from=STAFF_CANCELLABLE,
         author=staff_member,
         author_name=staff_member.get_full_name(),
@@ -123,7 +123,7 @@ ACCOUNT_DELETED_REASON = "Compte client supprimé : demande annulée automatique
 def cancel_after_account_deletion(order: Order) -> None:
     """Le client supprime son compte : sa demande en attente n'a plus à être traitée."""
     _change_status(
-        order, Status.CANCELLED,
+        order, OrderStatus.CANCELLED,
         allowed_from=CLIENT_CANCELLABLE,
         author=None,
         author_name=StatusChange.CLIENT_AUTHOR,

@@ -7,7 +7,7 @@ from django.utils import timezone
 
 from accounts.tests.factories import create_agent, create_client
 from catalog.tests.factories import create_activity, create_country, create_destination
-from orders.models import Order, Status, StatusChange
+from orders.models import Order, OrderStatus, StatusChange
 from orders.services.status import TransitionNotAllowed, cancel_by_client, cancel_by_staff, confirm_by_staff
 
 from .factories import create_order
@@ -37,10 +37,10 @@ class StaffProcessingTests(TestCase):
         response = self.client.post(self.confirm_url, follow=True)
 
         self.assertContains(response, "est confirmée")
-        self.assertEqual(self.refreshed_status(), Status.CONFIRMED)
+        self.assertEqual(self.refreshed_status(), OrderStatus.CONFIRMED)
         change = self.order.history.get()
         self.assertEqual(
-            (change.status, change.author, change.author_name), (Status.CONFIRMED, self.agent, "Luc Martin")
+            (change.status, change.author, change.author_name), (OrderStatus.CONFIRMED, self.agent, "Luc Martin")
         )
 
     def test_confirmed_order_shows_cancel_only(self):
@@ -55,7 +55,7 @@ class StaffProcessingTests(TestCase):
         response = self.client.post(self.cancel_url, {"internal_reason": "   "})
 
         self.assertContains(response, "Le motif interne est obligatoire.")
-        self.assertEqual(self.refreshed_status(), Status.PENDING)
+        self.assertEqual(self.refreshed_status(), OrderStatus.PENDING)
 
     def test_staff_cancels_pending_order_with_reason_and_explanation(self):
         response = self.client.post(
@@ -65,7 +65,7 @@ class StaffProcessingTests(TestCase):
         )
 
         self.assertContains(response, "est annulée")
-        self.assertEqual(self.refreshed_status(), Status.CANCELLED)
+        self.assertEqual(self.refreshed_status(), OrderStatus.CANCELLED)
         change = self.order.history.get()
         self.assertEqual(
             (change.author_name, change.internal_reason, change.reason),
@@ -77,9 +77,9 @@ class StaffProcessingTests(TestCase):
 
         self.client.post(self.cancel_url, {"internal_reason": "Le client a appelé pour annuler."})
 
-        self.assertEqual(self.refreshed_status(), Status.CANCELLED)
+        self.assertEqual(self.refreshed_status(), OrderStatus.CANCELLED)
         self.assertEqual(
-            list(self.order.history.values_list("status", flat=True)), [Status.CONFIRMED, Status.CANCELLED]
+            list(self.order.history.values_list("status", flat=True)), [OrderStatus.CONFIRMED, OrderStatus.CANCELLED]
         )
 
     def test_cancelled_order_offers_no_action(self):
@@ -102,14 +102,14 @@ class StaffProcessingTests(TestCase):
 
     def test_confirm_only_by_post(self):
         self.assertEqual(self.client.get(self.confirm_url).status_code, 405)
-        self.assertEqual(self.refreshed_status(), Status.PENDING)
+        self.assertEqual(self.refreshed_status(), OrderStatus.PENDING)
 
     def test_client_cannot_process_orders(self):
         self.client.force_login(self.marie)
 
         self.assertEqual(self.client.post(self.confirm_url).status_code, 403)
         self.assertEqual(self.client.post(self.cancel_url, {"internal_reason": "x"}).status_code, 403)
-        self.assertEqual(self.refreshed_status(), Status.PENDING)
+        self.assertEqual(self.refreshed_status(), OrderStatus.PENDING)
 
     def test_client_sees_explanation_but_not_internal_reason(self):
         cancel_by_staff(self.order, self.agent, "Hôtel partenaire en faillite.", "Destination fermée cette saison.")
@@ -298,7 +298,7 @@ class DepartureDateTests(TestCase):
 
         self.assertContains(response, "ne peut plus être confirmée")
         self.order.refresh_from_db()
-        self.assertEqual(self.order.status, Status.PENDING)
+        self.assertEqual(self.order.status, OrderStatus.PENDING)
 
     def test_departure_today_can_still_be_confirmed(self):
         Order.objects.filter(pk=self.order.pk).update(departure_date=timezone.localdate())
@@ -306,4 +306,4 @@ class DepartureDateTests(TestCase):
 
         confirm_by_staff(self.order, self.agent)
 
-        self.assertEqual(self.order.status, Status.CONFIRMED)
+        self.assertEqual(self.order.status, OrderStatus.CONFIRMED)
