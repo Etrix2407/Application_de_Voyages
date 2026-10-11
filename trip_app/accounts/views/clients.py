@@ -9,7 +9,7 @@ from accounts.decorators import staff_required
 from accounts.forms import ClientCorrectionForm
 from accounts.models import EmailKind, Role, User
 from accounts.services.address_check import with_address_to_check
-from accounts.services.client_search import client_matches, search_words
+from accounts.services.client_search import matching_clients, search_words
 from accounts.services.password_links import send_password_link
 
 CLIENTS_PER_PAGE = 25
@@ -23,11 +23,7 @@ def _get_client(pk: int) -> User:
 @staff_required
 def client_list(request):
     query = request.GET.get("q", "").strip()
-    clients = with_address_to_check(User.objects.filter(role=Role.CLIENT)).order_by("last_name", "first_name", "pk")
-    words = search_words(query)
-    if words:
-        # Filtre en Python (~1 000 clients) : voir client_matches.
-        clients = [client for client in clients if client_matches(client, words)]
+    clients = with_address_to_check(matching_clients(search_words(query))).order_by("last_name", "first_name", "pk")
     page = Paginator(clients, CLIENTS_PER_PAGE).get_page(request.GET.get("page"))
     return render(request, "accounts/clients/list.html", {"page": page, "query": query})
 
