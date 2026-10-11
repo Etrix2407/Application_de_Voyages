@@ -5,6 +5,7 @@ page ne peut être publiée par oubli sans contrôle d'accès.
 """
 
 from django.conf import settings
+from django.db import transaction
 from django.test import TestCase
 from django.urls import URLResolver, get_resolver, reverse
 
@@ -213,8 +214,14 @@ class AccessMatrixTests(TestCase):
                     if user:
                         self.client.force_login(user)
 
-                    # GET uniquement : aucune page ne doit modifier des données en GET.
+                    # GET d'abord : aucune page ne doit modifier des données en GET. Une route
+                    # réservée à POST répond 405 : elle est rejouée en POST (sans données) pour
+                    # vérifier le même contrôle d'accès, puis ses effets sont annulés.
                     response = self.client.get(url)
+                    if response.status_code == 405:
+                        with transaction.atomic():
+                            response = self.client.post(url)
+                            transaction.set_rollback(True)
 
                     redirected_to_login = response.status_code == 302 and response["Location"].startswith(login_url)
                     denied = response.status_code in (403, 404) or redirected_to_login
