@@ -19,12 +19,12 @@ def check_not_self(target: User, actor: User) -> None:
         )
 
 
-def send_activation_link(request, agent: User) -> bool:
+def send_activation_link(agent: User) -> bool:
     """Envoie à l'agent un lien (7 jours) pour choisir son mot de passe ; False si l'envoi a échoué.
 
     Sert à la création du compte comme au renvoi depuis la liste du personnel. Un membre qui a
     déjà un mot de passe reçoit un autre texte que l'invitation (« nouveau mot de passe »).
     """
     if agent.has_usable_password():
-        return send_staff_link(request, agent, EmailKind.STAFF_PASSWORD_LINK)
-    return send_staff_link(request, agent, EmailKind.AGENT_ACTIVATION)
+        return send_staff_link(agent, EmailKind.STAFF_PASSWORD_LINK)
+    return send_staff_link(agent, EmailKind.AGENT_ACTIVATION)

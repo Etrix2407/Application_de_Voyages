@@ -13,6 +13,7 @@ from accounts.forms import AccountDeletionForm, AccountPasswordChangeForm, Clien
 from accounts.services.account_deletion import delete_account as delete_account_and_notify
 from accounts.services.email_change import apply_email_change, pending_email_change, request_email_change
 from accounts.services.password_notice import send_password_changed_notice
+from accounts.services.throttling import email_change_requests, email_change_requests_by_ip, get_client_ip
 
 
 @login_required
@@ -58,7 +59,17 @@ def delete_account(request):
 def change_email(request):
     form = EmailChangeForm(request.user, request.POST or None)
     if request.method == "POST" and form.is_valid():
-        request_email_change(request, request.user, form.cleaned_data["new_email"])
+        account, ip = f"user-{request.user.pk}", get_client_ip(request)
+        if email_change_requests.is_locked(account) or email_change_requests_by_ip.is_locked(ip):
+            messages.error(
+                request,
+                "Trop de demandes de changement d'adresse. "
+                f"Réessayez dans {email_change_requests.window_text}.",
+            )
+            return render(request, "accounts/profile/change_email.html", {"form": form})
+        email_change_requests.record(account)
+        email_change_requests_by_ip.record(ip)
+        request_email_change(request.user, form.cleaned_data["new_email"])
         # Même message dans tous les cas : rien ne révèle si l'adresse est déjà prise.
         messages.success(
             request,
