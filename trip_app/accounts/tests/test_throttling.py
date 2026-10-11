@@ -8,7 +8,8 @@ from accounts.services.throttling import Limiter
 
 
 class FileCacheWindowTests(SimpleTestCase):
-    """Le cache de production (fichiers) : la fenêtre doit durer `window_seconds`, pas 5 minutes."""
+    """Cache sur disque : comme le cache en base de production, son incr() oublie la durée de vie.
+    La fenêtre doit pourtant durer `window_seconds`, pas les 5 minutes par défaut du cache."""
 
     def setUp(self):
         folder = tempfile.TemporaryDirectory()

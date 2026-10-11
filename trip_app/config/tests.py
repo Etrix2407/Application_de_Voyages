@@ -1,6 +1,10 @@
+from datetime import timedelta
+
 from django.conf import settings
 from django.test import SimpleTestCase, TestCase
 from django.urls import reverse
+
+from common.text import duration_text
 
 
 class HomeTests(TestCase):
@@ -69,3 +73,11 @@ class ErrorReportTests(SimpleTestCase):
 
         self.assertEqual(set(reporter_filter.get_post_parameters(request).values()), {"********************"})
         self.assertEqual(reporter_filter.get_safe_cookies(request), {"sessionid": "********************"})
+
+
+class DurationTextTests(SimpleTestCase):
+    def test_durations_in_words(self):
+        cases = {timedelta(minutes=1): "une minute", timedelta(hours=1): "une heure", timedelta(hours=72): "3 jours"}
+        for duration, text in cases.items():
+            with self.subTest(text=text):
+                self.assertEqual(duration_text(duration), text)

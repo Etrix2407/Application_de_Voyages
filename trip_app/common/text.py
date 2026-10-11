@@ -27,8 +27,10 @@ def normalize(text: str) -> str:
 def duration_text(duration: timedelta) -> str:
     """Durée pour les messages : « 15 minutes », « une heure », « 48 heures », « 30 jours »."""
     minutes = int(duration.total_seconds()) // 60
+    if minutes < 1:
+        raise ValueError("Durée trop courte pour un message : une minute au moins.")
     if minutes % 60:
-        return f"{minutes} minutes"
+        return "une minute" if minutes == 1 else f"{minutes} minutes"
     hours = minutes // 60
     if hours == 1:
         return "une heure"
