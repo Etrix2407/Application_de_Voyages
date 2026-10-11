@@ -34,9 +34,3 @@ class FileCacheWindowTests(SimpleTestCase):
             self.assertTrue(self.limiter.is_locked("marie@example.com"))
         with self.at(15 * 60 + 1):
             self.assertFalse(self.limiter.is_locked("marie@example.com"))
-
-    def test_reserve_refuses_once_limit_reached(self):
-        with self.at(0):
-            results = [self.limiter.reserve("marie@example.com") for _ in range(3)]
-
-        self.assertEqual(results, [True, True, False])

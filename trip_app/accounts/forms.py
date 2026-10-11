@@ -102,12 +102,15 @@ class LoginForm(AuthenticationForm):
         ip = get_client_ip(self.request)
         just_signed_up = recent_sign_ups_by_ip.is_locked(ip)
         account_limits = [(login_failures, login_key(email, ip)), (login_failures_by_account, email)] if email else []
-        if login_failures_by_ip.is_locked(ip) or (just_signed_up and login_failures_after_sign_up_by_ip.is_locked(ip)):
+        if login_failures_by_ip.is_locked(ip) or (
+            just_signed_up and login_failures_after_sign_up_by_ip.is_locked(ip)
+        ):
             raise ValidationError(self.error_messages["locked_ip"], code="locked_ip")
         if any(limiter.is_locked(key) for limiter, key in account_limits):
             raise ValidationError(self.error_messages["locked"], code="locked")
-        # L'essai est compté avant la vérification du mot de passe (lente) : des requêtes envoyées
-        # en même temps ne dépassent pas la limite du compte. Il est effacé en cas de succès.
+        # L'essai est compté avant la vérification du mot de passe (lente) et non après un échec :
+        # des requêtes envoyées en même temps ne dépassent pas la limite du compte.
+        # Il est effacé en cas de succès.
         for limiter, key in account_limits:
             limiter.record(key)
         try:

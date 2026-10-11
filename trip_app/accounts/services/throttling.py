@@ -57,20 +57,6 @@ class Limiter:
         count, started = self._current(key)
         self._store(key, count + 1, started)
 
-    def reserve(self, identifier: str) -> bool:
-        """Compte une tentative avant de la faire ; renvoie False, sans rien compter, si la limite est atteinte.
-
-        À utiliser avant une vérification lente (mot de passe) : des requêtes envoyées en même temps
-        ne peuvent pas toutes passer entre la vérification de la limite et l'enregistrement de l'échec.
-        En cas de succès, appeler reset().
-        """
-        key = self._key(identifier)
-        count, started = self._current(key)
-        if count >= self.max_attempts:
-            return False
-        self._store(key, count + 1, started)
-        return True
-
     def reset(self, identifier: str) -> None:
         cache.delete(self._key(identifier))
 
