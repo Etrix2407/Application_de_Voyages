@@ -8,7 +8,6 @@ from django.contrib import messages
 from django.http import Http404
 from django.shortcuts import redirect, render
 from django.utils import timezone
-from django.views.decorators.http import require_POST
 
 from accounts.decorators import administrator_required
 from accounts.forms import EmailTextForm
@@ -56,9 +55,15 @@ def edit_email_text(request, kind):
 
 
 @administrator_required
-@require_POST
 def reset_email_text(request, kind):
+    """Page de confirmation (GET), puis suppression du texte modifié (POST) : l'action est irréversible."""
     kind = _email_kind(kind)
-    EmailText.objects.filter(kind=kind).delete()
-    messages.success(request, f"Le texte d'origine de l'e-mail « {kind.label} » est rétabli.")
-    return redirect("email_text_list")
+    custom = EmailText.objects.filter(kind=kind).first()
+    if custom is None:
+        messages.info(request, f"L'e-mail « {kind.label} » a déjà son texte d'origine.")
+        return redirect("email_text_list")
+    if request.method == "POST":
+        custom.delete()
+        messages.success(request, f"Le texte d'origine de l'e-mail « {kind.label} » est rétabli.")
+        return redirect("email_text_list")
+    return render(request, "accounts/email_texts/reset.html", {"kind": kind, "custom": custom})

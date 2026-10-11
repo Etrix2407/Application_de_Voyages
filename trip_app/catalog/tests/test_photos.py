@@ -163,6 +163,15 @@ class PhotoMetadataTests(TemporaryMediaMixin, TestCase):
                 self.assertNotIn(b"Telephone de Marie", content)
                 self.assertNotIn(b"Rue des Lilas", content)
 
+    def test_palette_png_keeps_its_colours(self):
+        # PNG 8 bits (palette), exportée par certains logiciels : elle doit garder ses couleurs.
+        buffer = io.BytesIO()
+        Image.new("RGB", (10, 10), "red").convert("P").save(buffer, format="PNG")
+        saved = self.upload(SimpleUploadedFile("drapeau.png", buffer.getvalue(), content_type="image/png"))
+
+        with Image.open(saved) as image:
+            self.assertEqual(image.convert("RGB").getpixel((0, 0)), (255, 0, 0))
+
     def test_photo_taken_sideways_stays_upright(self):
         # Orientation 6 : l'appareil a été tourné, la photo doit s'afficher en portrait.
         saved = self.upload(photo_with_metadata("JPEG", size=(40, 20), orientation=6))

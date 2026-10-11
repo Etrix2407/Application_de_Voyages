@@ -1,4 +1,5 @@
-from django.test import TestCase
+from django.conf import settings
+from django.test import SimpleTestCase, TestCase
 from django.urls import reverse
 
 
@@ -36,3 +37,35 @@ class ErrorPageTests(TestCase):
         self.assertEqual(response.status_code, 404)
         self.assertTemplateUsed(response, "404.html")
         self.assertContains(response, "Page introuvable", status_code=404)
+
+
+class TemplateCommentTests(SimpleTestCase):
+    def test_no_hash_comment_spans_several_lines(self):
+        # {# … #} ne vaut que sur une ligne : au-delà, le texte s'affiche dans la page (et un « <form> »
+        # cité dans ce texte fait ignorer le vrai formulaire par le navigateur).
+        offending_lines = []
+        for path in sorted((settings.BASE_DIR / "templates").rglob("*.html")):
+            for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
+                if "{#" in line and "#}" not in line:
+                    offending_lines.append(f"{path.relative_to(settings.BASE_DIR)}:{number}")
+        self.assertEqual(offending_lines, [])
+
+
+class LoginPageMarkupTests(TestCase):
+    def test_login_page_has_a_single_form(self):
+        html = self.client.get(reverse("login")).content.decode()
+
+        self.assertEqual(html.count("<form"), 1)
+        self.assertNotIn("{#", html)
+
+class ErrorReportTests(SimpleTestCase):
+    def test_error_report_hides_posted_fields_and_cookies(self):
+        from django.test import RequestFactory
+        from django.views.debug import get_exception_reporter_filter
+
+        request = RequestFactory().post("/comptes/inscription/", {"email": "marie@example.com", "password1": "s3cret"})
+        request.COOKIES["sessionid"] = "abc"
+        reporter_filter = get_exception_reporter_filter(request)
+
+        self.assertEqual(set(reporter_filter.get_post_parameters(request).values()), {"********************"})
+        self.assertEqual(reporter_filter.get_safe_cookies(request), {"sessionid": "********************"})

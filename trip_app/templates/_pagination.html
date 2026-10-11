@@ -1,5 +1,7 @@
-{# Pagination commune. Paramètres : page, label (nom de la liste), anchor (facultatif, ex. « #avis »).
-   La balise querystring garde les filtres de l'adresse et ne change que le numéro de page. #}
+{% comment %}
+Pagination commune. Paramètres : page, label (nom de la liste), anchor (facultatif, ex. « #avis »).
+La balise querystring garde les filtres de l'adresse et ne change que le numéro de page.
+{% endcomment %}
 {% if page.paginator.num_pages > 1 %}
     <nav aria-label="Pages : {{ label }}">
         <p>Page {{ page.number }} sur {{ page.paginator.num_pages }}</p>

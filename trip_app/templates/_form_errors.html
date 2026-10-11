@@ -1,8 +1,10 @@
-{# Récapitulatif des erreurs d'un formulaire, à placer juste avant la balise <form>.
-   Paramètre : form. Chaque erreur de champ renvoie au champ concerné. #}
+{% comment %}
+Récapitulatif des erreurs d'un formulaire, à placer juste avant la balise <form>.
+Paramètre : form. Chaque erreur de champ renvoie au champ concerné.
+{% endcomment %}
 {% if form.errors %}
     <div class="form-errors" role="alert">
-        <p>Le formulaire contient {{ form.errors|length }} erreur{{ form.errors|length|pluralize }} :</p>
+        <p>Veuillez corriger les erreurs suivantes :</p>
         <ul>
             {% for error in form.non_field_errors %}
                 <li>{{ error }}</li>

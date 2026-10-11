@@ -26,6 +26,10 @@ def without_metadata(photo) -> ContentFile:
         original.draft(original.mode, (MAX_PHOTO_SIDE, MAX_PHOTO_SIDE))
         upright = ImageOps.exif_transpose(original)
         upright.thumbnail((MAX_PHOTO_SIDE, MAX_PHOTO_SIDE))
+        # Image en palette (PNG 8 bits) : passée en vraies couleurs, sinon la copie ci-dessous
+        # perdrait la palette et la photo sortirait noire.
+        if upright.mode == "P":
+            upright = upright.convert("RGBA" if "transparency" in upright.info else "RGB")
         # Nouvelle image vierge : ni EXIF, ni commentaires, ni texte intégré.
         clean = Image.new(upright.mode, upright.size)
         clean.paste(upright)

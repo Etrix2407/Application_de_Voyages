@@ -144,6 +144,21 @@ class RetryTests(TestCase):
         self.assertEqual(mail.outbox, [])
 
 
+class ServerUnreachableTests(TestCase):
+    def test_no_attempt_consumed_when_server_unreachable_at_start(self):
+        log = pending_log(create_client(), attempts=1, minutes_ago=6)
+        connection = mock.Mock()
+        connection.open.side_effect = OSError("serveur injoignable")
+
+        with mock.patch("accounts.services.email_retry.get_connection", return_value=connection):
+            with self.assertLogs("accounts.services.email_retry", level="ERROR"):
+                self.assertEqual(retry_due_emails(), 0)
+
+        log.refresh_from_db()
+        self.assertEqual((log.status, log.attempts), (EmailStatus.PENDING, 1))
+        connection.send_messages.assert_not_called()
+
+
 class ProcessEmailsLockTests(TestCase):
     def run_command(self):
         output = StringIO()
@@ -157,13 +172,17 @@ class ProcessEmailsLockTests(TestCase):
             self.assertIn("Un autre passage est en cours", self.run_command())
         self.assertEqual(mail.outbox, [])
 
+        # Verrou rendu à la fin du passage précédent : le suivant passe tout de suite.
+        self.assertIn("E-mails envoyés ou retentés : 1", self.run_command())
+        log.refresh_from_db()
+        self.assertEqual(log.status, EmailStatus.SENT)
+
         # Passage interrompu sans rendre le verrou : il est repris une fois expiré.
+        pending_log(create_client(email="paul@example.com"), attempts=1, minutes_ago=6)
         TaskLock.objects.filter(name="process_emails").update(
             locked_until=timezone.now() - timedelta(seconds=1), holder="passage interrompu"
         )
         self.assertIn("E-mails envoyés ou retentés : 1", self.run_command())
-        log.refresh_from_db()
-        self.assertEqual(log.status, EmailStatus.SENT)
 
 
 class ManualResendTests(TestCase):

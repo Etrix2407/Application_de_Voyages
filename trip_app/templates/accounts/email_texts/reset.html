@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+
+{% block title %}Rétablir le texte d'origine de l'e-mail « {{ kind.label }} »{% endblock %}
+
+{% block content %}
+    <h1>Rétablir le texte d'origine de l'e-mail « {{ kind.label }} »</h1>
+
+    <p>Le texte modifié le {{ custom.updated_at|date:"j F Y à H:i" }} par {{ custom.updated_by_name }} sera perdu : les prochains e-mails « {{ kind.label }} » reprendront le texte d'origine.</p>
+
+    {% url 'edit_email_text' kind.value as cancel_url %}
+    {% include "_confirm_delete.html" with submit_label="Rétablir le texte d'origine" cancel_label="Annuler et revenir au texte" %}
+{% endblock %}

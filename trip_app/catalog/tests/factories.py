@@ -1,6 +1,7 @@
 """Création de données de test pour le catalogue."""
 
 import io
+import os
 import shutil
 from decimal import Decimal
 
@@ -50,7 +51,8 @@ def make_image(name: str = "photo.png", image_format: str = "PNG") -> SimpleUplo
     return SimpleUploadedFile(name, buffer.getvalue(), content_type=f"image/{image_format.lower()}")
 
 
-TEST_MEDIA_ROOT = settings.BASE_DIR / "_test_media"
+# Un dossier par processus : avec --parallel, le nettoyage d'un test ne supprime pas les photos d'un autre.
+TEST_MEDIA_ROOT = settings.BASE_DIR / "_test_media" / str(os.getpid())
 
 
 class TemporaryMediaMixin:

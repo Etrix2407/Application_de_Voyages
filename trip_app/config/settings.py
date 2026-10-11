@@ -176,7 +176,7 @@ if TESTING:
     PASSWORD_HASHERS = ["django.contrib.auth.hashers.MD5PasswordHasher"]
 
 # Cache des limites anti-abus : table « django_cache » de la base SQLite, partagée par tous les processus
-# du serveur et conservée au redémarrage. À créer une fois par « python manage.py createcachetable ».
+# du serveur et conservée au redémarrage. Créée par « migrate » (migration accounts/0018_cache_table).
 # Choisie plutôt que des fichiers sur disque : ceux-ci étaient tous parcourus à chaque écriture
 # (lent avec beaucoup de compteurs) et pouvaient se bloquer entre processus sous Windows.
 # Grande capacité : impossible de faire « oublier » un compteur en remplissant le cache.
@@ -235,9 +235,9 @@ EMAIL_TIMEOUT = env_int("DJANGO_EMAIL_TIMEOUT", 10)
 # Une ligne vide dans .env garde l'adresse par défaut.
 RESERVATIONS_EMAIL = env_str("DJANGO_RESERVATIONS_EMAIL") or "reservations@horizons-lointains.be"
 
-# Adresse du site (ex. https://horizons-lointains.be), pour les liens absolus des e-mails
-# envoyés hors d'une requête (commandes planifiées) et pour le logo. Obligatoire en production :
-# sans elle, les liens de ces e-mails (dont le lien de désinscription, obligatoire) seraient incomplets.
+# Adresse du site (ex. https://horizons-lointains.be), pour tous les liens absolus des e-mails
+# et pour le logo. Obligatoire en production : sans elle, les liens des e-mails (dont le lien de
+# désinscription, obligatoire) seraient incomplets.
 SITE_URL = (env_str("DJANGO_SITE_URL") or ("http://127.0.0.1:8000" if DEBUG else "")).rstrip("/")
 if not SITE_URL and not DEBUG and not TESTING:
     raise RuntimeError("La variable d'environnement DJANGO_SITE_URL est obligatoire (ex. https://horizons-lointains.be).")
@@ -262,7 +262,7 @@ if EMAIL_TEST_MODE and not EMAIL_TEST_RECIPIENT:
 
 # Journal : avertissements et erreurs affichés dans la sortie du serveur, y compris en production
 # (sans ce réglage, Django n'y affiche pas les erreurs 500). Les pages introuvables (404) ne sont
-# pas journalisées. Format sans données personnelles : date, niveau, origine et message.
+# pas journalisées. Lignes de journal sans données personnelles : date, niveau, origine et message.
 # Facultatif : DJANGO_ADMINS (adresses séparées par des virgules) reçoit aussi chaque erreur 500
 # par e-mail en production, envoyé depuis DEFAULT_FROM_EMAIL.
 ADMINS = [(email, email) for email in (part.strip() for part in env_str("DJANGO_ADMINS").split(",")) if email]
@@ -289,8 +289,14 @@ LOGGING = {
         # Remplace la configuration par défaut de Django, qui n'affiche rien quand DEBUG vaut 0.
         "django": {"handlers": ["console", "mail_admins"], "level": "WARNING", "propagate": False},
         "django.request": {"level": "ERROR"},
+        # Lignes « GET / 200 » de runserver en développement (sinon réinitialisées par cette configuration).
+        "django.server": {"handlers": ["console"], "level": "INFO", "propagate": False},
+        # Un robot qui appelle le serveur par son adresse IP : une ligne de journal, pas un e-mail.
+        "django.security.DisallowedHost": {"handlers": ["console"], "propagate": False},
     },
 }
+# Le rapport d'erreur envoyé à ADMINS ne contient ni les champs envoyés (mots de passe) ni les cookies.
+DEFAULT_EXCEPTION_REPORTER_FILTER = "common.error_reports.PrivateExceptionReporterFilter"
 if TESTING:
     # Les erreurs provoquées exprès par les tests n'encombrent pas leur affichage.
     LOGGING["handlers"]["console"]["level"] = "CRITICAL"
