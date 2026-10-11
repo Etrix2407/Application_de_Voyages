@@ -58,7 +58,12 @@ class EmailTextPageTests(SendEmailsImmediately, TestCase):
             kind=EmailKind.CLIENT_PASSWORD_LINK, subject="Ancien objet", body="{prénom} {lien}", updated_by_name="Anne"
         )
 
-        self.client.post(reverse("reset_email_text", args=[EmailKind.CLIENT_PASSWORD_LINK]))
+        reset_url = reverse("reset_email_text", args=[EmailKind.CLIENT_PASSWORD_LINK])
+        # Une page de confirmation d'abord : rien n'est perdu sur un simple clic.
+        self.assertContains(self.client.get(reset_url), "Rétablir le texte d'origine")
+        self.assertTrue(EmailText.objects.exists())
+
+        self.client.post(reset_url)
 
         self.assertFalse(EmailText.objects.exists())
         message = self.send()

@@ -12,6 +12,7 @@
             Texte d'origine.
         {% endif %}
         Le logo et la signature de l'agence sont ajoutés automatiquement : ne les écrivez pas.
+        Une adresse web écrite dans le texte reste du texte : seuls les liens prévus par l'e-mail sont cliquables.
     </p>
 
     {% include "_form_errors.html" %}
@@ -32,10 +33,7 @@
     </form>
 
     {% if custom %}
-        <form method="post" action="{% url 'reset_email_text' kind.value %}">
-            {% csrf_token %}
-            <button type="submit">Rétablir le texte d'origine (le texte actuel sera perdu)</button>
-        </form>
+        <p><a href="{% url 'reset_email_text' kind.value %}">Rétablir le texte d'origine</a></p>
     {% endif %}
 
     <p><a href="{% url 'email_text_list' %}">Retour aux modèles des e-mails</a></p>
