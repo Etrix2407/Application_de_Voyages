@@ -5,7 +5,10 @@ from django.urls import reverse
 from accounts.models import EmailKind, EmailLog, EmailStatus
 from accounts.services.email_retry import OBSOLETE, retry_due_emails
 from accounts.tests.factories import create_admin, create_agent, create_client
-from promotions.models import PromotionMailing
+from catalog.tests.factories import create_country, create_destination
+from orders.tests.factories import create_order
+from promotions.models import PromotionMailing, Scope
+from promotions.services.mailing import send_promotion_mailing
 from promotions.tests.factories import create_promotion
 
 
@@ -93,3 +96,35 @@ class PromotionEmailTests(TestCase):
         self.log.refresh_from_db()
         self.assertEqual(self.log.status, EmailStatus.FAILED)
         self.assertEqual(mail.outbox, [])
+
+
+class MailablePromotionsTests(TestCase):
+    """Un pays ou une destination désactivé n'est jamais cité ; une offre épuisée n'est pas envoyée."""
+
+    def setUp(self):
+        self.admin = create_admin()
+        self.japan = create_country("Japon")
+
+    def test_only_promotions_still_offered_can_be_chosen(self):
+        nara = create_destination(self.japan, "Nara", active=False)
+        create_promotion(name="Offre valable")
+        create_promotion(name="Printemps à Nara", scope=Scope.DESTINATIONS, destinations=[nara])
+        exhausted = create_promotion(name="Offre épuisée", max_uses=1)
+        create_order(create_client(), create_destination(self.japan), promotion=exhausted)
+        self.client.force_login(self.admin)
+
+        response = self.client.get(reverse("manage_send_promotion_mailing"))
+
+        self.assertContains(response, "Offre valable")
+        self.assertNotContains(response, "Printemps à Nara")
+        self.assertNotContains(response, "Offre épuisée")
+
+    def test_withdrawn_country_not_named_in_the_email(self):
+        create_client("marie@example.com", accepts_promotional_emails=True)
+        portugal = create_country("Portugal", active=False)
+        promotion = create_promotion(scope=Scope.COUNTRIES, countries=[self.japan, portugal])
+        send_promotion_mailing(promotion, "Le printemps arrive !", self.admin)
+
+        retry_due_emails()
+
+        self.assertIn("Destinations concernées : Japon.", mail.outbox[0].body)

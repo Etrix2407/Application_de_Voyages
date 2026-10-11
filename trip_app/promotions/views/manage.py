@@ -9,6 +9,7 @@ from django.views.decorators.http import require_POST
 from accounts.decorators import administrator_required, staff_required
 from accounts.models import User
 from orders.services.promotion_statistics import promotion_statistics
+from orders.services.promotions import exhausted_promotions
 from promotions.forms import PromotionForm, PromotionMailingForm
 from promotions.models import Action, Promotion, State
 from promotions.services.management import (
@@ -18,7 +19,7 @@ from promotions.services.management import (
     disable_promotion,
     update_promotion,
 )
-from promotions.services.mailing import NoRecipients, can_be_mailed, send_promotion_mailing
+from promotions.services.mailing import NoRecipients, mailable_promotions, send_promotion_mailing
 
 PROMOTIONS_PER_PAGE = 25
 
@@ -59,7 +60,7 @@ def promotion_detail(request, pk):
         "created_by": creation.author_name if creation else "",
         "can_manage": request.user.is_administrator,
         "can_disable": state != State.DISABLED,
-        "can_mail": can_be_mailed(promotion),
+        "can_mail": promotion in mailable_promotions(exclude=exhausted_promotions()),
         "mailings": promotion.mailings.all(),
         "used": used,
     }
@@ -86,7 +87,9 @@ def create(request):
 @administrator_required
 def send_mailing(request):
     """Envoi d'une promotion par e-mail à tous les clients consentants (programmé, pas immédiat)."""
-    form = PromotionMailingForm(request.POST or None, initial={"promotion": request.GET.get("promotion")})
+    form = PromotionMailingForm(
+        request.POST or None, initial={"promotion": request.GET.get("promotion")}, exclude=exhausted_promotions()
+    )
     if request.method == "POST" and form.is_valid():
         data = form.cleaned_data
         try:

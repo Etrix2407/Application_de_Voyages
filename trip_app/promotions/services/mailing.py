@@ -15,6 +15,7 @@ from accounts.models import EmailKind, User
 from accounts.services.emails import queue_emails, site_url
 from accounts.services.unsubscribe import unsubscribe_link
 from promotions.models import Promotion, PromotionMailing, State
+from promotions.services.public import offers_something, visible_targets
 
 
 class NoRecipients(Exception):
@@ -22,8 +23,27 @@ class NoRecipients(Exception):
 
 
 def can_be_mailed(promotion: Promotion) -> bool:
-    """Seules les promotions en cours ou à venir peuvent être envoyées."""
-    return promotion.state() in (State.RUNNING, State.UPCOMING)
+    """En cours ou à venir, et vise encore un pays ou une destination proposé.
+
+    Les pays et destinations visés doivent être préchargés avec visible_targets : l'e-mail ne cite
+    jamais un élément désactivé.
+    """
+    return promotion.state() in (State.RUNNING, State.UPCOMING) and offers_something(promotion)
+
+
+def mailable_promotions(exclude=()) -> list[Promotion]:
+    """Promotions que l'administrateur peut envoyer, de la plus proche à la plus lointaine.
+
+    `exclude` : promotions épuisées (maximum au total atteint). Ce sont les demandes qui le disent,
+    donc l'appelant les donne (voir orders.services.promotions.exhausted_promotions).
+    """
+    candidates = (
+        Promotion.objects.filter(is_active=True, ends_on__gte=timezone.localdate())
+        .exclude(pk__in=exclude)
+        .prefetch_related(*visible_targets())
+        .order_by("starts_on", "name", "pk")
+    )
+    return [promotion for promotion in candidates if can_be_mailed(promotion)]
 
 
 @transaction.atomic
