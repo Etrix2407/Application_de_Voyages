@@ -7,7 +7,7 @@ Seulement pour une demande confirmée, dont le client a encore son compte. Le ra
 La date d'envoi, notée sur la demande, empêche tout doublon.
 """
 
-from datetime import datetime, time, timedelta
+from datetime import timedelta
 
 from django.db import transaction
 from django.urls import reverse
@@ -16,7 +16,7 @@ from django.utils.formats import date_format
 
 from accounts.models import EmailKind
 from accounts.services.emails import send_email, site_url
-from catalog.services.time_zones import BELGIUM, format_offset, offset_from_belgium
+from catalog.services.time_zones import format_offset, offset_on
 from orders.models import Order, Status
 from orders.services.labels import destination_label
 
@@ -53,7 +53,7 @@ def departure_reminder_context(order: Order) -> dict:
     # Fuseau non renseigné : la ligne du décalage horaire est omise.
     time_offset = ""
     if country.time_zone:
-        time_offset = f"- Décalage horaire le jour du départ : {_offset_on(country.time_zone, order.departure_date)}"
+        time_offset = f"- Décalage horaire le jour du départ : {format_offset(offset_on(country.time_zone, order.departure_date))}"
     return {
         "prénom": order.client.first_name,
         "destination": destination_label(order),
@@ -84,8 +84,3 @@ def _send_reminder(order: Order) -> bool:
         order_number=order.pk,
     )
     return True
-
-
-def _offset_on(zone_name: str, day) -> str:
-    """Décalage avec la Belgique le jour donné (à midi), changements d'heure compris."""
-    return format_offset(offset_from_belgium(zone_name, datetime.combine(day, time(12), BELGIUM)))
