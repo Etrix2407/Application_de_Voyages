@@ -11,7 +11,7 @@ from accounts.tests.email_delivery import SendEmailsImmediately
 from accounts.tests.factories import create_agent, create_client
 from catalog.models import Visa
 from catalog.tests.factories import create_country, create_destination
-from orders.models import Order, Status
+from orders.models import Order, OrderStatus
 from orders.services.reminders import send_departure_reminders
 from orders.services.status import confirm_by_staff
 
@@ -31,7 +31,7 @@ class DepartureReminderTests(SendEmailsImmediately, TestCase):
         send_departure_reminders()
 
     def confirmed_order(self, days: int, **fields):
-        fields.setdefault("status", Status.CONFIRMED)
+        fields.setdefault("status", OrderStatus.CONFIRMED)
         return create_order(self.marie, self.kyoto, departure_date=departure_in(days), **fields)
 
     def test_reminder_seven_days_before_departure(self):
@@ -79,17 +79,17 @@ class DepartureReminderTests(SendEmailsImmediately, TestCase):
         self.assertEqual(len(mail.outbox), 1)
 
     def test_only_confirmed_orders_of_existing_clients(self):
-        self.confirmed_order(5, status=Status.PENDING)
-        self.confirmed_order(5, status=Status.CANCELLED)
-        create_order(None, self.kyoto, departure_date=departure_in(5), status=Status.CONFIRMED)
+        self.confirmed_order(5, status=OrderStatus.PENDING)
+        self.confirmed_order(5, status=OrderStatus.CANCELLED)
+        create_order(None, self.kyoto, departure_date=departure_in(5), status=OrderStatus.CONFIRMED)
 
         self.run_command()
 
         self.assertEqual(len(mail.outbox), 0)
 
     def test_late_confirmation_sends_reminder_at_once(self):
-        soon = self.confirmed_order(5, status=Status.PENDING)
-        later = self.confirmed_order(30, status=Status.PENDING)
+        soon = self.confirmed_order(5, status=OrderStatus.PENDING)
+        later = self.confirmed_order(30, status=OrderStatus.PENDING)
         agent = create_agent()
 
         confirm_by_staff(soon, agent)
@@ -112,7 +112,7 @@ class DepartureReminderTests(SendEmailsImmediately, TestCase):
             "accounts.services.emails.EmailMultiAlternatives.send", side_effect=OSError("serveur injoignable")
         ), self.assertLogs("accounts.services.emails", level="ERROR"):
             self.run_command()
-        Order.objects.filter(pk=cancelled.pk).update(status=Status.CANCELLED)
+        Order.objects.filter(pk=cancelled.pk).update(status=OrderStatus.CANCELLED)
         EmailLog.objects.update(last_attempt_at=timezone.now() - timedelta(minutes=6))
 
         retry_due_emails()

@@ -16,7 +16,7 @@ from django.utils import timezone
 
 from accounts.services.throttling import wrong_promo_codes, wrong_promo_codes_by_ip
 from catalog.models import Destination
-from orders.models import Order, Status, client_fingerprint
+from orders.models import Order, OrderStatus, client_fingerprint
 from promotions.models import Promotion, normalize_code
 from common.text import euros
 from promotions.services.discounts import (
@@ -58,7 +58,7 @@ class PromotionChoice:
 
 
 # Seules les demandes non annulées comptent dans les limites (une annulation rend l'utilisation).
-_NOT_CANCELLED = ~Q(orders__status=Status.CANCELLED)
+_NOT_CANCELLED = ~Q(orders__status=OrderStatus.CANCELLED)
 
 
 def _usage(client) -> dict:

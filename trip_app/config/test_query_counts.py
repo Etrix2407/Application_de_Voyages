@@ -15,7 +15,7 @@ from django.urls import reverse
 from accounts.tests.factories import create_admin, create_agent, create_client
 from catalog.models import FavoriteActivity, FavoriteDestination
 from catalog.tests.factories import create_activity, create_country, create_destination
-from orders.models import Status
+from orders.models import OrderStatus
 from orders.tests.factories import create_order
 from promotions.models import Scope
 from promotions.tests.factories import create_promotion
@@ -152,7 +152,7 @@ class QueryCountTests(TestCase):
             client = create_client(email=f"{self.unique('client').replace(' ', '')}@example.com")
             destination = create_destination(self.country, self.unique("Ville"))
             create_order(client, destination, promotion=promotion)
-            create_order(client, destination, promotion=promotion, status=Status.CANCELLED)
+            create_order(client, destination, promotion=promotion, status=OrderStatus.CANCELLED)
 
         self.assert_constant_queries(reverse("manage_promotion_statistics", args=[promotion.pk]), add_orders)
 

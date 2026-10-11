@@ -46,11 +46,6 @@ class OrderStatus(models.TextChoices):
     CANCELLED = "cancelled", "Annulée"
 
 
-# Ancien nom, gardé pour les modules qui l'importent encore (e-mails, promotions, démonstration) :
-# à retirer quand plus aucun import ne l'utilise.
-Status = OrderStatus
-
-
 def departure_window():
     """Premier et dernier jour de départ possibles pour une nouvelle demande."""
     today = timezone.localdate()

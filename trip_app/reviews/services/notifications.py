@@ -12,7 +12,6 @@ from django.utils.formats import date_format
 
 from accounts.models import EmailKind
 from accounts.services.emails import send_email, site_url
-from orders.services.labels import destination_label
 from reviews.models import AgencyResponse, RefusalReason, Review
 from reviews.services.writing import client_can_edit
 
@@ -78,7 +77,7 @@ def _base_context(review: Review) -> dict:
     return {
         "prénom": order.client.first_name,
         "titre": review.title,
-        "destination": destination_label(order),
+        "destination": order.destination_label,
     }
 
 

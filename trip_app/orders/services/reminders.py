@@ -17,8 +17,7 @@ from django.utils.formats import date_format
 from accounts.models import EmailKind
 from accounts.services.emails import send_email, site_url
 from catalog.services.time_zones import format_offset, offset_on
-from orders.models import Order, Status
-from orders.services.labels import destination_label
+from orders.models import Order, OrderStatus
 
 REMINDER_DAYS_BEFORE_DEPARTURE = 7
 
@@ -27,7 +26,7 @@ def due_departure_reminders():
     """Demandes confirmées dont le départ est dans 7 jours ou moins, sans rappel envoyé."""
     today = timezone.localdate()
     return Order.objects.filter(
-        status=Status.CONFIRMED,
+        status=OrderStatus.CONFIRMED,
         client__isnull=False,
         departure_reminder_sent_at__isnull=True,
         departure_date__gte=today,
@@ -56,7 +55,7 @@ def departure_reminder_context(order: Order) -> dict:
         time_offset = f"- Décalage horaire le jour du départ : {format_offset(offset_on(country.time_zone, order.departure_date))}"
     return {
         "prénom": order.client.first_name,
-        "destination": destination_label(order),
+        "destination": order.destination_label,
         "date de départ": date_format(order.departure_date, "j F Y"),
         "date de retour": date_format(order.return_date, "j F Y"),
         "numéro": order.pk,

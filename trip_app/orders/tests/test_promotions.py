@@ -12,7 +12,7 @@ from django.utils import timezone
 from accounts.services.email_change import apply_email_change
 from accounts.tests.factories import create_admin, create_agent, create_client
 from catalog.tests.factories import create_country, create_destination
-from orders.models import Order, Status
+from orders.models import Order, OrderStatus
 from orders.services import promotions as messages
 from orders.services.placing import parts_for, place_order
 from orders.services.promotions import choose_promotion
@@ -76,7 +76,7 @@ class ChoosePromotionTests(TestCase):
         order = create_order(self.marie, self.kyoto, promotion=promotion)
 
         self.assertEqual(self.choose("unefois").code_error, messages.ALREADY_USED)
-        order.status = Status.CANCELLED
+        order.status = OrderStatus.CANCELLED
         order.save()
         self.assertTrue(self.choose("unefois").code_applied)
 
@@ -230,7 +230,7 @@ class OrderWithPromotionTests(TestCase):
     def test_limit_per_client_survives_account_deletion_and_new_sign_up(self):
         self.use_code_once()
         # Confirmée : elle reste comptée (une demande en attente est annulée si le compte est supprimé).
-        Order.objects.update(status=Status.CONFIRMED)
+        Order.objects.update(status=OrderStatus.CONFIRMED)
         self.marie.delete()
 
         response = self.try_code_again_as(self.marie.email)
@@ -253,7 +253,7 @@ class PublicOffersTests(TestCase):
         order = create_order(create_client(), kyoto, promotion=promotion)
 
         self.assertNotContains(self.client.get(reverse("offers")), "Dernières places")
-        order.status = Status.CANCELLED
+        order.status = OrderStatus.CANCELLED
         order.save()
         self.assertContains(self.client.get(reverse("offers")), "Dernières places")
 
