@@ -510,7 +510,8 @@ trip_app/
 │   ├── views/              # manage (administrateur ; consultation par les agents), public (« Nos offres du moment »)
 │   ├── services/           # discounts (calcul de la remise, meilleure offre), management, history,
 │   │                       # public (offres affichées : bandeau, étiquette « Promo », page des offres),
-│   │                       # mailing (envoi d'une promotion par e-mail, v5), email_rebuilders (construction
+│   │                       # mailing (envoi d'une promotion par e-mail, v5), email_texts (type et texte
+│   │                       # d'origine de l'e-mail promotionnel), email_rebuilders (construction
 │   │                       # de l'e-mail promotionnel au moment de l'envoi)
 │   ├── models.py · forms.py · urls.py
 │   └── tests/
@@ -520,6 +521,7 @@ trip_app/
 │   │                       # d'état), filtering (liste du personnel), privacy (anonymisation RGPD),
 │   │                       # promotion_statistics (statistiques d'une promotion), reminders (rappel avant le
 │   │                       # départ), emails (e-mails des demandes au client et alerte au personnel),
+│   │                       # email_texts (types et textes d'origine des e-mails des demandes),
 │   │                       # email_rebuilders (reconstruction de ces e-mails), data_export (demandes du client)
 │   ├── models.py · forms.py · signals.py · urls.py
 │   └── tests/
@@ -528,7 +530,8 @@ trip_app/
 │   ├── services/           # eligibility, writing (client), moderation, responses, filtering (personnel),
 │   │                       # ratings (notes publiques), order_events, privacy (effacement RGPD des signatures),
 │   │                       # invitations (invitation à donner un avis), notifications (e-mails au client sur
-│   │                       # son avis), email_rebuilders (reconstruction de ces e-mails), data_export (avis
+│   │                       # son avis), email_texts (types et textes d'origine des e-mails d'avis),
+│   │                       # email_rebuilders (reconstruction de ces e-mails), data_export (avis
 │   │                       # du client avec la réponse de l'agence)
 │   ├── management/commands/  # load_demo (données de démonstration de toutes les versions),
 │   │                         # send_trip_reminders (rappels de voyage, chaque jour)

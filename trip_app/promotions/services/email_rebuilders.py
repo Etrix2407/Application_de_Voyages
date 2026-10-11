@@ -10,14 +10,13 @@ Deux requêtes au plus par message : l'envoi avec sa promotion (et le consenteme
 puis les pays ou destinations visés.
 """
 
-from django.db.models import Exists, prefetch_related_objects
+from django.db.models import Exists
 
 from accounts.models import EmailLog, User
 from accounts.services.email_retry import RebuiltEmail, rebuilder
 from accounts.services.unsubscribe import unsubscribe_headers
 from promotions.models import PromotionEmail, PromotionMailing
 from promotions.services.mailing import can_be_mailed, promotion_email_context
-from promotions.services.public import visible_targets
 
 
 # Envoi en nombre (queue_emails) : premier envoi au passage suivant de process_emails, après les autres e-mails.
@@ -35,7 +34,6 @@ def _promotion(log: EmailLog) -> RebuiltEmail | None:
     if mailing is None or not mailing.still_accepted:
         return None
     promotion = mailing.promotion
-    prefetch_related_objects([promotion], *visible_targets(promotion.scope))
     if not can_be_mailed(promotion):
         return None
     return RebuiltEmail(promotion_email_context(mailing, user), unsubscribe_headers(user))
