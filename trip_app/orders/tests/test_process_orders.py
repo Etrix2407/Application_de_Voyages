@@ -132,7 +132,7 @@ class StaffProcessingTests(TestCase):
 
         self.assertEqual(self.order.history.get().reason, "")
         self.assertNotContains(response, "Hôtel partenaire en faillite.")
-        self.assertContains(response, "<td>—</td>", html=True)
+        self.assertContains(response, '<td data-label="Motif">—</td>', html=True)
 
     def test_client_or_agency_decided_by_who_acted_not_by_name(self):
         # Un agent qui s'appellerait « Client » reste affiché « Agence » au client.
@@ -157,7 +157,7 @@ class StaffProcessingTests(TestCase):
 
         response = self.client.get(reverse("my_order_detail", args=[self.order.pk]))
 
-        self.assertContains(response, "<td>Client</td>", html=True)
+        self.assertContains(response, '<td data-label="Par">Client</td>', html=True)
         self.assertNotContains(response, "Agence")
 
 

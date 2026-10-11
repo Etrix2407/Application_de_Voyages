@@ -11,6 +11,7 @@
         <p>Nous allons envoyer un nouveau lien de confirmation, valable 48 heures, à {{ user.email }}.</p>
     {% endif %}
 
+    {% include "_form_errors.html" %}
     <form method="post" novalidate>
         {% csrf_token %}
         {{ form }}

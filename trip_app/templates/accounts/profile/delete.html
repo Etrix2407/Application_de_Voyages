@@ -10,6 +10,7 @@
     <p>Vos demandes de voyage sont conservées pour nos statistiques, sans votre nom ni vos coordonnées, et vos remarques sont effacées. Seule une empreinte non lisible de votre adresse e-mail y reste attachée, pour appliquer les limites des promotions. Vos demandes encore en attente sont annulées.</p>
     <p>Vos avis restent publiés, signés « Voyageur anonyme » : ils ne sont plus liés à vous.</p>
 
+    {% include "_form_errors.html" %}
     <form method="post" novalidate>
         {% csrf_token %}
         {{ form }}

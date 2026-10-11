@@ -55,7 +55,7 @@ class StaffReviewListTests(TestCase):
         self.review(self.kyoto, "Content", rating=4)
 
         self.assertEqual(self.titles(negative_only="on"), ["Déçu"])
-        self.assertContains(self.client.get(self.url), 'class="badge-negative"', count=1)
+        self.assertContains(self.client.get(self.url), 'class="badge badge-negative"', count=1)
 
     def test_two_periods_review_date_and_stay_date(self):
         self.review(self.kyoto, "Séjour de mars, écrit il y a 40 jours", departure=date(2026, 3, 10),

@@ -5,6 +5,7 @@
 {% block content %}
     <h1>Modifier mes informations</h1>
 
+    {% include "_form_errors.html" %}
     <form method="post" novalidate>
         {% csrf_token %}
         {{ form }}

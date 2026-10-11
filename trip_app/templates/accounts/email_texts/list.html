@@ -7,7 +7,7 @@
 
     <p>Vous pouvez modifier l'objet et le texte de chaque e-mail envoyé par le site. La mise en page (logo, signature de l'agence) et les champs variables (prénom, numéro de demande, liens...) restent fixes.</p>
 
-    <div class="table-scroll">
+    <div class="table-scroll" tabindex="0" role="region" aria-label="Tableau des modèles des e-mails">
         <table>
             <caption>Types d'e-mails</caption>
             <thead>
@@ -30,7 +30,7 @@
                                 Texte d'origine
                             {% endif %}
                         </td>
-                        <td><a href="{% url 'edit_email_text' row.kind.value %}">Modifier</a></td>
+                        <td><a href="{% url 'edit_email_text' row.kind.value %}">Modifier<span class="sr-only"> l'e-mail « {{ row.kind.label }} »</span></a></td>
                     </tr>
                 {% endfor %}
             </tbody>

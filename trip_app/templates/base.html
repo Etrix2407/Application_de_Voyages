@@ -6,7 +6,7 @@
     <title>{% block title %}{% endblock %} — {{ site_name }}</title>
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
 </head>
-{# spellcheck désactivé : pas de soulignement rouge dans les champs (motifs, remarques, descriptions). #}
+{# spellcheck désactivé par défaut (noms, adresses, codes) ; réactivé sur les formulaires de texte libre (avis, remarques, motifs). #}
 <body spellcheck="false">
     <a class="skip-link" href="#content">Aller au contenu</a>
     <header class="site-header">
@@ -53,9 +53,10 @@
 
     <main id="content" class="content">
         {% if messages %}
-            <ul class="messages" role="status">
+            {# Erreurs et avertissements annoncés tout de suite (alert), les autres messages poliment (status). #}
+            <ul class="messages">
                 {% for message in messages %}
-                    <li class="message message-{{ message.tags }}">{{ message }}</li>
+                    <li class="message message-{{ message.tags }}"><span role="{% if message.level >= DEFAULT_MESSAGE_LEVELS.WARNING %}alert{% else %}status{% endif %}">{{ message }}</span></li>
                 {% endfor %}
             </ul>
         {% endif %}

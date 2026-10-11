@@ -41,7 +41,7 @@
             <a class="button" href="{% url 'download_my_data' %}">Télécharger mes données</a>
             {# Le personnel n'a que son profil : ni demandes, ni avis, ni favoris. #}
             {% if user.is_client %}
-                <p>Fichier contenant vos informations, vos demandes de voyage, vos avis et vos favoris.</p>
+                <p>Fichier contenant vos informations, vos demandes de voyage, vos avis, vos favoris et la liste des e-mails que vous avez reçus.</p>
             {% else %}
                 <p>Fichier contenant vos informations de compte.</p>
             {% endif %}

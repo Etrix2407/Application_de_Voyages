@@ -101,7 +101,8 @@ class ManageCountryTests(TemporaryMediaMixin, TestCase):
         response = self.client.get(reverse("manage_country", args=[country.pk]))
 
         self.assertContains(response, "Kyoto")
-        self.assertContains(response, 'alt="Photo : Kyoto"')
+        self.assertContains(response, '<img class="thumbnail"')
+        self.assertContains(response, 'alt=""')
         self.assertContains(response, "Sumo")
 
 

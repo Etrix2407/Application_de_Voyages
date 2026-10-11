@@ -19,7 +19,7 @@
     </p>
 
     {% if page.object_list %}
-        <div class="table-scroll">
+        <div class="table-scroll" tabindex="0" role="region" aria-label="Tableau des clients">
             <table>
                 <caption>Liste des clients{% if page.paginator.num_pages > 1 %}, page {{ page.number }} sur {{ page.paginator.num_pages }}{% endif %}</caption>
                 <thead>
@@ -37,11 +37,11 @@
                             <td>{{ client.last_name }} {{ client.first_name }}</td>
                             <td>
                                 {{ client.email }}
-                                {% if client.address_to_check %}<br><span class="badge-warning">Adresse à vérifier</span>{% endif %}
+                                {% if client.address_to_check %}<br><span class="badge badge-warning">Adresse à vérifier</span>{% endif %}
                             </td>
                             <td>{{ client.phone|default:"—" }}</td>
                             <td>{{ client.date_joined|date:"j F Y" }}</td>
-                            <td><a href="{% url 'edit_client' client.pk %}{% if list_query %}?{{ list_query }}{% endif %}">Corriger</a></td>
+                            <td><a href="{% url 'edit_client' client.pk %}{% if list_query %}?{{ list_query }}{% endif %}">Corriger<span class="sr-only"> {{ client.get_full_name }}</span></a></td>
                         </tr>
                     {% endfor %}
                 </tbody>

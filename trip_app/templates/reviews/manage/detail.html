@@ -8,7 +8,7 @@
     <h1>Avis « {{ review.title }} »</h1>
     <p>
         État : <span class="status status-{{ review.status }}">{{ review.get_status_display }}</span>
-        {% if review.is_negative %}<span class="badge-negative">Avis négatif</span>{% endif %}
+        {% if review.is_negative %}<span class="badge badge-negative">Avis négatif</span>{% endif %}
     </p>
     {% if review.refusal_reason %}
         <p>Motif : {{ review.get_refusal_reason_display }}{% if review.refusal_details %} — {{ review.refusal_details }}{% endif %}</p>
@@ -58,7 +58,7 @@
                 <li>
                     <form method="post" action="{% url 'manage_publish_review' review.pk %}">
                         {% csrf_token %}
-        <input type="hidden" name="version" value="{{ review.version }}">
+                        <input type="hidden" name="version" value="{{ review.version }}">
                         <button type="submit">Publier l'avis</button>
                     </form>
                 </li>

@@ -18,7 +18,7 @@
 
     {% if can_review %}
         <p class="message">
-            Vous êtes rentré de ce voyage : racontez-le aux futurs voyageurs.
+            Votre voyage est terminé : racontez-le aux futurs voyageurs.
             <a class="button" href="{% url 'create_review' order.pk %}">Donner mon avis</a>
         </p>
     {% elif review %}
