@@ -9,3 +9,15 @@ trip_app/staticfiles/
 trip_app/media/
 trip_app/cache/
 trip_app/_test_media/
+db.sqlite3-journal
+*.sqlite3-wal
+*.sqlite3-shm
+*.log
+.env.*
+!.env.example
+.coverage
+htmlcov/
+.vscode/
+.idea/
+.claude/worktrees/
+.claude/settings.local.json
