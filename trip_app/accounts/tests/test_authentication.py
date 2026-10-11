@@ -319,6 +319,9 @@ class LoginTests(TestCase):
     def log_in(self, email="client@example.com", password=PASSWORD, ip="127.0.0.1"):
         return self.client.post(self.url, {"username": email, "password": password}, REMOTE_ADDR=ip)
 
+    def test_page_shows_agency_name(self):
+        self.assertEqual(self.client.get(self.url).context["site_name"], settings.SITE_NAME)
+
     def test_successful_login(self):
         response = self.log_in()
 

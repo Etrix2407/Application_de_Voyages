@@ -9,7 +9,11 @@ from django.urls import reverse
 
 from accounts.forms import AgentCreationForm
 from accounts.models import Role
-from accounts.services.password_links import AgentInvitationTokenGenerator, agent_invitation_token_generator
+from accounts.services.password_links import (
+    AgentInvitationTokenGenerator,
+    agent_invitation_token_generator,
+    staff_link_path,
+)
 
 from .email_delivery import SendEmailsImmediately
 from .factories import create_admin, create_agent, create_client
@@ -286,6 +290,16 @@ class EmailFailureTests(SendEmailsImmediately, TestCase):
 
 
 class InactiveMemberLinkTests(TestCase):
+    def test_link_received_before_deactivation_refused(self):
+        agent = create_agent()
+        agent.set_unusable_password()
+        agent.save()
+        link = staff_link_path(agent)
+        agent.is_active = False
+        agent.save()
+
+        self.assertFalse(self.client.get(link, follow=True).context["validlink"])
+
     def test_no_password_link_for_inactive_member(self):
         self.client.force_login(create_admin())
         agent = create_agent(is_active=False)
