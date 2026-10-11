@@ -11,6 +11,7 @@
     --color-background-soft: #f2f5f8;
     /* Contour de focus : orange foncé, contraste supérieur à 3:1 sur le blanc (WCAG). */
     --color-focus: #b35c00;
+    --color-warning: #b35c00;
     /* Contour de focus sur l'en-tête bleu : blanc, contraste 8,4:1. */
     --color-focus-on-primary: #ffffff;
     /* Texte orangé foncé (états « en attente », « à venir », étoiles) : contraste supérieur à 4,5:1. */
@@ -150,7 +151,7 @@ textarea:focus-visible {
 }
 
 .message-warning {
-    border-color: var(--color-focus);
+    border-color: var(--color-warning);
 }
 
 /* Formulaires */
