@@ -11,6 +11,7 @@
     {% include "_form_errors.html" %}
     <form method="post" novalidate>
         {% csrf_token %}
+        <input type="hidden" name="version" value="{{ review.version }}">
         {{ form }}
         <button type="submit">Publier la réponse</button>
     </form>

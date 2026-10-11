@@ -112,9 +112,9 @@ def respond_review(request, pk):
     form = ResponseForm(request.POST or None, initial={"text": response.text if response else ""})
     if request.method == "POST" and form.is_valid():
         try:
-            save_response(review, request.user, form.cleaned_data["text"])
-        except ResponseNotAllowed:
-            messages.error(request, "Vous ne pouvez pas répondre à cet avis.")
+            save_response(review, request.user, form.cleaned_data["text"], seen_version=_seen_version(request))
+        except ResponseNotAllowed as error:
+            messages.error(request, str(error) or "Vous ne pouvez pas répondre à cet avis.")
         else:
             messages.success(request, "La réponse de l'agence est publiée sous l'avis.")
         return redirect("manage_review_detail", pk=review.pk)

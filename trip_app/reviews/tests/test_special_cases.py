@@ -123,7 +123,10 @@ class ReviewJourneyTests(TestCase):
         self.client.force_login(luc)
         self.assertContains(self.client.get(reverse("home")), "Avis à modérer (1)")
         self.client.post(reverse("manage_publish_review", args=[review.pk]), {"version": review.version})
-        self.client.post(reverse("manage_respond_review", args=[review.pk]), {"text": "Merci Julie, à bientôt !"})
+        self.client.post(
+            reverse("manage_respond_review", args=[review.pk]),
+            {"text": "Merci Julie, à bientôt !", "version": review.version},
+        )
         page = self.client.get(public_page)
         self.assertContains(page, "Très beau voyage")
         self.assertContains(page, '<span aria-hidden="true">✓</span> Voyage vérifié')
