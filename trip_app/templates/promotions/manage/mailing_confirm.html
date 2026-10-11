@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}Confirmer l'envoi par e-mail — Promotions{% endblock %}
+
+{% block content %}
+    <h1>Confirmer l'envoi par e-mail</h1>
+
+    {% if recipients_count %}
+        <p><strong>Envoyer la promotion « {{ promotion }} » à {{ recipients_count }} client{{ recipients_count|pluralize }} ?</strong></p>
+        <p>Une fois confirmé, l'envoi ne peut pas être annulé : les e-mails partent dans les minutes qui suivent.</p>
+    {% else %}
+        <p><strong>Aucun client n'accepte les e-mails promotionnels pour l'instant : l'envoi n'est pas possible.</strong></p>
+    {% endif %}
+
+    <h2>Aperçu de l'e-mail</h2>
+    <p>Chaque client lit son propre prénom (ici, l'exemple « Marie ») et son propre lien de désinscription.</p>
+    <dl class="details">
+        <dt>Objet</dt>
+        <dd>{{ preview_subject }}</dd>
+        <dt>Texte</dt>
+        <dd>{{ preview_body|linebreaksbr }}</dd>
+    </dl>
+
+    <form method="post">
+        {% csrf_token %}
+        {{ form.promotion.as_hidden }}
+        {{ form.message.as_hidden }}
+        <input type="hidden" name="submission_token" value="{{ submission_token }}">
+        <ul class="actions">
+            {% if recipients_count %}
+                <li><button type="submit" name="confirm">Envoyer à {{ recipients_count }} client{{ recipients_count|pluralize }}</button></li>
+            {% endif %}
+            <li><button type="submit" name="edit" class="button-secondary">Modifier</button></li>
+        </ul>
+    </form>
+{% endblock %}

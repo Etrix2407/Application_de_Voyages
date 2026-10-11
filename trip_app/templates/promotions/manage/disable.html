@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+
+{% block title %}Désactiver « {{ promotion }} » — Promotions{% endblock %}
+
+{% block content %}
+    <h1>Désactiver « {{ promotion }} »</h1>
+
+    <p><strong>Attention : cette action est définitive</strong>, la promotion ne pourra pas être réactivée.</p>
+    <p>Elle ne sera plus proposée aux clients ni envoyée par e-mail. Elle reste dans la liste des promotions avec son historique, et les demandes de voyage qui l'ont utilisée gardent leur remise.</p>
+
+    <form method="post">
+        {% csrf_token %}
+        <button type="submit" class="button-danger">Désactiver définitivement</button>
+    </form>
+
+    <p><a href="{% url 'manage_promotion_detail' promotion.pk %}">Annuler et revenir</a></p>
+{% endblock %}

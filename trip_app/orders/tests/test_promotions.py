@@ -3,7 +3,9 @@ from decimal import Decimal
 from unittest import mock
 
 from django.core.cache import cache
+from django.db import connection
 from django.test import TestCase
+from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 from django.utils import timezone
 
@@ -91,6 +93,21 @@ class ChoosePromotionTests(TestCase):
         create_order(create_client(email="autre@example.com"), self.kyoto, promotion=promotion)
 
         self.assertEqual(self.choose("CINQUANTE").code_error, messages.NO_LONGER_AVAILABLE)
+
+    def test_queries_do_not_depend_on_the_number_of_automatic_promotions(self):
+        def add_promotion():
+            create_promotion(scope=Scope.COUNTRIES, countries=[self.kyoto.country], max_uses=5, max_uses_per_client=1)
+
+        add_promotion()
+        with CaptureQueriesContext(connection) as with_one:
+            self.choose()
+        for _ in range(4):
+            add_promotion()
+        with CaptureQueriesContext(connection) as with_five:
+            choice = self.choose()
+
+        self.assertIsNotNone(choice.offer)
+        self.assertEqual(len(with_five), len(with_one), "Une requête SQL est faite pour chaque promotion.")
 
     def test_code_beaten_by_automatic_offer_is_not_used(self):
         create_promotion(name="Automatique", value=Decimal("20"))

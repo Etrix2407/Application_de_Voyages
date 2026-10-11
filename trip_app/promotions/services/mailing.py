@@ -4,31 +4,87 @@ L'envoi est seulement programmé : un e-mail par client est mis en attente dans 
 la commande planifiée process_emails les envoie à son prochain passage (5 minutes au plus).
 Le message est construit à ce moment-là (email_rebuilders.py) : un client qui se désinscrit
 entre-temps ne reçoit rien.
+
+Avant l'envoi, l'administrateur confirme sur une page qui montre le nombre de clients et un aperçu
+(mailing_preview) ; le jeton de cette page empêche de programmer deux fois le même envoi.
 """
 
-from django.db import transaction
+from django.db import IntegrityError, transaction
+from django.db.models import prefetch_related_objects
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.formats import date_format
 
 from accounts.models import EmailKind, User
+from accounts.services.email_texts import render_email
 from accounts.services.emails import queue_emails, site_url
 from accounts.services.unsubscribe import unsubscribe_link
 from promotions.models import Promotion, PromotionMailing, State
+from promotions.services.public import offers_something, visible_targets
+
+# Aperçu avant l'envoi : chaque client lit son prénom et son propre lien de désinscription.
+PREVIEW_FIRST_NAME = "Marie"
+PREVIEW_UNSUBSCRIBE_LINK = "[lien personnel de désinscription]"
 
 
 class NoRecipients(Exception):
     """Aucun client ne peut recevoir l'envoi (consentement, adresse confirmée, compte actif)."""
 
 
+class AlreadySent(Exception):
+    """Cet envoi a déjà été programmé (même jeton d'envoi) : rien n'est envoyé une seconde fois."""
+
+    def __init__(self, mailing: PromotionMailing):
+        super().__init__(mailing.pk)
+        self.mailing = mailing
+
+
 def can_be_mailed(promotion: Promotion) -> bool:
-    """Seules les promotions en cours ou à venir peuvent être envoyées."""
-    return promotion.state() in (State.RUNNING, State.UPCOMING)
+    """En cours ou à venir, et vise encore un pays ou une destination proposé.
+
+    Les pays et destinations visés doivent être préchargés avec visible_targets : l'e-mail ne cite
+    jamais un élément désactivé.
+    """
+    return promotion.state() in (State.RUNNING, State.UPCOMING) and offers_something(promotion)
+
+
+def mailable_promotions(exclude=()) -> list[Promotion]:
+    """Promotions que l'administrateur peut envoyer, de la plus proche à la plus lointaine.
+
+    `exclude` : promotions épuisées (maximum au total atteint). Ce sont les demandes qui le disent,
+    donc l'appelant les donne (voir orders.services.promotions.exhausted_promotions).
+    """
+    candidates = (
+        Promotion.objects.filter(is_active=True, ends_on__gte=timezone.localdate())
+        .exclude(pk__in=exclude)
+        .prefetch_related(*visible_targets())
+        .order_by("starts_on", "name", "pk")
+    )
+    return [promotion for promotion in candidates if can_be_mailed(promotion)]
+
+
+def send_promotion_mailing(
+    promotion: Promotion, message: str, author: User, submission_token=None
+) -> PromotionMailing:
+    """Programme l'envoi à tous les clients consentants ; lève NoRecipients s'il n'y en a aucun.
+
+    Un `submission_token` déjà utilisé (double clic, formulaire renvoyé) lève AlreadySent : la base
+    garantit l'unicité, même si deux envois arrivent au même instant. Les clients ne reçoivent
+    donc l'e-mail qu'une fois.
+    """
+    try:
+        return _create_mailing(promotion, message, author, submission_token)
+    except IntegrityError:
+        existing = (
+            PromotionMailing.objects.filter(submission_token=submission_token).first() if submission_token else None
+        )
+        if existing is None:
+            raise
+        raise AlreadySent(existing) from None
 
 
 @transaction.atomic
-def send_promotion_mailing(promotion: Promotion, message: str, author: User) -> PromotionMailing:
-    """Programme l'envoi à tous les clients consentants ; lève NoRecipients s'il n'y en a aucun."""
+def _create_mailing(promotion: Promotion, message: str, author: User, submission_token) -> PromotionMailing:
     recipients = list(User.objects.promotion_recipients().only("pk", "email"))
     if not recipients:
         raise NoRecipients
@@ -38,24 +94,36 @@ def send_promotion_mailing(promotion: Promotion, message: str, author: User) -> 
         author=author,
         author_name=author.get_full_name(),
         recipients_count=len(recipients),
+        submission_token=submission_token,
     )
     queue_emails(recipients, EmailKind.PROMOTION, promotion_mailing_number=mailing.pk)
     return mailing
 
 
+def mailing_preview(promotion: Promotion, message: str) -> tuple[str, str]:
+    """Objet et texte de l'e-mail, avant l'envoi. Prénom et lien de désinscription : des exemples."""
+    prefetch_related_objects([promotion], *visible_targets(promotion.scope))
+    return render_email(
+        EmailKind.PROMOTION, _email_fields(promotion, message, PREVIEW_FIRST_NAME, PREVIEW_UNSUBSCRIBE_LINK)
+    )
+
+
 def promotion_email_context(mailing: PromotionMailing, user: User) -> dict:
     """Champs de l'e-mail d'un client, lus au moment de l'envoi."""
-    promotion = mailing.promotion
+    return _email_fields(mailing.promotion, mailing.message, user.first_name, unsubscribe_link(user))
+
+
+def _email_fields(promotion: Promotion, message: str, first_name: str, unsubscribe: str) -> dict:
     # La page « Nos offres du moment » ne montre que les promotions automatiques en cours.
     on_offers_page = promotion.is_automatic and promotion.state() == State.RUNNING
     return {
-        "prénom": user.first_name,
-        "message": mailing.message,
+        "prénom": first_name,
+        "message": message,
         "offre": _offer(promotion),
         "lien": site_url(reverse("offers" if on_offers_page else "country_list")),
         "désinscription": (
             "Vous recevez cet e-mail parce que vous avez accepté de recevoir nos offres. "
-            f"Pour ne plus les recevoir, suivez ce lien :\n{unsubscribe_link(user)}"
+            f"Pour ne plus les recevoir, suivez ce lien :\n{unsubscribe}"
         ),
     }
 

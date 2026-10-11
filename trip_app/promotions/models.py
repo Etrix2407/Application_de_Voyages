@@ -11,6 +11,7 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db import models
+from django.db.models import F, Q
 from django.utils import timezone
 
 from catalog.models import Country, Destination
@@ -106,6 +107,35 @@ class Promotion(models.Model):
     class Meta:
         verbose_name = "promotion"
         ordering = ["-created_at", "-pk"]
+        # Les règles de clean(), garanties aussi par la base (ex. une promotion créée hors formulaire).
+        constraints = [
+            models.CheckConstraint(
+                condition=(
+                    Q(kind=Kind.PERCENT, value__gte=MIN_PERCENT, value__lte=MAX_PERCENT)
+                    | Q(kind=Kind.FIXED, value__gt=0)
+                ),
+                name="promotion_value_in_range",
+            ),
+            models.CheckConstraint(condition=Q(ends_on__gte=F("starts_on")), name="promotion_ends_after_start"),
+            models.CheckConstraint(
+                condition=(
+                    Q(departure_from__isnull=True, departure_until__isnull=True)
+                    | Q(
+                        departure_from__isnull=False,
+                        departure_until__isnull=False,
+                        departure_until__gte=F("departure_from"),
+                    )
+                ),
+                name="promotion_departure_period",
+            ),
+            models.CheckConstraint(
+                condition=Q(max_uses__isnull=True) | Q(max_uses__gte=1), name="promotion_max_uses_positive"
+            ),
+            models.CheckConstraint(
+                condition=Q(max_uses_per_client__isnull=True) | Q(max_uses_per_client__gte=1),
+                name="promotion_max_uses_per_client_positive",
+            ),
+        ]
 
     def __str__(self) -> str:
         return self.name
@@ -173,12 +203,6 @@ class Promotion(models.Model):
             return State.FINISHED
         return State.RUNNING
 
-    @property
-    def created_by_name(self) -> str:
-        """Auteur de la création, lu dans l'historique (nom figé)."""
-        creation = self.history.filter(action=Action.CREATED).first()
-        return creation.author_name if creation else ""
-
 
 def targets_problem(scope: str, countries, destinations) -> dict[str, str]:
     """Erreurs de portée, par champ ; vide si la portée est valable.
@@ -239,7 +263,9 @@ class PromotionMailing(models.Model):
     (prénom, lien de désinscription), et le journal des e-mails ne garde aucun contenu.
     """
 
-    promotion = models.ForeignKey(Promotion, on_delete=models.CASCADE, related_name="mailings")
+    # PROTECT : une promotion déjà envoyée ne se supprime pas (historique des envois et journal
+    # des e-mails) ; elle se désactive.
+    promotion = models.ForeignKey(Promotion, on_delete=models.PROTECT, related_name="mailings")
     message = models.TextField("message")
     created_at = models.DateTimeField("date", default=timezone.now)
     # Nom figé au moment de l'envoi : reste lisible si le compte de l'administrateur est supprimé.
@@ -248,10 +274,13 @@ class PromotionMailing(models.Model):
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="+"
     )
     recipients_count = models.PositiveIntegerField("nombre de destinataires")
+    # Jeton de la page de confirmation : un double clic ou un formulaire renvoyé ne crée pas
+    # un second envoi (unicité garantie par la base). Vide pour les envois d'avant ce jeton.
+    submission_token = models.UUIDField(null=True, blank=True, unique=True, editable=False)
 
     class Meta:
         verbose_name = "envoi promotionnel"
         ordering = ["-created_at", "-pk"]
 
     def __str__(self) -> str:
-        return f"{self.promotion} — {self.created_at:%d/%m/%Y}"
+        return f"{self.promotion} — {timezone.localtime(self.created_at):%d/%m/%Y}"
