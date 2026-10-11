@@ -58,7 +58,7 @@
                 <li>
                     <form method="post" action="{% url 'manage_publish_review' review.pk %}">
                         {% csrf_token %}
-        <input type="hidden" name="version" value="{{ review.version }}">
+                        <input type="hidden" name="version" value="{{ review.version }}">
                         <button type="submit">Publier l'avis</button>
                     </form>
                 </li>
