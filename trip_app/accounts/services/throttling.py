@@ -4,9 +4,12 @@ import ipaddress
 import math
 import time
 from dataclasses import dataclass
+from datetime import timedelta
 
 from django.conf import settings
 from django.core.cache import cache
+
+from common.text import duration_text
 
 
 @dataclass(frozen=True)
@@ -16,7 +19,7 @@ class Limiter:
     L'identifiant (adresse e-mail, IP...) est comparé sans tenir compte des majuscules.
     La fenêtre de `window_seconds` part de la première tentative. Le cache Django garde le
     nombre de tentatives et le début de la fenêtre, avec le délai restant comme durée de vie :
-    la fenêtre a la même durée quel que soit le cache (fichiers en production, mémoire en test).
+    la fenêtre a la même durée quel que soit le cache (base de données en production, mémoire en test).
     """
 
     name: str
@@ -25,12 +28,8 @@ class Limiter:
 
     @property
     def window_text(self) -> str:
-        """Durée de la fenêtre pour les messages : « 15 minutes », « une heure », « 2 heures »."""
-        minutes = self.window_seconds // 60
-        if minutes % 60:
-            return f"{minutes} minutes"
-        hours = minutes // 60
-        return "une heure" if hours == 1 else f"{hours} heures"
+        """Durée de la fenêtre pour les messages : « 15 minutes », « une heure »."""
+        return duration_text(timedelta(seconds=self.window_seconds))
 
     def _key(self, identifier: str) -> str:
         return f"{self.name}:{identifier.strip().lower()}"
