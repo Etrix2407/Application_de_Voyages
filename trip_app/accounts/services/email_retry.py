@@ -114,8 +114,9 @@ def retry_due_emails(now: datetime | None = None) -> int:
     connection = get_connection()
     try:
         connection.open()
-    except Exception:  # Serveur injoignable : chaque message retentera l'ouverture et notera l'échec.
-        logger.error("Connexion au serveur d'envoi impossible en début de passage.")
+    except Exception:  # Serveur injoignable : aucune tentative consommée, tout reste dû pour le passage suivant.
+        logger.error("Connexion au serveur d'envoi impossible : passage reporté.")
+        return 0
     try:
         for log in logs:
             if time.monotonic() > deadline:
