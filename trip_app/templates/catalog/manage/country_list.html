@@ -8,7 +8,7 @@
     <p><a class="button" href="{% url 'manage_create_country' %}">Ajouter un pays</a></p>
 
     {% if countries %}
-        <div class="table-scroll">
+        <div class="table-scroll" tabindex="0" role="region" aria-label="Tableau des pays">
             <table>
                 <caption>Pays</caption>
                 <thead>

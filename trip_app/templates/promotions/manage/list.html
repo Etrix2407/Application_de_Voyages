@@ -14,7 +14,7 @@
     {% endif %}
 
     {% if rows %}
-        <div class="table-scroll">
+        <div class="table-scroll" tabindex="0" role="region" aria-label="Tableau des promotions">
             <table>
                 <caption>Promotions, de la plus récente à la plus ancienne{% if page.paginator.num_pages > 1 %}, page {{ page.number }} sur {{ page.paginator.num_pages }}{% endif %}</caption>
                 <thead>

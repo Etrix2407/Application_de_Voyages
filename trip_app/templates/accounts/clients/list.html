@@ -19,7 +19,7 @@
     </p>
 
     {% if page.object_list %}
-        <div class="table-scroll">
+        <div class="table-scroll" tabindex="0" role="region" aria-label="Tableau des clients">
             <table>
                 <caption>Liste des clients{% if page.paginator.num_pages > 1 %}, page {{ page.number }} sur {{ page.paginator.num_pages }}{% endif %}</caption>
                 <thead>

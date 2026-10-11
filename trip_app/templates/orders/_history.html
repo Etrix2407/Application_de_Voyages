@@ -1,5 +1,5 @@
-    <div class="table-scroll">
-        <table>
+    <div class="table-scroll" tabindex="0" role="region" aria-label="Tableau des changements d’état de la demande">
+        <table class="table-cards">
             <caption>Changements d'état de la demande</caption>
             <thead>
                 <tr>
@@ -17,13 +17,13 @@
             <tbody>
                 {% for change in history %}
                     <tr>
-                        <td>{{ change.changed_at|date:"j F Y à H:i" }}</td>
-                        <td>{{ change.get_status_display }}</td>
+                        <td data-label="Date">{{ change.changed_at|date:"j F Y à H:i" }}</td>
+                        <td data-label="État">{{ change.get_status_display }}</td>
                         {# Nom de l'agent réservé au personnel ; le client voit « Agence ». #}
-                        <td>{% if show_staff_names %}{{ change.author_name }}{% else %}{{ change.author_for_client }}{% endif %}</td>
-                        <td>{{ change.reason|default:"—" }}</td>
+                        <td data-label="Par">{% if show_staff_names %}{{ change.author_name }}{% else %}{{ change.author_for_client }}{% endif %}</td>
+                        <td data-label="{% if show_internal_reasons %}Motif visible par le client{% else %}Motif{% endif %}">{{ change.reason|default:"—" }}</td>
                         {# Motif interne réservé au personnel : jamais affiché au client. #}
-                        {% if show_internal_reasons %}<td>{{ change.internal_reason|default:"—" }}</td>{% endif %}
+                        {% if show_internal_reasons %}<td data-label="Motif interne">{{ change.internal_reason|default:"—" }}</td>{% endif %}
                     </tr>
                 {% endfor %}
             </tbody>

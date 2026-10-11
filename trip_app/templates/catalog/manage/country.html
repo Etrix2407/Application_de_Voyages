@@ -29,7 +29,7 @@
     <h2>Destinations</h2>
     <p><a class="button" href="{% url 'manage_create_destination' country.pk %}">Ajouter une destination</a></p>
     {% if destinations %}
-        <div class="table-scroll">
+        <div class="table-scroll" tabindex="0" role="region" aria-label="Tableau des destinations">
             <table>
                 <caption>Destinations de {{ country.name }}</caption>
                 <thead>
@@ -72,7 +72,7 @@
     <h2>Activités</h2>
     <p><a class="button" href="{% url 'manage_create_activity' country.pk %}">Ajouter une activité</a></p>
     {% if activities %}
-        <div class="table-scroll">
+        <div class="table-scroll" tabindex="0" role="region" aria-label="Tableau des activités">
             <table>
                 <caption>Activités de {{ country.name }}</caption>
                 <thead>

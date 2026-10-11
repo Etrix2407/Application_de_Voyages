@@ -8,7 +8,7 @@
     <p>Ces e-mails n'ont pas pu partir. Vérifiez l'adresse du destinataire, puis renvoyez le message : il est refait à neuf, avec un nouveau lien s'il en contient un.</p>
 
     {% if page.object_list %}
-        <div class="table-scroll">
+        <div class="table-scroll" tabindex="0" role="region" aria-label="Tableau des e-mails en échec">
             <table>
                 <caption>E-mails en échec, du plus récent au plus ancien{% if page.paginator.num_pages > 1 %}, page {{ page.number }} sur {{ page.paginator.num_pages }}{% endif %}</caption>
                 <thead>

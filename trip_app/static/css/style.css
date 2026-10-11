@@ -539,3 +539,35 @@ td {
     color: var(--color-warning-text);
     letter-spacing: 0.1em;
 }
+
+/* Tableaux du client sur téléphone : chaque ligne devient une carte, chaque cellule
+   précédée du nom de sa colonne (attribut data-label). */
+
+@media (max-width: 40rem) {
+    .table-cards thead {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+    }
+
+    .table-cards tr {
+        display: block;
+        margin-bottom: 1rem;
+        padding: 0.5rem;
+        border: 2px solid var(--color-border);
+        border-radius: 6px;
+    }
+
+    .table-cards td {
+        display: block;
+        border-bottom: none;
+    }
+
+    .table-cards td::before {
+        content: attr(data-label);
+        display: block;
+        font-weight: bold;
+    }
+}
