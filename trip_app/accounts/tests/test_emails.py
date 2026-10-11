@@ -1,3 +1,4 @@
+import smtplib
 from unittest import mock
 
 from django.core import mail
@@ -91,3 +92,15 @@ class SendEmailTests(TestCase):
 
         log = EmailLog.objects.get()
         self.assertEqual((log.recipient, log.user), ("", None))
+
+    def test_account_deletion_erases_error_detail(self):
+        refused = smtplib.SMTPRecipientsRefused({"marie@example.com": (550, b"<marie@example.com> rejected")})
+        with mock.patch("accounts.services.emails.EmailMultiAlternatives.send", side_effect=refused):
+            with self.assertLogs("accounts.services.emails", level="ERROR") as logs:
+                self.send()
+        self.assertNotIn("marie@example.com", "".join(logs.output))
+        self.assertIn("marie@example.com", EmailLog.objects.get().last_error)
+
+        self.marie.delete()
+
+        self.assertEqual(EmailLog.objects.get().last_error, "")

@@ -161,4 +161,4 @@ class ClientPasswordLinkTests(SendEmailsImmediately, TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "n&#x27;a pas pu être envoyé")
-        self.assertIn("serveur SMTP injoignable", logs.output[0])
+        self.assertIn("OSError", logs.output[0])

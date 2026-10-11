@@ -117,9 +117,13 @@ def deliver(log: EmailLog, message: EmailMultiAlternatives) -> bool:
     try:
         message.send()
     except Exception as error:  # Toute erreur : un échec d'envoi ne doit jamais bloquer l'action.
-        logger.exception("Échec de l'envoi de l'e-mail « %s » à %s", log.subject, log.recipient)
         log.last_error = (str(error) or type(error).__name__)[:500]
         log.failure = failure_of(error)
+        # Ni adresse ni message d'erreur dans les logs (ils contiennent souvent l'adresse) : le
+        # numéro de la ligne du journal suffit pour retrouver le détail.
+        logger.error(
+            "Échec de l'envoi de l'e-mail n° %s (%s) : %s", log.pk, type(error).__name__, log.get_failure_display()
+        )
         log.status = EmailStatus.FAILED if log.attempts >= MAX_ATTEMPTS else EmailStatus.PENDING
         log.save(update_fields=["attempts", "last_attempt_at", "last_error", "failure", "status"])
         return False
