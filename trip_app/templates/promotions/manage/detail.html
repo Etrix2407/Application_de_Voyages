@@ -12,6 +12,9 @@
     {% if can_manage %}
         <ul class="actions">
             <li><a class="button" href="{% url 'manage_edit_promotion' promotion.pk %}">Modifier</a></li>
+            {% if can_mail %}
+                <li><a class="button" href="{% url 'manage_send_promotion_mailing' %}?promotion={{ promotion.pk }}">Envoyer par e-mail aux clients</a></li>
+            {% endif %}
             {% if can_disable %}
                 <li>
                     <form method="post" action="{% url 'manage_disable_promotion' promotion.pk %}">
@@ -65,5 +68,19 @@
         </ul>
     {% else %}
         <p>Aucun historique.</p>
+    {% endif %}
+
+    <h2>Envois par e-mail</h2>
+    {% if mailings %}
+        <ul>
+            {% for mailing in mailings %}
+                <li>
+                    {{ mailing.created_at|date:"j F Y à H:i" }} — envoyée par {{ mailing.author_name }}
+                    à {{ mailing.recipients_count }} client{{ mailing.recipients_count|pluralize }}
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p>Cette promotion n'a pas encore été envoyée par e-mail.</p>
     {% endif %}
 {% endblock %}

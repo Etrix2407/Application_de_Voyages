@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+
+{% block title %}Désinscription confirmée{% endblock %}
+
+{% block content %}
+    <h1>Désinscription confirmée</h1>
+    <p>Vous ne recevrez plus nos e-mails promotionnels.</p>
+    <p>Vous pouvez changer d'avis à tout moment dans votre profil, avec « Modifier mes informations ».</p>
+    <p><a href="{% url 'home' %}">Revenir à l'accueil</a></p>
+{% endblock %}

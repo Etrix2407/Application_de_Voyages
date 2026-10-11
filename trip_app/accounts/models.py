@@ -217,6 +217,7 @@ class EmailKind(models.TextChoices):
     UNCONFIRMED_ACCOUNT_DELETED = "unconfirmed_account_deleted", "Compte jamais confirmé supprimé"
     STAFF_ACCOUNT_DELETED = "staff_account_deleted", "Compte du personnel supprimé"
     STAFF_PASSWORD_LINK = "staff_password_link", "Lien de mot de passe envoyé à un membre du personnel"
+    PROMOTION = "promotion", "E-mail promotionnel"
 
 
 class EmailStatus(models.TextChoices):
@@ -249,6 +250,8 @@ class EmailLog(models.Model):
     # Numéro de la demande de voyage liée, sans clé étrangère : accounts ne dépend pas de orders
     # (ordre des applications). L'application orders retrouve la demande par ce numéro.
     order_number = models.PositiveBigIntegerField("demande de voyage liée", null=True, blank=True)
+    # Numéro de l'envoi promotionnel lié, sans clé étrangère pour la même raison (application promotions).
+    promotion_mailing_number = models.PositiveBigIntegerField("envoi promotionnel lié", null=True, blank=True)
 
     class Meta:
         verbose_name = "envoi d'e-mail"

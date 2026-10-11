@@ -230,3 +230,28 @@ class PromotionChange(models.Model):
 
     def __str__(self) -> str:
         return f"{self.get_action_display()} — {self.author_name}"
+
+
+class PromotionMailing(models.Model):
+    """Envoi d'une promotion par e-mail aux clients consentants, décidé par l'administrateur (v5).
+
+    Seul le texte de l'administrateur est gardé : chaque message est construit au moment de l'envoi
+    (prénom, lien de désinscription), et le journal des e-mails ne garde aucun contenu.
+    """
+
+    promotion = models.ForeignKey(Promotion, on_delete=models.CASCADE, related_name="mailings")
+    message = models.TextField("message")
+    created_at = models.DateTimeField("date", default=timezone.now)
+    # Nom figé au moment de l'envoi : reste lisible si le compte de l'administrateur est supprimé.
+    author_name = models.CharField("auteur", max_length=210)
+    author = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="+"
+    )
+    recipients_count = models.PositiveIntegerField("nombre de destinataires")
+
+    class Meta:
+        verbose_name = "envoi promotionnel"
+        ordering = ["-created_at", "-pk"]
+
+    def __str__(self) -> str:
+        return f"{self.promotion} — {self.created_at:%d/%m/%Y}"

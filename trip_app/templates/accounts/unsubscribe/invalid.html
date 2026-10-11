@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+
+{% block title %}Lien non valable{% endblock %}
+
+{% block content %}
+    <h1>Ce lien n'est pas valable</h1>
+    <p>Il n'est pas complet, ou le compte n'existe plus.</p>
+    <p>Pour ne plus recevoir nos offres, connectez-vous, puis décochez la case des e-mails promotionnels dans « Modifier mes informations ».</p>
+    <p><a class="button" href="{% url 'login' %}">Me connecter</a></p>
+{% endblock %}

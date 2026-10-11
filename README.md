@@ -146,6 +146,7 @@ Formats à respecter :
 4. **Désactiver** : la promotion n'est plus proposée mais reste dans l'historique. **Supprimer** n'est possible que pour une promotion jamais utilisée.
 5. Un pays ou une destination visé par une promotion ne peut pas être supprimé : désactivez-le.
 6. **Statistiques** (lien depuis la fiche, agents et administrateur) : nombre de demandes qui ont utilisé la promotion, total des remises accordées (pour une demande confirmée, la remise recalculée à la confirmation), nombre de clients différents, et liste des demandes avec un lien vers chacune. Les demandes annulées ne comptent dans aucun chiffre et sont listées à part. Les demandes de clients ayant supprimé leur compte sont comptées dans les demandes (« dont 2 demandes de clients ayant supprimé leur compte ») mais pas dans les clients différents : on ne peut plus savoir de qui il s'agit.
+7. **Envoyer une promotion par e-mail** (administrateur, lien depuis la liste ou la fiche d'une promotion en cours ou à venir) : choisissez la promotion, rédigez votre message ; la page indique le nombre de clients qui le recevront. Les e-mails partent dans les minutes qui suivent (voir [E-mails promotionnels](#e-mails-promotionnels)). Les envois passés (date, auteur, nombre de destinataires) sont listés sur la fiche de la promotion.
 
 ### Utiliser l'application (client)
 
@@ -253,7 +254,7 @@ Fonctionnement :
 - Chaque e-mail (texte et HTML) se termine par la signature « L'équipe Horizons Lointains ». Logo et coordonnées de l'agence (ajoutées sous la signature) : réglages `EMAIL_LOGO_STATIC_PATH` et `EMAIL_SIGNATURE_LINES` de `config/settings.py`, **vides** tant qu'ils ne sont pas fournis (la mise en page ne les affiche pas). Le logo est un fichier de `static/`, affiché par son adresse complète (`DJANGO_SITE_URL` + chemin) : rien n'est joint au message, et si la messagerie bloque les images, le nom de l'agence s'affiche à la place.
 - **Journal** (`EmailLog`) : une ligne par e-mail avec la date, le destinataire, le type, l'objet, l'état (en attente / envoyé / échec), le nombre de tentatives, la raison du dernier échec, le compte et la demande de voyage liés. Le **contenu** des messages et leurs **liens de sécurité** ne sont **jamais** conservés. Un envoi qui échoue reste « en attente » jusqu'à la 3e tentative, puis passe en « échec ». La demande est liée par son numéro, sans clé étrangère : `accounts` ne dépend pas de `orders`.
 - **Télécharger mes données** : le fichier JSON contient aussi la liste des e-mails reçus (`emails` : date, type, objet, état), pour les clients comme pour le personnel.
-- **Consentement aux e-mails promotionnels** (clients) : case facultative, **non cochée par défaut**, à l'inscription et dans « Modifier mes informations » (un agent ne peut pas la changer). Enregistré dans `accepts_promotional_emails` avec la date du dernier changement du choix (`promotional_emails_choice_date`, posée à l'accord comme au retrait : date de l'accord si le choix est accepté, du retrait sinon ; vide si le client n'a jamais accepté), à ne pas confondre avec `consent_date` (politique de confidentialité). Les comptes existants n'ont pas consenti. Les destinataires d'un envoi promotionnel sont donnés par `User.objects.promotion_recipients()` : clients actifs, consentants, à l'adresse confirmée. Le fichier « Télécharger mes données » contient ce choix et sa date.
+- **Consentement aux e-mails promotionnels** (clients) : case facultative, **non cochée par défaut**, à l'inscription et dans « Modifier mes informations » (un agent ne peut pas la changer). Enregistré dans `accepts_promotional_emails` avec la date du dernier changement du choix (`promotional_emails_choice_date`, posée à l'accord comme au retrait : date de l'accord si le choix est accepté, du retrait sinon ; vide si le client n'a jamais accepté), à ne pas confondre avec `consent_date` (politique de confidentialité). Les comptes existants n'ont pas consenti. Les destinataires d'un envoi promotionnel sont donnés par `User.objects.promotion_recipients()` : clients actifs, consentants, à l'adresse confirmée. Le client peut aussi retirer son accord par le lien de désinscription de chaque e-mail promotionnel (date du retrait notée de la même façon). Le fichier « Télécharger mes données » contient ce choix et sa date.
 - **Compte supprimé** : les lignes du journal restent (statistiques anonymes), sans adresse ni lien vers le compte (`accounts/signals.py`, quel que soit le chemin de suppression).
 
 ### Fiabilité et journal
@@ -288,6 +289,15 @@ Deux e-mails liés aux dates du voyage, envoyés **une seule fois par demande** 
 
 Ils partent par la commande `python manage.py send_trip_reminders`, à **planifier une fois par jour** (voir [Tâches planifiées](#tâches-planifiées)). Elle rattrape les jours manqués : le rappel part tant que le départ n'est pas passé, l'invitation tant que l'avis reste possible.
 - **Nouvelles tentatives** : reconstruction dans `orders/services/email_rebuilders.py` (rappel) et `reviews/services/email_rebuilders.py` (invitation). Rien n'est renvoyé si la demande a été annulée ou le client supprimé, si le départ est passé (rappel) ou si un avis a été laissé ou n'est plus possible (invitation).
+
+### E-mails promotionnels
+
+L'administrateur envoie une promotion existante, **en cours ou à venir**, avec un texte qu'il rédige (menu **Promotions** → **Envoyer une promotion par e-mail**). Pas de programmation, de ciblage ni de statistiques d'ouverture.
+
+- **Destinataires** : seulement les clients de `User.objects.promotion_recipients()` (consentement, adresse confirmée, compte actif). Sans aucun destinataire, l'envoi est refusé.
+- **Envoi programmé** (`promotions/services/mailing.py`) : l'envoi (`PromotionMailing` : promotion, texte, date, auteur au nom figé, nombre de destinataires) et un e-mail en attente par client sont enregistrés d'un coup (`queue_emails`, jusqu'à 1 000 e-mails), sans rien envoyer pendant la requête. La commande `process_emails` les envoie à son passage suivant (5 minutes au plus), puis applique les nouvelles tentatives habituelles. L'envoi est lié au journal par son numéro (`promotion_mailing_number`, sans clé étrangère).
+- **Message construit au moment de l'envoi** (`promotions/services/email_rebuilders.py`), comme pour une nouvelle tentative : « Bonjour » et le prénom, le texte de l'administrateur, l'offre (nom, remise, validité, code s'il y en a un) et un lien vers « Nos offres du moment » (promotion automatique en cours) ou vers le catalogue. Rien ne part si, entre-temps, le client s'est désinscrit, a changé d'adresse, a été désactivé ou supprimé, ou si la promotion a été supprimée, désactivée ou est terminée.
+- **Désinscription en un clic** (`accounts/services/unsubscribe.py`) : chaque e-mail contient un lien personnel signé, sans date d'expiration, dans le texte et dans les en-têtes `List-Unsubscribe` et `List-Unsubscribe-Post` (désinscription directe depuis la messagerie). Ouvrir le lien affiche un bouton « Me désinscrire » (les logiciels qui inspectent les liens ne désinscrivent personne) ; le clic retire le consentement, sans connexion. Un lien faux affiche une page d'explication.
 
 ## Tests
 
@@ -348,7 +358,7 @@ Trois commandes doivent tourner seules sur le serveur (tâche planifiée Windows
 
 | Commande | Fréquence | Rôle |
 |---|---|---|
-| `python manage.py process_emails` | Toutes les 5 minutes | Retente les e-mails en attente (5 puis 15 minutes après l'échec précédent) et efface les lignes du journal des e-mails de plus d'un an |
+| `python manage.py process_emails` | Toutes les 5 minutes | Envoie les e-mails promotionnels programmés, retente les e-mails en attente (5 puis 15 minutes après l'échec précédent) et efface les lignes du journal des e-mails de plus d'un an |
 | `python manage.py purge_unconfirmed` | Une fois par jour | Efface les comptes clients dont l'adresse n'a pas été confirmée dans les 30 jours (RGPD) ; chacun reçoit un dernier e-mail qui l'annonce |
 | `python manage.py send_trip_reminders` | Une fois par jour | Envoie le rappel des départs dans 7 jours ou moins et l'invitation à donner un avis après le retour, une seule fois par demande, avec rattrapage des jours manqués (voir [Rappels de voyage](#rappels-de-voyage)) |
 
@@ -386,14 +396,15 @@ trip_app/
 ├── config/                 # paramètres, routes et page d'accueil (views.py) du projet ; tests transversaux (droits d'accès, nombre de requêtes)
 ├── common/                 # outils partagés entre applications (normalisation du texte)
 ├── accounts/               # comptes : utilisateurs, rôles, RGPD ; journal des e-mails (v5)
-│   ├── views/              # auth, profile, data_export, staff, clients, email_failures (une responsabilité par module)
+│   ├── views/              # auth, profile, data_export, staff, clients, email_failures, unsubscribe (une responsabilité par module)
 │   ├── services/           # inscription, changement d'e-mail, emails (envoi de tous les e-mails du site
 │   │                       # et journal), email_retry (nouvelles tentatives, renvoi), email_rebuilders
 │   │                       # (reconstruction des e-mails des comptes), address_check (« adresse à vérifier »),
 │   │                       # password_links (liens de mot de passe), password_notice (alerte « mot de passe
 │   │                       # modifié »), account_deletion (suppression du compte avec un dernier e-mail),
 │   │                       # règles du personnel, recherche de client, limites anti-abus,
-│   │                       # privacy (effacement RGPD et conservation du journal)
+│   │                       # privacy (effacement RGPD et conservation du journal),
+│   │                       # unsubscribe (désinscription des e-mails promotionnels)
 │   ├── management/commands/ # process_emails (toutes les 5 minutes), purge_unconfirmed (chaque jour)
 │   ├── models.py · forms.py · validators.py · decorators.py · urls.py
 │   └── tests/
@@ -405,7 +416,8 @@ trip_app/
 ├── promotions/             # promotions (v4) : modèle, règles, historique
 │   ├── views/              # manage (administrateur ; consultation par les agents), public (« Nos offres du moment »)
 │   ├── services/           # discounts (calcul de la remise, meilleure offre), management, history,
-│   │                       # public (offres affichées : bandeau, étiquette « Promo », page des offres)
+│   │                       # public (offres affichées : bandeau, étiquette « Promo », page des offres),
+│   │                       # mailing et email_rebuilders (envoi d'une promotion par e-mail, v5)
 │   ├── models.py · forms.py · urls.py
 │   └── tests/
 ├── orders/                 # demandes de voyage (v2) : modèles, prix estimé, historique

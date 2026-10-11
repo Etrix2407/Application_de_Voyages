@@ -5,7 +5,10 @@
 {% block content %}
     <h1>Promotions</h1>
     {% if can_manage %}
-        <p><a class="button" href="{% url 'manage_create_promotion' %}">Créer une promotion</a></p>
+        <ul class="actions">
+            <li><a class="button" href="{% url 'manage_create_promotion' %}">Créer une promotion</a></li>
+            <li><a class="button" href="{% url 'manage_send_promotion_mailing' %}">Envoyer une promotion par e-mail</a></li>
+        </ul>
     {% else %}
         <p>Consultation seulement : les promotions sont gérées par l'administrateur.</p>
     {% endif %}

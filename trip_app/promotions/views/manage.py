@@ -7,8 +7,9 @@ from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from accounts.decorators import administrator_required, staff_required
+from accounts.models import User
 from orders.services.promotion_statistics import promotion_statistics
-from promotions.forms import PromotionForm
+from promotions.forms import PromotionForm, PromotionMailingForm
 from promotions.models import Action, Promotion, State
 from promotions.services.management import (
     PromotionInUse,
@@ -17,6 +18,7 @@ from promotions.services.management import (
     disable_promotion,
     update_promotion,
 )
+from promotions.services.mailing import NoRecipients, can_be_mailed, send_promotion_mailing
 
 PROMOTIONS_PER_PAGE = 25
 
@@ -57,6 +59,8 @@ def promotion_detail(request, pk):
         "created_by": creation.author_name if creation else "",
         "can_manage": request.user.is_administrator,
         "can_disable": state != State.DISABLED,
+        "can_mail": can_be_mailed(promotion),
+        "mailings": promotion.mailings.all(),
         "used": used,
     }
     return render(request, "promotions/manage/detail.html", context)
@@ -77,6 +81,30 @@ def create(request):
         messages.success(request, f"La promotion « {promotion} » a été créée.")
         return redirect("manage_promotion_detail", pk=promotion.pk)
     return render(request, "promotions/manage/form.html", {"form": form, "title": "Créer une promotion"})
+
+
+@administrator_required
+def send_mailing(request):
+    """Envoi d'une promotion par e-mail à tous les clients consentants (programmé, pas immédiat)."""
+    form = PromotionMailingForm(request.POST or None, initial={"promotion": request.GET.get("promotion")})
+    if request.method == "POST" and form.is_valid():
+        data = form.cleaned_data
+        try:
+            mailing = send_promotion_mailing(data["promotion"], data["message"], request.user)
+        except NoRecipients:
+            messages.error(
+                request, "Aucun client n'accepte les e-mails promotionnels pour l'instant : rien n'a été envoyé."
+            )
+        else:
+            count = mailing.recipients_count
+            messages.success(
+                request,
+                f"L'envoi à {count} client{'s' if count > 1 else ''} a été programmé : "
+                "les e-mails partent dans les prochaines minutes.",
+            )
+            return redirect("manage_promotion_detail", pk=mailing.promotion.pk)
+    context = {"form": form, "recipients_count": User.objects.promotion_recipients().count()}
+    return render(request, "promotions/manage/mailing.html", context)
 
 
 @administrator_required
