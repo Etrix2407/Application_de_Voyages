@@ -500,7 +500,7 @@ fieldset {
     min-width: 0;
     margin-top: 1rem;
     padding: 0.5rem 1rem 1rem;
-    border: 2px solid var(--color-line);
+    border: 2px solid var(--color-text-muted);
     border-radius: 1rem;
 }
 
@@ -652,6 +652,12 @@ button:has(+ .button-secondary),
     overflow-x: auto;
 }
 
+/* Tableau défilant atteint au clavier (tabindex="0") : même contour que les liens. */
+.table-scroll:focus-visible {
+    outline: 3px solid var(--color-focus);
+    outline-offset: 3px;
+}
+
 table {
     width: 100%;
     border-collapse: collapse;
@@ -703,7 +709,7 @@ thead th {
         display: block;
         margin-bottom: 1rem;
         padding: 0.5rem 0.75rem;
-        border: 2px solid var(--color-line);
+        border: 2px solid var(--color-text-muted);
         border-radius: 1rem;
     }
 
@@ -717,6 +723,11 @@ thead th {
         display: block;
         font-weight: 600;
         color: var(--color-primary);
+    }
+
+    /* Un état long (« En attente de validation ») passe à la ligne dans la carte. */
+    .table-cards .status {
+        white-space: normal;
     }
 }
 
