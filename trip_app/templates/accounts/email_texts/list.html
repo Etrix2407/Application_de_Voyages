@@ -30,7 +30,7 @@
                                 Texte d'origine
                             {% endif %}
                         </td>
-                        <td><a href="{% url 'edit_email_text' row.kind.value %}">Modifier</a></td>
+                        <td><a href="{% url 'edit_email_text' row.kind.value %}">Modifier<span class="sr-only"> l'e-mail « {{ row.kind.label }} »</span></a></td>
                     </tr>
                 {% endfor %}
             </tbody>

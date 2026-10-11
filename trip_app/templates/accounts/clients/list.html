@@ -41,7 +41,7 @@
                             </td>
                             <td>{{ client.phone|default:"—" }}</td>
                             <td>{{ client.date_joined|date:"j F Y" }}</td>
-                            <td><a href="{% url 'edit_client' client.pk %}">Corriger</a></td>
+                            <td><a href="{% url 'edit_client' client.pk %}">Corriger<span class="sr-only"> {{ client.get_full_name }}</span></a></td>
                         </tr>
                     {% endfor %}
                 </tbody>

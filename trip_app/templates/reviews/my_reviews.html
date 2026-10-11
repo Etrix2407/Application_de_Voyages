@@ -48,12 +48,12 @@
                             </td>
                             <td data-label="Actions">
                                 {% if can_edit %}
-                                    <a href="{% url 'edit_review' review.pk %}">Modifier</a>
+                                    <a href="{% url 'edit_review' review.pk %}">Modifier<span class="sr-only"> l'avis « {{ review.title }} »</span></a>
                                     (jusqu'au {{ review.editable_until|date:"j F Y" }})
                                 {% else %}
                                     Plus modifiable
                                 {% endif %}
-                                <br><a href="{% url 'remove_review' review.pk %}">Supprimer</a>
+                                <br><a href="{% url 'remove_review' review.pk %}">Supprimer<span class="sr-only"> l'avis « {{ review.title }} »</span></a>
                             </td>
                         </tr>
                     {% endfor %}

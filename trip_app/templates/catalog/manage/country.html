@@ -39,7 +39,7 @@
                         <tr>
                             <td>
                                 {% if destination.photo %}
-                                    <img class="thumbnail" src="{{ destination.photo.url }}" alt="Photo : {{ destination.name }}" loading="lazy">
+                                    <img class="thumbnail" src="{{ destination.photo.url }}" alt="" loading="lazy">
                                 {% endif %}
                             </td>
                             <td>{{ destination.name }}</td>
@@ -48,8 +48,8 @@
                             <td>{{ destination.active|yesno:"Active,Désactivée" }}</td>
                             <td>
                                 <ul class="actions table-actions">
-                                    <li><a href="{% url 'manage_edit_destination' destination.pk %}">Modifier</a></li>
-                                    <li><a href="{% url 'manage_delete_destination' destination.pk %}">Supprimer</a></li>
+                                    <li><a href="{% url 'manage_edit_destination' destination.pk %}">Modifier<span class="sr-only"> {{ destination.name }}</span></a></li>
+                                    <li><a href="{% url 'manage_delete_destination' destination.pk %}">Supprimer<span class="sr-only"> {{ destination.name }}</span></a></li>
                                 </ul>
                             </td>
                         </tr>
@@ -89,8 +89,8 @@
                             <td>{{ activity.active|yesno:"Active,Désactivée" }}</td>
                             <td>
                                 <ul class="actions table-actions">
-                                    <li><a href="{% url 'manage_edit_activity' activity.pk %}">Modifier</a></li>
-                                    <li><a href="{% url 'manage_delete_activity' activity.pk %}">Supprimer</a></li>
+                                    <li><a href="{% url 'manage_edit_activity' activity.pk %}">Modifier<span class="sr-only"> {{ activity.name }}</span></a></li>
+                                    <li><a href="{% url 'manage_delete_activity' activity.pk %}">Supprimer<span class="sr-only"> {{ activity.name }}</span></a></li>
                                 </ul>
                             </td>
                         </tr>

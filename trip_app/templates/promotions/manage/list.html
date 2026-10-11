@@ -37,7 +37,7 @@
                             <td>{% if promotion.code %}{{ promotion.code }}{% else %}Automatique{% endif %}</td>
                             <td>du {{ promotion.starts_on|date:"j F Y" }} au {{ promotion.ends_on|date:"j F Y" }}</td>
                             <td><span class="status status-{{ state.value }}">{{ state.label }}</span></td>
-                            <td><a href="{% url 'manage_promotion_detail' promotion.pk %}">Voir</a></td>
+                            <td><a href="{% url 'manage_promotion_detail' promotion.pk %}">Voir<span class="sr-only"> la promotion « {{ promotion.name }} »</span></a></td>
                         </tr>
                     {% endfor %}
                 </tbody>

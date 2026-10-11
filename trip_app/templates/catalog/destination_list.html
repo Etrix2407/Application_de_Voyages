@@ -7,6 +7,7 @@
     <p>Les notes viennent uniquement de clients partis avec l'agence (avis vérifiés).</p>
 
     {% if destinations %}
+        <h2 class="sr-only">Liste des destinations</h2>
         <ul class="cards">
             {% for destination in destinations %}
                 {% include "catalog/_destination_card.html" with show_country=True %}

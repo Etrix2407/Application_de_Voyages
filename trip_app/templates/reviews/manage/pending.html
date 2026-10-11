@@ -30,7 +30,7 @@
                                 <br>« {{ review.title }} »
                             </td>
                             <td>{% include "reviews/manage/_client.html" %}</td>
-                            <td><a href="{% url 'manage_review_detail' review.pk %}">Lire et modérer</a></td>
+                            <td><a href="{% url 'manage_review_detail' review.pk %}">Lire et modérer<span class="sr-only"> l'avis « {{ review.title }} »</span></a></td>
                         </tr>
                     {% endfor %}
                 </tbody>

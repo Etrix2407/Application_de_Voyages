@@ -43,7 +43,7 @@
                             </td>
                             <td>{% include "reviews/manage/_client.html" %}</td>
                             <td><span class="status status-{{ review.status }}">{{ review.get_status_display }}</span></td>
-                            <td><a href="{% url 'manage_review_detail' review.pk %}">Voir</a></td>
+                            <td><a href="{% url 'manage_review_detail' review.pk %}">Voir<span class="sr-only"> l'avis « {{ review.title }} »</span></a></td>
                         </tr>
                     {% endfor %}
                 </tbody>

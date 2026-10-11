@@ -38,7 +38,7 @@
                         </td>
                         <td>
                             <ul class="actions table-actions">
-                                <li><a href="{% url 'edit_staff_member' member.pk %}">Modifier</a></li>
+                                <li><a href="{% url 'edit_staff_member' member.pk %}">Modifier<span class="sr-only"> {{ member.get_full_name }}</span></a></li>
                                 {% if member.pk != user.pk %}
                                     <li>
                                         {% if member.is_active %}
@@ -61,7 +61,7 @@
                                             </form>
                                         </li>
                                     {% endif %}
-                                    <li><a href="{% url 'delete_staff_member' member.pk %}">Supprimer</a></li>
+                                    <li><a href="{% url 'delete_staff_member' member.pk %}">Supprimer<span class="sr-only"> {{ member.get_full_name }}</span></a></li>
                                 {% else %}
                                     <li>(votre compte)</li>
                                 {% endif %}

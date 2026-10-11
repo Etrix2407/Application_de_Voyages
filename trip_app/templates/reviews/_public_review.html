@@ -2,7 +2,7 @@
 <li class="review">
     <h3>{{ review.title }}</h3>
     <p>{% include "reviews/_rating.html" %}</p>
-    <p class="verified">✓ Voyage vérifié — séjour de {{ review.order.departure_date|date:"F Y" }}</p>
+    <p class="verified"><span aria-hidden="true">✓</span> Voyage vérifié — séjour de {{ review.order.departure_date|date:"F Y" }}</p>
     {% if review.comment %}<p>{% if short %}{{ review.comment|truncatechars:200|linebreaksbr }}{% else %}{{ review.comment|linebreaksbr }}{% endif %}</p>{% endif %}
     <p class="review-meta">
         {{ review.author_name }} — publié le {{ review.published_at|date:"j F Y" }}
