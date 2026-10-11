@@ -27,8 +27,13 @@ from .services.staff_rules import check_not_self
 
 
 CLIENT_FIELDS = ("first_name", "last_name", "email", "phone", "birth_date")
+# Le site parle d'« e-mail » : même mot dans le message d'erreur de Django.
+EMAIL_ERROR_MESSAGES = {"invalid": "Saisissez une adresse e-mail valide."}
+# autocomplete : le navigateur peut remplir les informations de la personne (WCAG 1.3.5).
 CLIENT_WIDGETS = {
-    "birth_date": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
+    "first_name": forms.TextInput(attrs={"autocomplete": "given-name"}),
+    "last_name": forms.TextInput(attrs={"autocomplete": "family-name"}),
+    "birth_date": forms.DateInput(attrs={"type": "date", "autocomplete": "bday"}, format="%Y-%m-%d"),
     "email": forms.EmailInput(attrs={"autocomplete": "email"}),
     "phone": forms.TextInput(attrs={"autocomplete": "tel", "inputmode": "tel"}),
 }
@@ -58,6 +63,7 @@ class SignUpForm(BaseUserCreationForm):
         fields = CLIENT_FIELDS
         widgets = CLIENT_WIDGETS
         help_texts = CLIENT_HELP_TEXTS
+        error_messages = {"email": EMAIL_ERROR_MESSAGES}
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -73,7 +79,9 @@ class SignUpForm(BaseUserCreationForm):
 
 class ResendConfirmationForm(forms.Form):
     email = forms.EmailField(
-        label="Adresse e-mail", widget=forms.EmailInput(attrs={"autocomplete": "email"})
+        label="Adresse e-mail",
+        widget=forms.EmailInput(attrs={"autocomplete": "email"}),
+        error_messages=EMAIL_ERROR_MESSAGES,
     )
 
 
@@ -90,6 +98,9 @@ class LoginForm(AuthenticationForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["username"].label = "Adresse e-mail"
+        # Champ e-mail : clavier adapté sur téléphone et remplissage automatique.
+        self.fields["username"].widget.input_type = "email"
+        self.fields["username"].widget.attrs.update(autocomplete="email", inputmode="email")
 
     def clean(self):
         email = self.cleaned_data.get("username") or ""
@@ -122,6 +133,13 @@ class PasswordResetRequestForm(PasswordResetForm):
     Au-delà de la limite, aucun e-mail ne part mais la page affichée reste la même :
     rien ne révèle si l'adresse existe ni si la limite est atteinte.
     """
+
+    email = forms.EmailField(
+        label="Adresse e-mail",
+        max_length=254,
+        widget=forms.EmailInput(attrs={"autocomplete": "email"}),
+        error_messages=EMAIL_ERROR_MESSAGES,
+    )
 
     def save(self, *args, request=None, **kwargs) -> None:
         email = self.cleaned_data["email"]
@@ -207,7 +225,9 @@ class AccountPasswordChangeForm(PasswordChangeForm):
 
 class EmailChangeForm(CurrentPasswordMixin, forms.Form):
     new_email = forms.EmailField(
-        label="Nouvelle adresse e-mail", widget=forms.EmailInput(attrs={"autocomplete": "email"})
+        label="Nouvelle adresse e-mail",
+        widget=forms.EmailInput(attrs={"autocomplete": "email"}),
+        error_messages=EMAIL_ERROR_MESSAGES,
     )
     password = forms.CharField(
         label="Votre mot de passe actuel",
@@ -245,6 +265,7 @@ class AgentCreationForm(forms.ModelForm):
         model = User
         fields = ("first_name", "last_name", "email")
         labels = {"email": "Adresse e-mail professionnelle"}
+        error_messages = {"email": EMAIL_ERROR_MESSAGES}
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -268,6 +289,7 @@ class StaffMemberForm(forms.ModelForm):
         model = User
         fields = ("first_name", "last_name", "email", "role")
         labels = {"email": "Adresse e-mail professionnelle"}
+        error_messages = {"email": EMAIL_ERROR_MESSAGES}
 
     def __init__(self, *args, actor: User, **kwargs):
         self.actor = actor
