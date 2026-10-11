@@ -64,13 +64,18 @@ def staff_link_path(member: User) -> str:
     )
 
 
-def send_password_link(request, user: User, kind: EmailKind, template_name: str) -> bool:
+def send_password_link(request, user: User, kind: EmailKind) -> bool:
     """Envoie un lien valable 1 heure (PASSWORD_RESET_TIMEOUT) ; personne d'autre ne voit le mot de passe."""
     link = request.build_absolute_uri(password_link_path(user))
-    return send_email(user.email, kind, template_name, {"user": user, "link": link}, user=user)
+    return send_email(user.email, kind, {"prénom": user.first_name, "lien": link}, user=user)
 
 
-def send_staff_link(request, member: User, kind: EmailKind, template_name: str) -> bool:
+def send_staff_link(request, member: User, kind: EmailKind) -> bool:
     """Envoie à un membre du personnel un lien valable 7 jours pour choisir son mot de passe (pas de mot de passe provisoire)."""
     link = request.build_absolute_uri(staff_link_path(member))
-    return send_email(member.email, kind, template_name, {"user": member, "link": link}, user=member)
+    return send_email(member.email, kind, staff_link_fields(member, link), user=member)
+
+
+def staff_link_fields(member: User, link: str) -> dict:
+    """Champs des e-mails qui envoient un lien à un membre du personnel (invitation, nouveau mot de passe)."""
+    return {"prénom": member.first_name, "numéro d'employé": member.employee_number, "lien": link}

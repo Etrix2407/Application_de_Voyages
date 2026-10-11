@@ -56,7 +56,7 @@ def request_sign_up(request, form) -> None:
     email = normalize_email_address(form.cleaned_data["email"])
     existing = User.objects.filter(email=email).first()
     if existing and not existing.is_awaiting_confirmation:
-        _notify(request, existing, EmailKind.SIGN_UP_EXISTING, "accounts/emails/sign_up_existing.txt")
+        _notify(request, existing, EmailKind.SIGN_UP_EXISTING)
         return
 
     user = User(email=email, role=Role.CLIENT, consent_date=timezone.now())
@@ -76,13 +76,7 @@ def request_sign_up(request, form) -> None:
 def send_confirmation(request, user: User) -> bool:
     """Envoie le lien de confirmation. Renvoie False s'il n'est pas parti (limite ou panne)."""
     link = request.build_absolute_uri(reverse("confirm_sign_up", args=[make_confirmation_token(user)]))
-    return _notify(
-        request,
-        user,
-        EmailKind.SIGN_UP_CONFIRMATION,
-        "accounts/emails/sign_up_confirmation.txt",
-        {"confirmation_link": link},
-    )
+    return _notify(request, user, EmailKind.SIGN_UP_CONFIRMATION, {"lien": link})
 
 
 def resend_confirmation(request, email: str) -> None:
@@ -111,19 +105,19 @@ def purge_unconfirmed(now=None) -> int:
 
 
 def notification_context(user: User, absolute_url: Callable[[str], str]) -> dict:
-    """Variables communes aux e-mails d'inscription ; `absolute_url` rend un chemin absolu
+    """Champs communs aux e-mails d'inscription ; `absolute_url` rend un chemin absolu
     (request.build_absolute_uri pendant une requête, site_url hors requête)."""
     return {
-        "user": user,
-        "login_link": absolute_url(reverse("login")),
-        "password_reset_link": absolute_url(reverse("password_reset")),
+        "prénom": user.first_name,
+        "lien de connexion": absolute_url(reverse("login")),
+        "lien mot de passe oublié": absolute_url(reverse("password_reset")),
     }
 
 
-def _notify(request, user: User, kind: EmailKind, template_name: str, extra: dict | None = None) -> bool:
+def _notify(request, user: User, kind: EmailKind, extra: dict | None = None) -> bool:
     # Limite par adresse : on ne peut pas se servir du site pour inonder une boîte e-mail.
     if confirmation_emails.is_locked(user.email):
         return False
     confirmation_emails.record(user.email)
-    context = {**notification_context(user, request.build_absolute_uri), **(extra or {})}
-    return send_email(user.email, kind, template_name, context, user=user)
+    fields = {**notification_context(user, request.build_absolute_uri), **(extra or {})}
+    return send_email(user.email, kind, fields, user=user)

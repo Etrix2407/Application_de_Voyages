@@ -9,16 +9,8 @@ from accounts.models import EmailKind, EmailLog
 from accounts.services.email_retry import RebuiltEmail, rebuilder
 from reviews.models import AgencyResponse, Review, ReviewStatus
 from reviews.services.eligibility import reviewable_orders
-from reviews.services.invitations import TEMPLATE as INVITATION_TEMPLATE
 from reviews.services.invitations import review_invitation_context
-from reviews.services.notifications import (
-    PUBLISHED_TEMPLATE,
-    REFUSED_TEMPLATE,
-    RESPONSE_TEMPLATE,
-    published_context,
-    refused_context,
-    response_context,
-)
+from reviews.services.notifications import published_context, refused_context, response_context
 
 
 def _review_of(log: EmailLog, status: str) -> Review | None:
@@ -35,13 +27,13 @@ def _review_of(log: EmailLog, status: str) -> Review | None:
 @rebuilder(EmailKind.REVIEW_PUBLISHED)
 def _review_published(log: EmailLog) -> RebuiltEmail | None:
     review = _review_of(log, ReviewStatus.PUBLISHED)
-    return RebuiltEmail(PUBLISHED_TEMPLATE, published_context(review)) if review else None
+    return RebuiltEmail(published_context(review)) if review else None
 
 
 @rebuilder(EmailKind.REVIEW_REFUSED)
 def _review_refused(log: EmailLog) -> RebuiltEmail | None:
     review = _review_of(log, ReviewStatus.REFUSED)
-    return RebuiltEmail(REFUSED_TEMPLATE, refused_context(review)) if review else None
+    return RebuiltEmail(refused_context(review)) if review else None
 
 
 @rebuilder(EmailKind.REVIEW_RESPONSE)
@@ -52,7 +44,7 @@ def _review_response(log: EmailLog) -> RebuiltEmail | None:
         return None
     # Texte actuel de la réponse ; « modifiée » si elle l'a été depuis sa création.
     created = response.updated_at == response.created_at
-    return RebuiltEmail(RESPONSE_TEMPLATE, response_context(response, created))
+    return RebuiltEmail(response_context(response, created))
 
 
 @rebuilder(EmailKind.REVIEW_INVITATION)
@@ -61,4 +53,4 @@ def _review_invitation(log: EmailLog) -> RebuiltEmail | None:
     if log.user is None or log.order_number is None:
         return None
     order = reviewable_orders(log.user).filter(pk=log.order_number).select_related("client").first()
-    return RebuiltEmail(INVITATION_TEMPLATE, review_invitation_context(order)) if order else None
+    return RebuiltEmail(review_invitation_context(order)) if order else None

@@ -6,10 +6,4 @@ from accounts.services.emails import send_email
 
 def send_password_changed_notice(user: User) -> None:
     """« Si ce n'est pas vous, contactez-nous » : pas envoyé à la toute première définition (invitation d'un agent)."""
-    send_email(
-        user.email,
-        EmailKind.PASSWORD_CHANGED,
-        "accounts/emails/password_changed.txt",
-        {"user": user},
-        user=user,
-    )
+    send_email(user.email, EmailKind.PASSWORD_CHANGED, {"prénom": user.first_name}, user=user)

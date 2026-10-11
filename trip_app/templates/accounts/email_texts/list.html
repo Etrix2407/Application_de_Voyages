@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block title %}Modèles des e-mails{% endblock %}
+
+{% block content %}
+    <h1>Modèles des e-mails</h1>
+
+    <p>Vous pouvez modifier l'objet et le texte de chaque e-mail envoyé par le site. La mise en page (logo, signature de l'agence) et les champs variables (prénom, numéro de demande, liens...) restent fixes.</p>
+
+    <div class="table-scroll">
+        <table>
+            <caption>Types d'e-mails</caption>
+            <thead>
+                <tr>
+                    <th scope="col">Type</th>
+                    <th scope="col">Objet</th>
+                    <th scope="col">Texte</th>
+                    <th scope="col">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in rows %}
+                    <tr>
+                        <td>{{ row.kind.label }}</td>
+                        <td>« {{ row.subject }} »</td>
+                        <td>
+                            {% if row.custom %}
+                                Modifié le {{ row.custom.updated_at|date:"j F Y à H:i" }} par {{ row.custom.updated_by_name }}
+                            {% else %}
+                                Texte d'origine
+                            {% endif %}
+                        </td>
+                        <td><a href="{% url 'edit_email_text' row.kind.value %}">Modifier</a></td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% endblock %}

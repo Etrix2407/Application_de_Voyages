@@ -10,7 +10,7 @@ from accounts.models import EmailKind, EmailLog, User
 from accounts.services.email_retry import RebuiltEmail, rebuilder
 from accounts.services.unsubscribe import unsubscribe_headers
 from promotions.models import PromotionMailing
-from promotions.services.mailing import TEMPLATE, can_be_mailed, promotion_email_context
+from promotions.services.mailing import can_be_mailed, promotion_email_context
 
 
 @rebuilder(EmailKind.PROMOTION)
@@ -23,4 +23,4 @@ def _promotion(log: EmailLog) -> RebuiltEmail | None:
     mailing = PromotionMailing.objects.select_related("promotion").filter(pk=log.promotion_mailing_number).first()
     if mailing is None or not can_be_mailed(mailing.promotion):
         return None
-    return RebuiltEmail(TEMPLATE, promotion_email_context(mailing, user), unsubscribe_headers(user))
+    return RebuiltEmail(promotion_email_context(mailing, user), unsubscribe_headers(user))

@@ -193,7 +193,7 @@ class User(AbstractBaseUser):
 
 
 class EmailKind(models.TextChoices):
-    """Type de chaque e-mail : clé stable, qui servira à rendre son texte modifiable par l'administrateur."""
+    """Type de chaque e-mail : clé stable, qui fixe son objet et son texte (modifiables par l'administrateur)."""
 
     SIGN_UP_CONFIRMATION = "sign_up_confirmation", "Confirmation d'inscription"
     SIGN_UP_EXISTING = "sign_up_existing", "Inscription avec une adresse déjà utilisée"
@@ -260,3 +260,26 @@ class EmailLog(models.Model):
 
     def __str__(self) -> str:
         return f"{self.get_kind_display()} — {self.get_status_display()}"
+
+
+class EmailText(models.Model):
+    """Objet et texte d'un type d'e-mail, modifiés par l'administrateur (Recap 5).
+
+    Sans ligne pour un type, le texte d'origine est utilisé (accounts/services/email_texts.py).
+    Seul le texte change : la mise en page et les champs variables restent ceux du site.
+    """
+
+    kind = models.CharField("type", max_length=40, choices=EmailKind.choices, unique=True)
+    subject = models.CharField("objet", max_length=200)
+    body = models.TextField("texte")
+    updated_at = models.DateTimeField("modifié le", default=timezone.now)
+    # Nom figé : il reste affiché si le compte de l'administrateur est supprimé ensuite.
+    updated_by_name = models.CharField("modifié par", max_length=210)
+    updated_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
+
+    class Meta:
+        verbose_name = "texte d'e-mail modifié"
+        verbose_name_plural = "textes d'e-mails modifiés"
+
+    def __str__(self) -> str:
+        return self.get_kind_display()
