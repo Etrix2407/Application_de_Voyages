@@ -8,7 +8,7 @@ from django.utils import timezone
 
 from accounts.models import EmailFailure, EmailKind, EmailLog, EmailStatus
 from accounts.services.account_deletion import delete_account
-from accounts.services.email_retry import NOT_REBUILDABLE, OBSOLETE, retry_due_emails
+from accounts.services.email_retry import NOT_REBUILDABLE, OBSOLETE, AlreadyResent, resend, retry_due_emails
 from accounts.services.privacy import purge_old_email_log
 
 from .factories import create_admin, create_agent, create_client
@@ -112,6 +112,15 @@ class ManualResendTests(TestCase):
 
         self.log.refresh_from_db()
         self.assertEqual((self.log.status, self.log.attempts), (EmailStatus.PENDING, 1))
+
+    def test_resend_already_taken_is_not_sent_twice(self):
+        stale = EmailLog.objects.get(pk=self.log.pk)  # ligne lue avant le renvoi d'un collègue
+        resend(self.log)
+
+        with self.assertRaises(AlreadyResent):
+            resend(stale)
+
+        self.assertEqual(len(mail.outbox), 1)
 
     def test_emails_that_cannot_be_resent_are_not_listed(self):
         self.log.failure = EmailFailure.OBSOLETE

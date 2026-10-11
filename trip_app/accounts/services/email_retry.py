@@ -39,6 +39,10 @@ NOT_REBUILDABLE = "Ce type d'e-mail ne peut pas être renvoyé."
 OBSOLETE = "Message devenu sans objet (compte supprimé ou modifié depuis) : il n'a pas été renvoyé."
 
 
+class AlreadyResent(Exception):
+    """L'e-mail n'est plus en échec : il vient d'être renvoyé par une autre requête."""
+
+
 class RebuiltEmail(NamedTuple):
     """Valeurs des champs variables d'un message reconstruit (liens de sécurité neufs).
 
@@ -96,10 +100,18 @@ def resend(log: EmailLog) -> bool:
     avec un compteur de tentatives remis à zéro, et l'envoi est tenté tout de suite.
 
     En cas de nouvel échec, les tentatives automatiques reprennent (5 puis 15 minutes).
-    Renvoie True si le message est parti.
+    Renvoie True si le message est parti. Lève AlreadyResent si la ligne n'est plus en échec
+    (double clic, ou renvoi par un collègue au même moment) : rien n'est envoyé une 2e fois.
     """
-    log.status = EmailStatus.PENDING
-    log.attempts = 0
+    taken_at = timezone.now()
+    # Prise conditionnelle : une seule requête peut faire passer la ligne de « échec » à « en attente ».
+    # La date de tentative posée écarte aussi la ligne de la reprise automatique pendant l'envoi.
+    taken = EmailLog.objects.filter(pk=log.pk, status=EmailStatus.FAILED).update(
+        status=EmailStatus.PENDING, attempts=0, last_attempt_at=taken_at
+    )
+    if not taken:
+        raise AlreadyResent
+    log.status, log.attempts, log.last_attempt_at = EmailStatus.PENDING, 0, taken_at
     return redeliver(log)
 
 

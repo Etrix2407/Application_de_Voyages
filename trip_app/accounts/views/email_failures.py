@@ -8,7 +8,7 @@ from django.views.decorators.http import require_POST
 
 from accounts.decorators import staff_required
 from accounts.models import NOT_RESENDABLE_FAILURES, EmailKind, EmailLog, EmailStatus, User
-from accounts.services.email_retry import resend
+from accounts.services.email_retry import AlreadyResent, resend
 
 FAILURES_PER_PAGE = 25
 
@@ -45,7 +45,12 @@ def resend_email(request, pk):
     log = get_object_or_404(_failures(), pk=pk)
     if not _can_resend(request.user, log):
         raise PermissionDenied
-    if resend(log):
+    try:
+        sent = resend(log)
+    except AlreadyResent:
+        messages.info(request, "Cet e-mail vient déjà d'être renvoyé : il n'a pas été envoyé une deuxième fois.")
+        return redirect("email_failure_list")
+    if sent:
         messages.success(request, f"L'e-mail « {log.subject} » a été renvoyé à {log.recipient}.")
     elif log.status == EmailStatus.PENDING:
         messages.error(
