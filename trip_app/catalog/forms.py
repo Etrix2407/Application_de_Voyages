@@ -7,7 +7,7 @@ from .models import Activity, Category, Continent, Destination, Difficulty, Mont
 from .services.photos import without_metadata
 from .services.time_zones import time_zone_choices, time_zone_from_input, time_zone_label
 from .services.search import Criteria
-from .validators import PHOTO_FORMATS
+from .validators import PHOTO_FORMATS, validate_photo_pixels, validate_photo_size
 
 
 class TimeZoneInput(forms.TextInput):
@@ -107,6 +107,9 @@ class DestinationForm(_CountryContentForm):
             return photo  # pas de nouvelle photo : celle déjà enregistrée est gardée
         if image.format not in PHOTO_FORMATS:
             raise forms.ValidationError("Formats acceptés : JPEG, PNG ou WebP.", code="invalid_photo_format")
+        # Contrôles sur le fichier envoyé, avant de le décoder et de le réencoder.
+        validate_photo_size(photo)
+        validate_photo_pixels(*image.size)
         return without_metadata(photo)
 
 

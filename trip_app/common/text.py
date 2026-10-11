@@ -11,7 +11,8 @@ def euros(amount) -> str:
 def normalize(text: str) -> str:
     """Sans accents, sans majuscules ni espaces autour : « Pérou » devient « perou ».
 
-    Sert aux comparaisons et recherches : SQLite ne sait pas ignorer les accents.
+    Sert aux comparaisons et recherches. SQLite ne sait pas ignorer les accents : dans une
+    requête, utiliser son équivalent SQL common.db.Normalize.
     """
     decompose = unicodedata.normalize("NFKD", text.strip())
     return "".join(c for c in decompose if not unicodedata.combining(c)).casefold()

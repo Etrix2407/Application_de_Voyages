@@ -128,13 +128,12 @@ class FavoriteTests(TestCase):
         self.assertFalse(FavoriteActivity.objects.exists())
 
 
-class FavoriteAccessTests(TestCase):
-    def test_reserved_to_clients(self):
+class FavoriteButtonTests(TestCase):
+    # Le refus d'accès aux favoris pour le personnel est vérifié par config/test_access.py.
+    def test_button_hidden_from_staff(self):
         activity = create_activity(create_country())
         self.client.force_login(create_agent())
 
-        url = reverse("add_favorite", args=["activite", activity.pk])
-        self.assertEqual(self.client.post(url).status_code, 403)
         self.assertNotContains(
             self.client.get(reverse("activity_detail", args=[activity.pk])), "mes favoris"
         )
