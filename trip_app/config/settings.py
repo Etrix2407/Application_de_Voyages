@@ -126,8 +126,16 @@ DATABASES = {
         # enregistrements simultanés passent l'un après l'autre, et le second voit le premier.
         # Ex. la dernière utilisation d'une promotion, revérifiée à l'envoi de la demande, ne peut
         # pas être prise par deux clients. Sans ce réglage, SQLite pourrait refuser l'un des deux
-        # avec l'erreur « database is locked ». Le second attend au plus 5 secondes (délai par défaut).
-        "OPTIONS": {"transaction_mode": "IMMEDIATE"},
+        # avec l'erreur « database is locked ». Le second attend au plus 20 secondes (timeout).
+        # Mode WAL : les lectures ne sont plus bloquées pendant une écriture. Il ajoute deux fichiers
+        # à côté de la base (db.sqlite3-wal et db.sqlite3-shm), qui en font partie : à sauvegarder
+        # avec elle (ou utiliser la commande .backup de sqlite3). Le dossier doit être local, pas un
+        # partage réseau.
+        "OPTIONS": {
+            "transaction_mode": "IMMEDIATE",
+            "timeout": 20,
+            "init_command": "PRAGMA journal_mode=WAL;",
+        },
     }
 }
 
