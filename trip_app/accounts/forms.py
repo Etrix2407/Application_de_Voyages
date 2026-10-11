@@ -11,7 +11,7 @@ from django.core.exceptions import ValidationError
 
 from .models import STAFF_ROLES, EmailKind, EmailText, Role, User, normalize_email_address
 from .services.email_texts import DEFAULT_TEXTS, fields_in, has_lone_brace
-from .services.emails import queue_emails
+from .services.password_links import send_password_link
 from .services.throttling import (
     get_client_ip,
     login_failures,
@@ -141,10 +141,9 @@ class LoginForm(AuthenticationForm):
 class PasswordResetRequestForm(PasswordResetForm):
     """« Mot de passe oublié » limité par adresse et par IP, pour empêcher d'inonder une boîte e-mail.
 
-    Rien ne révèle si l'adresse existe ni si la limite est atteinte : la page affichée reste la même,
-    et l'e-mail est mis en file d'attente au lieu d'être envoyé pendant la requête (la durée de la
-    réponse trahirait sinon l'existence du compte). La commande process_emails l'envoie à son
-    passage suivant, avec un lien neuf valable 1 heure (voir email_rebuilders.py).
+    Rien ne révèle si l'adresse existe ni si la limite est atteinte : la page affichée reste la même.
+    L'e-mail part tout de suite (après validation de la transaction), sans attendre la tâche
+    planifiée : un client qui a oublié son mot de passe ne doit pas patienter.
     """
 
     email = forms.EmailField(
@@ -162,7 +161,8 @@ class PasswordResetRequestForm(PasswordResetForm):
         password_reset_requests.record(email)
         password_reset_requests_by_ip.record(ip)
         # get_users : comptes actifs avec un mot de passe, à cette adresse (sans tenir compte des majuscules).
-        queue_emails(self.get_users(email), EmailKind.PASSWORD_RESET)
+        for user in self.get_users(email):
+            send_password_link(user, EmailKind.PASSWORD_RESET)
 
 
 class ClientDataForm(forms.ModelForm):

@@ -35,7 +35,7 @@ RETRY_DELAYS = {1: timedelta(minutes=5), 2: timedelta(minutes=15)}
 # Envoi jamais tenté (serveur arrêté juste après l'action) : repris au bout de 5 minutes.
 NEVER_ATTEMPTED_DELAY = timedelta(minutes=5)
 # Types mis en attente sans envoi immédiat (queue_emails) : envoyés dès le passage suivant.
-QUEUED_KINDS = (EmailKind.PROMOTION, EmailKind.PASSWORD_RESET)
+QUEUED_KINDS = (EmailKind.PROMOTION,)
 # Un passage envoie au plus 200 e-mails (le reste part aux passages suivants, toutes les 5 minutes)
 # et ne prend plus de nouveau message après 20 minutes (serveur très lent ou injoignable).
 EMAILS_PER_PASS = 200
@@ -102,8 +102,8 @@ def retry_due_emails(now: datetime | None = None) -> int:
     )
     for attempts, delay in RETRY_DELAYS.items():
         due |= Q(attempts=attempts, last_attempt_at__lte=now - delay)
-    # Les promotions passent après les autres e-mails : un « mot de passe oublié » mis en file
-    # pendant un envoi à 1 000 clients part au passage suivant, pas 25 minutes plus tard.
+    # Les promotions passent après les autres e-mails : une nouvelle tentative (demande de voyage,
+    # lien de mot de passe...) n'attend pas la fin d'un envoi à 1 000 clients.
     promotions_last = Case(When(kind=EmailKind.PROMOTION, then=1), default=0)
     logs = list(
         EmailLog.objects.filter(due, status=EmailStatus.PENDING)

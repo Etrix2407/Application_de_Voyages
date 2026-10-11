@@ -4,7 +4,6 @@ from django.test import RequestFactory, SimpleTestCase, TestCase, override_setti
 from django.urls import reverse
 
 from accounts.models import User
-from accounts.services.email_retry import retry_due_emails
 from accounts.services.throttling import (
     get_client_ip,
     login_failures_by_ip,
@@ -140,6 +139,5 @@ class PasswordResetIpLimitTests(SendEmailsImmediately, TestCase):
             )
             # La page reste identique : la limite n'est pas révélée.
             self.assertRedirects(response, reverse("password_reset_done"))
-        retry_due_emails()
 
         self.assertEqual(len(mail.outbox), limit)

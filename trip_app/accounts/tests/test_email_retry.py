@@ -109,12 +109,11 @@ class RetryTests(TestCase):
         next_one.refresh_from_db()
         self.assertEqual(next_one.status, EmailStatus.SENT)
 
-    def test_promotions_sent_after_other_queued_emails(self):
-        def queued(kind):
-            return EmailLog.objects.create(recipient=self.marie.email, kind=kind, subject="Objet", user=self.marie)
-
-        promotion = queued(EmailKind.PROMOTION)
-        password_reset = queued(EmailKind.PASSWORD_RESET)
+    def test_promotions_sent_after_other_emails(self):
+        promotion = EmailLog.objects.create(
+            recipient=self.marie.email, kind=EmailKind.PROMOTION, subject="Objet", user=self.marie
+        )
+        password_reset = pending_log(self.marie, attempts=1, minutes_ago=6, kind=EmailKind.PASSWORD_RESET)
 
         with mock.patch("accounts.services.email_retry.EMAILS_PER_PASS", 1):
             retry_due_emails()
