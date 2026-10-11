@@ -276,6 +276,14 @@ class EmailLog(models.Model):
         verbose_name = "envoi d'e-mail"
         verbose_name_plural = "journal des e-mails"
         ordering = ["-created_at", "-pk"]
+        indexes = [
+            # Listes du plus récent au plus ancien, et purge des lignes de plus d'un an.
+            models.Index(fields=["-created_at", "-id"], name="emaillog_recent_idx"),
+            # « Adresse à vérifier » et effacement RGPD : recherche par adresse.
+            models.Index(fields=["recipient"], name="emaillog_recipient_idx"),
+            # File d'envoi (en attente) et liste des échecs : quelques lignes parmi tous les envois réussis.
+            models.Index(fields=["status"], name="emaillog_status_idx"),
+        ]
 
     def __str__(self) -> str:
         return f"{self.get_kind_display()} — {self.get_status_display()}"

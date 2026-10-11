@@ -8,7 +8,7 @@ from django.db import migrations
 
 
 def create_cache_table(apps, schema_editor):
-    call_command("createcachetable", verbosity=0)
+    call_command("createcachetable", database=schema_editor.connection.alias, verbosity=0)
 
 
 class Migration(migrations.Migration):
