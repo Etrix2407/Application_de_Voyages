@@ -1,5 +1,5 @@
 /* Design « Ligne d'horizon » : le nom de l'agence mis en image.
-   Un ciel bleu nuit, une ligne d'horizon ambrée et un soleil couchant posé dessus ;
+   Un ciel bleu nuit, une ligne d'horizon ambrée, un avion qui décolle et un soleil couchant ;
    les photos sont cadrées comme des hublots d'avion.
    Trois couleurs : bleu altitude, brume et ambre du soir. Le rouge est réservé aux erreurs. */
 
@@ -7,7 +7,7 @@
     /* Les trois couleurs de l'agence. */
     --color-primary: #1c3a57;       /* bleu altitude : en-tête, boutons, liens (11,7:1 sur le blanc) */
     --color-soft: #e7eef3;          /* brume : surfaces calmes */
-    --color-accent: #9a5410;        /* ambre du soir : horizon, soleil, focus (5,7:1 sur le blanc, 4,9:1 sur la brume) */
+    --color-accent: #9a5410;        /* ambre du soir : horizon, soleil de l'accueil, focus (5,7:1 sur le blanc, 4,9:1 sur la brume) */
 
     /* Dérivés neutres (nuances du bleu, pas de nouvelle couleur). */
     --color-primary-dark: #12283e;
@@ -153,27 +153,34 @@ textarea:focus-visible {
     color: var(--color-soft);
 }
 
-/* Logo : un petit soleil posé sur l'horizon, avant le nom. */
+/* Logo : un avion qui décolle au-dessus d'une ligne d'horizon ambrée, avant le nom. */
 .logo {
     display: inline-flex;
     /* Texte très agrandi sur un petit écran : le nom se coupe plutôt que de déborder. */
     overflow-wrap: anywhere;
     align-items: flex-end;
     gap: 0.6rem;
+    padding-bottom: 0.2rem;
     font-family: var(--font-heading);
     font-size: 1.5rem;
     font-weight: 700;
     text-decoration: none;
+    /* La ligne d'horizon, sous l'avion seulement. */
+    background: linear-gradient(var(--color-accent), var(--color-accent)) 0 100% / 2rem 3px no-repeat;
 }
 
+/* L'avion (vu du dessus), découpé dans la couleur du texte de l'en-tête ; décoratif. */
 .logo::before {
     content: "";
-    width: 1.6rem;
-    height: 0.8rem;
-    margin-bottom: 0.35rem;
-    background: var(--color-accent);
-    border-radius: 1.6rem 1.6rem 0 0;
-    box-shadow: 0 3px 0 0 #ffffff;
+    flex-shrink: 0;
+    width: 2rem;
+    height: 2rem;
+    margin-bottom: 0.15rem;
+    background: currentColor;
+    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 2c.8 0 1.4.7 1.4 1.6V9L22 14v2l-8.6-2.6v5.1L16 20.5V22l-4-1-4 1v-1.5l2.6-2v-5.1L2 16v-2l8.6-5V3.6c0-.9.6-1.6 1.4-1.6z'/%3E%3C/svg%3E") center / contain no-repeat;
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 2c.8 0 1.4.7 1.4 1.6V9L22 14v2l-8.6-2.6v5.1L16 20.5V22l-4-1-4 1v-1.5l2.6-2v-5.1L2 16v-2l8.6-5V3.6c0-.9.6-1.6 1.4-1.6z'/%3E%3C/svg%3E") center / contain no-repeat;
+    /* Nez vers le haut à droite : l'avion prend son envol. */
+    transform: rotate(60deg);
 }
 
 .menu {
