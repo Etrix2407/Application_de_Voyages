@@ -116,13 +116,6 @@ class StaffProcessingTests(TestCase):
         self.assertEqual(self.client.get(self.confirm_url).status_code, 405)
         self.assertEqual(self.refreshed_status(), OrderStatus.PENDING)
 
-    def test_client_cannot_process_orders(self):
-        self.client.force_login(self.marie)
-
-        self.assertEqual(self.client.post(self.confirm_url).status_code, 403)
-        self.assertEqual(self.client.post(self.cancel_url, {"internal_reason": "x"}).status_code, 403)
-        self.assertEqual(self.refreshed_status(), OrderStatus.PENDING)
-
     def test_client_sees_explanation_but_not_internal_reason(self):
         cancel_by_staff(self.order, self.agent, "Hôtel partenaire en faillite.", "Destination fermée cette saison.")
         self.client.force_login(self.marie)

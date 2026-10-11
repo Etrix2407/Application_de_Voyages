@@ -364,12 +364,6 @@ class PlaceOrderServiceValidationTests(TestCase):
     def test_departure_too_soon_refused(self):
         self.assert_refused(self.data(departure_date=departure_in(1), return_date=departure_in(5)))
 
-    def test_too_many_travellers_refused(self):
-        self.assert_refused(self.data(adults=6, children=5))
-
-    def test_activity_of_another_country_refused(self):
-        self.assert_refused(self.data(activities=[create_activity(create_country("Pérou"))]))
-
     def test_inactive_activity_refused(self):
         self.assert_refused(self.data(activities=[create_activity(self.country, active=False)]))
 

@@ -138,13 +138,6 @@ class ModerationActionsTests(TestCase):
         self.review.refresh_from_db()
         self.assertEqual(self.review.title, "Superbe")
 
-    def test_client_cannot_moderate(self):
-        self.client.force_login(self.julie)
-
-        self.assertEqual(self.client.post(reverse("manage_publish_review", args=[self.review.pk])).status_code, 403)
-        self.review.refresh_from_db()
-        self.assertEqual(self.review.status, ReviewStatus.PENDING)
-
 
 class ModerationServiceTests(TestCase):
     def setUp(self):

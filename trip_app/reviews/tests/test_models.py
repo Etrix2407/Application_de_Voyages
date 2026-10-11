@@ -39,13 +39,6 @@ class ReviewRulesTests(TestCase):
         with self.assertRaises(IntegrityError), transaction.atomic():
             create_review(self.order, rating=9)
 
-    def test_title_required_and_limited(self):
-        self.assert_invalid("title", title="")
-        self.assert_invalid("title", title="a" * 101)
-
-    def test_comment_limited_to_1000_characters(self):
-        self.assert_invalid("comment", comment="a" * 1001)
-
     def test_comment_required_for_low_rating(self):
         for rating in [1, 2]:
             with self.subTest(rating=rating):

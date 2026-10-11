@@ -64,6 +64,8 @@ class WriteReviewTests(TestCase):
         self.client.force_login(create_client(email="paul@example.com"))
 
         self.assertEqual(self.client.get(self.url).status_code, 404)
+        self.assertEqual(self.client.post(self.url, GOOD_REVIEW).status_code, 404)
+        self.assertFalse(Review.objects.exists())
 
 
 class MyReviewsTests(TestCase):
@@ -165,10 +167,14 @@ class EditReviewTests(TestCase):
         )
 
     def test_other_client_review_not_found(self):
-        review = create_review(self.trip)
+        review = create_review(self.trip, title="Avant")
         self.client.force_login(create_client(email="paul@example.com"))
+        url = reverse("edit_review", args=[review.pk])
 
-        self.assertEqual(self.client.get(reverse("edit_review", args=[review.pk])).status_code, 404)
+        self.assertEqual(self.client.get(url).status_code, 404)
+        self.assertEqual(self.client.post(url, {**GOOD_REVIEW, "title": "Piraté"}).status_code, 404)
+        review.refresh_from_db()
+        self.assertEqual(review.title, "Avant")
 
 
 class DeleteReviewTests(TestCase):
@@ -192,6 +198,12 @@ class DeleteReviewTests(TestCase):
         self.assertContains(response, "Votre avis a été supprimé.")
         self.assertNotContains(response, reverse("create_review", args=[trip.pk]))
         self.assertFalse(Review.objects.exists())
+
+    def test_other_client_cannot_delete(self):
+        self.client.force_login(create_client(email="paul@example.com"))
+
+        self.assertEqual(self.client.post(self.url).status_code, 404)
+        self.assertTrue(Review.objects.exists())
 
     def test_can_still_delete_after_thirty_days(self):
         age_beyond_edit_period(self.review)
