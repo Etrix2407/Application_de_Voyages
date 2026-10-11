@@ -20,6 +20,15 @@ class HomeTests(TestCase):
         self.assertContains(response, "Horizons Lointains", count=3)
 
 
+class SecurityHeaderTests(TestCase):
+    def test_content_security_policy_forbids_inline_scripts_and_framing(self):
+        response = self.client.get(reverse("home"))
+
+        policy = response.headers["Content-Security-Policy"]
+        self.assertIn("script-src 'self'", policy)
+        self.assertIn("frame-ancestors 'none'", policy)
+
+
 class ErrorPageTests(TestCase):
     def test_readable_not_found_page(self):
         response = self.client.get("/page-qui-n-existe-pas/")
