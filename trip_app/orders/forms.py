@@ -4,7 +4,8 @@ from datetime import timedelta
 
 from django import forms
 
-from catalog.models import Activity, Country, Destination
+from catalog.models import Activity, Destination
+from common.forms import DateInput, StaffFilterForm, optional_date_field
 from common.text import euros
 from orders.models import (
     AT_LEAST_ONE_ADULT,
@@ -52,8 +53,8 @@ class OrderForm(forms.ModelForm):
         model = Order
         fields = ("departure_date", "return_date", "adults", "children", "remarks")
         widgets = {
-            "departure_date": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
-            "return_date": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
+            "departure_date": DateInput,
+            "return_date": DateInput,
             "children": forms.NumberInput(attrs={"min": 0, "max": MAX_TRAVELLERS - 1}),
             "remarks": forms.Textarea(attrs={"rows": 4}),
         }
@@ -89,28 +90,18 @@ class ClientCancelForm(forms.Form):
     )
 
 
-class StaffOrderFilterForm(forms.Form):
+class StaffOrderFilterForm(StaffFilterForm):
     """Filtres de la liste des demandes (personnel). Tous facultatifs."""
 
+    field_order = ["status", "country", "destination"]
+    periods = (("departure_from", "departure_to"),)
+
     status = forms.ChoiceField(label="État", required=False, choices=[("", "Tous les états"), *OrderStatus.choices])
-    country = forms.ModelChoiceField(
-        label="Pays", required=False, queryset=Country.objects.all(), empty_label="Tous les pays"
-    )
-    destination = forms.ModelChoiceField(
-        label="Destination",
-        required=False,
-        queryset=Destination.objects.select_related("country").order_by("country__name", "name", "pk"),
-        empty_label="Toutes les destinations",
-    )
     client = forms.CharField(
         label="Client", required=False, max_length=100, help_text="Nom, prénom ou e-mail."
     )
-    departure_from = forms.DateField(
-        label="Départ à partir du", required=False, widget=forms.DateInput(attrs={"type": "date"})
-    )
-    departure_to = forms.DateField(
-        label="Départ jusqu'au", required=False, widget=forms.DateInput(attrs={"type": "date"})
-    )
+    departure_from = optional_date_field("Départ à partir du")
+    departure_to = optional_date_field("Départ jusqu'au")
     sort = forms.ChoiceField(
         label="Tri",
         required=False,
@@ -119,13 +110,6 @@ class StaffOrderFilterForm(forms.Form):
             (OLDEST_FIRST, "Demandes les plus anciennes d'abord"),
         ],
     )
-
-    def clean(self):
-        data = super().clean()
-        start, end = data.get("departure_from"), data.get("departure_to")
-        if start and end and end < start:
-            raise forms.ValidationError("La fin de la période doit être après son début.")
-        return data
 
 
 class StaffCancelForm(forms.Form):

@@ -2,7 +2,7 @@
 
 from django import forms
 
-from catalog.models import Country, Destination
+from common.forms import StaffFilterForm, optional_date_field
 from reviews.models import (
     MAX_COMMENT_LENGTH,
     MAX_RATING,
@@ -107,37 +107,20 @@ class ResponseForm(forms.Form):
     )
 
 
-def _date_field(label: str) -> forms.DateField:
-    return forms.DateField(label=label, required=False, widget=forms.DateInput(attrs={"type": "date"}))
-
-
-class StaffReviewFilterForm(forms.Form):
+class StaffReviewFilterForm(StaffFilterForm):
     """Filtres de la liste « Tous les avis » (personnel). Tous facultatifs."""
 
+    field_order = ["status", "country", "destination"]
+    periods = (("written_from", "written_to"), ("stay_from", "stay_to"))
+
     status = forms.ChoiceField(label="État", required=False, choices=[("", "Tous les états"), *ReviewStatus.choices])
-    country = forms.ModelChoiceField(
-        label="Pays", required=False, queryset=Country.objects.all(), empty_label="Tous les pays"
-    )
-    destination = forms.ModelChoiceField(
-        label="Destination",
-        required=False,
-        queryset=Destination.objects.select_related("country").order_by("country__name", "name", "pk"),
-        empty_label="Toutes les destinations",
-    )
     rating = forms.TypedChoiceField(
         label="Note", required=False, coerce=int, empty_value=None, choices=[("", "Toutes les notes"), *RATING_CHOICES]
     )
     negative_only = forms.BooleanField(
         label=f"Avis négatifs seulement ({NEGATIVE_RATING} étoiles ou moins)", required=False
     )
-    written_from = _date_field("Avis écrit à partir du")
-    written_to = _date_field("Avis écrit jusqu'au")
-    stay_from = _date_field("Séjour (départ) à partir du")
-    stay_to = _date_field("Séjour (départ) jusqu'au")
-
-    def clean(self):
-        data = super().clean()
-        for start, end in [("written_from", "written_to"), ("stay_from", "stay_to")]:
-            if data.get(start) and data.get(end) and data[end] < data[start]:
-                self.add_error(end, "La fin de la période doit être après son début.")
-        return data
+    written_from = optional_date_field("Avis écrit à partir du")
+    written_to = optional_date_field("Avis écrit jusqu'au")
+    stay_from = optional_date_field("Séjour (départ) à partir du")
+    stay_to = optional_date_field("Séjour (départ) jusqu'au")
