@@ -99,6 +99,8 @@ class PromotionMailingForm(forms.Form):
             "et le lien de désinscription sont ajoutés automatiquement."
         ),
     )
+    # Posé par la page de confirmation : un même envoi n'est programmé qu'une fois.
+    submission_token = forms.UUIDField(required=False, widget=forms.HiddenInput)
 
     def __init__(self, *args, exclude=(), **kwargs):
         super().__init__(*args, **kwargs)

@@ -1,5 +1,7 @@
 """Pages de gestion des promotions : consultation par le personnel, actions réservées à l'administrateur."""
 
+import uuid
+
 from django.contrib import messages
 from django.core.paginator import Paginator
 from django.shortcuts import get_object_or_404, redirect, render
@@ -19,7 +21,13 @@ from promotions.services.management import (
     disable_promotion,
     update_promotion,
 )
-from promotions.services.mailing import NoRecipients, mailable_promotions, send_promotion_mailing
+from promotions.services.mailing import (
+    AlreadySent,
+    NoRecipients,
+    mailable_promotions,
+    mailing_preview,
+    send_promotion_mailing,
+)
 
 PROMOTIONS_PER_PAGE = 25
 
@@ -86,14 +94,25 @@ def create(request):
 
 @administrator_required
 def send_mailing(request):
-    """Envoi d'une promotion par e-mail à tous les clients consentants (programmé, pas immédiat)."""
+    """Envoi d'une promotion par e-mail à tous les clients consentants (programmé, pas immédiat).
+
+    Formulaire, puis page de confirmation (nombre de clients, aperçu du texte), puis envoi.
+    """
     form = PromotionMailingForm(
         request.POST or None, initial={"promotion": request.GET.get("promotion")}, exclude=exhausted_promotions()
     )
-    if request.method == "POST" and form.is_valid():
+    recipients_count = User.objects.promotion_recipients().count()
+    if request.method == "POST" and "edit" not in request.POST and form.is_valid():
         data = form.cleaned_data
+        if "confirm" not in request.POST or data["submission_token"] is None:
+            return _confirm_mailing(request, form, recipients_count)
         try:
-            mailing = send_promotion_mailing(data["promotion"], data["message"], request.user)
+            mailing = send_promotion_mailing(
+                data["promotion"], data["message"], request.user, submission_token=data["submission_token"]
+            )
+        except AlreadySent as duplicate:
+            messages.info(request, "Cet envoi avait déjà été programmé : chaque client ne le recevra qu'une fois.")
+            return redirect("manage_promotion_detail", pk=duplicate.mailing.promotion_id)
         except NoRecipients:
             messages.error(
                 request, "Aucun client n'accepte les e-mails promotionnels pour l'instant : rien n'a été envoyé."
@@ -106,8 +125,23 @@ def send_mailing(request):
                 "les e-mails partent dans les prochaines minutes.",
             )
             return redirect("manage_promotion_detail", pk=mailing.promotion.pk)
-    context = {"form": form, "recipients_count": User.objects.promotion_recipients().count()}
+    context = {"form": form, "recipients_count": recipients_count}
     return render(request, "promotions/manage/mailing.html", context)
+
+
+def _confirm_mailing(request, form, recipients_count):
+    """Dernière vérification avant l'envoi réel : nombre de clients et aperçu de l'e-mail."""
+    data = form.cleaned_data
+    subject, body = mailing_preview(data["promotion"], data["message"])
+    context = {
+        "form": form,
+        "promotion": data["promotion"],
+        "recipients_count": recipients_count,
+        "preview_subject": subject,
+        "preview_body": body,
+        "submission_token": uuid.uuid4(),
+    }
+    return render(request, "promotions/manage/mailing_confirm.html", context)
 
 
 @administrator_required

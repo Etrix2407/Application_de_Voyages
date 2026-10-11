@@ -248,6 +248,9 @@ class PromotionMailing(models.Model):
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="+"
     )
     recipients_count = models.PositiveIntegerField("nombre de destinataires")
+    # Jeton de la page de confirmation : un double clic ou un formulaire renvoyé ne crée pas
+    # un second envoi (unicité garantie par la base). Vide pour les envois d'avant ce jeton.
+    submission_token = models.UUIDField(null=True, blank=True, unique=True, editable=False)
 
     class Meta:
         verbose_name = "envoi promotionnel"
