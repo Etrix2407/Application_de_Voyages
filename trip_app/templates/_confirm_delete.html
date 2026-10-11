@@ -1,8 +1,11 @@
-{# Bouton de suppression définitive et lien d'annulation, communs aux pages de suppression.
-   Paramètres : cancel_url (adresse de retour), cancel_label (texte du lien de retour). #}
+{% comment %}
+Bouton d'action irréversible et lien d'annulation, communs aux pages de confirmation.
+Paramètres : cancel_url (adresse de retour), cancel_label (texte du lien de retour),
+submit_label (texte du bouton, « Supprimer définitivement » par défaut).
+{% endcomment %}
 <form method="post">
     {% csrf_token %}
-    <button type="submit" class="button-danger">Supprimer définitivement</button>
+    <button type="submit" class="button-danger">{{ submit_label|default:"Supprimer définitivement" }}</button>
 </form>
 
 <p><a href="{{ cancel_url }}">{{ cancel_label }}</a></p>
