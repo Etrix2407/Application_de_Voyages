@@ -102,8 +102,8 @@ class DiscountLabelTests(TestCase):
         for kind, value, label in [
             (DiscountKind.PERCENT, "15.00", "-15 %"),
             (DiscountKind.PERCENT, "12.50", "-12,5 %"),
-            (DiscountKind.FIXED, "100.00", "-100,00 €"),
-            (DiscountKind.FIXED, "99.50", "-99,50 €"),
+            (DiscountKind.FIXED, "100.00", "-100,00\u00a0€"),
+            (DiscountKind.FIXED, "99.50", "-99,50\u00a0€"),
         ]:
             with self.subTest(label=label):
                 self.assertEqual(Promotion(kind=kind, value=Decimal(value)).discount_label, label)
