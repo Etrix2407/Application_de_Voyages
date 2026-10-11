@@ -27,6 +27,7 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 from typing import NamedTuple
 
+from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
 from django.db.models import TextChoices
 from django.utils.html import escape, linebreaks
@@ -117,7 +118,7 @@ ACCOUNT_TEXTS = {
         "Confirmez votre inscription",
         paragraphs(
             "Bonjour {prénom},",
-            "Bienvenue chez Horizons Lointains, et merci pour votre inscription. Pour confirmer votre adresse "
+            f"Bienvenue chez {settings.SITE_NAME}, et merci pour votre inscription. Pour confirmer votre adresse "
             "e-mail, ouvrez ce lien (valable 48 heures) :",
             "{lien}",
             "Si vous n'êtes pas à l'origine de cette inscription, ignorez cet e-mail : l'adresse ne sera pas "
