@@ -51,7 +51,7 @@ class ReviewInvitationTests(SendEmailsImmediately, TestCase):
         order = create_trip_done(self.marie, self.kyoto)
         with mock.patch(
             "accounts.services.emails.EmailMultiAlternatives.send", side_effect=OSError("serveur injoignable")
-        ):
+        ), self.assertLogs("accounts.services.emails", level="ERROR"):
             self.run_command()
         create_review(order)
         EmailLog.objects.update(last_attempt_at=timezone.now() - timedelta(minutes=6))

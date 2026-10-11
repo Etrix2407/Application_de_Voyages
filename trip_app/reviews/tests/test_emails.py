@@ -100,7 +100,7 @@ class ReviewEmailTests(SendEmailsImmediately, TestCase):
     def test_failed_email_rebuilt_by_retry(self):
         with mock.patch(
             "accounts.services.emails.EmailMultiAlternatives.send", side_effect=OSError("serveur injoignable")
-        ):
+        ), self.assertLogs("accounts.services.emails", level="ERROR"):
             refuse(self.review, RefusalReason.OFF_TOPIC)
         EmailLog.objects.update(last_attempt_at=timezone.now() - timedelta(minutes=6))
 
