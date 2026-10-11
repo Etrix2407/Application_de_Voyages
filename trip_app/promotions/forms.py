@@ -1,8 +1,11 @@
+"""Formulaires des promotions : création et modification, envoi par e-mail aux clients."""
+
 from django import forms
 from django.utils import timezone
 
 from catalog.models import Country, Destination
 from promotions.models import Promotion, Scope, targets_problem
+from promotions.services.mailing import mailable_promotions
 
 _DATE = forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d")
 
@@ -45,7 +48,10 @@ class PromotionForm(forms.ModelForm):
             "starts_on": "La promotion vaut pour les demandes faites à partir de ce jour.",
             "ends_on": "Dernier jour inclus, jusqu'à minuit.",
             "departure_from": "Facultatif : départs autorisés. Vide = tous les départs.",
-            "code": "Vide = promotion automatique. Sinon 4 à 20 lettres sans accents ou chiffres (ex. BIENVENUE15).",
+            "code": (
+                "Vide = promotion automatique. "
+                "Sinon 4 à 20 caractères : lettres sans accent et chiffres (ex. BIENVENUE15)."
+            ),
             "max_uses": "Vide = illimité. Les demandes annulées ne comptent pas.",
             "max_uses_per_client": "Vide = illimité.",
         }
@@ -83,7 +89,10 @@ class PromotionForm(forms.ModelForm):
 
 
 class PromotionMailingForm(forms.Form):
-    """Envoi d'une promotion par e-mail : seules les promotions en cours ou à venir sont proposées."""
+    """Envoi d'une promotion par e-mail : seules les promotions qui peuvent être envoyées sont proposées.
+
+    `exclude` : promotions épuisées, à écarter (voir promotions.services.mailing.mailable_promotions).
+    """
 
     promotion = forms.ModelChoiceField(label="Promotion à envoyer", queryset=Promotion.objects.none())
     message = forms.CharField(
@@ -95,9 +104,12 @@ class PromotionMailingForm(forms.Form):
             "et le lien de désinscription sont ajoutés automatiquement."
         ),
     )
+    # Posé par la page de confirmation : un même envoi n'est programmé qu'une fois.
+    submission_token = forms.UUIDField(required=False, widget=forms.HiddenInput)
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, exclude=(), **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["promotion"].queryset = Promotion.objects.filter(
-            is_active=True, ends_on__gte=timezone.localdate()
-        ).order_by("starts_on", "name")
+        mailable = [promotion.pk for promotion in mailable_promotions(exclude)]
+        self.fields["promotion"].queryset = Promotion.objects.filter(pk__in=mailable).order_by(
+            "starts_on", "name", "pk"
+        )

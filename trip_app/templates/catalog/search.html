@@ -6,6 +6,7 @@
     <h1>Rechercher</h1>
     <p>Remplissez un ou plusieurs champs, puis cliquez sur « Rechercher ».</p>
 
+    {% include "_form_errors.html" %}
     <form method="get" novalidate class="search-form">
         {{ form }}
         <button type="submit">Rechercher</button>

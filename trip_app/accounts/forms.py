@@ -8,16 +8,17 @@ from django.contrib.auth.forms import (
     PasswordResetForm,
 )
 from django.core.exceptions import ValidationError
-from django.urls import reverse
 
 from .models import STAFF_ROLES, EmailKind, EmailText, Role, User, normalize_email_address
 from .services.email_texts import DEFAULT_TEXTS, fields_in, has_lone_brace
-from .services.emails import send_email
+from .services.emails import queue_emails
 from .services.throttling import (
     get_client_ip,
     login_failures,
     login_failures_after_sign_up_by_ip,
+    login_failures_by_account,
     login_failures_by_ip,
+    login_key,
     password_confirmations,
     password_reset_requests,
     password_reset_requests_by_ip,
@@ -27,8 +28,13 @@ from .services.staff_rules import check_not_self
 
 
 CLIENT_FIELDS = ("first_name", "last_name", "email", "phone", "birth_date")
+# Le site parle d'« e-mail » : même mot dans le message d'erreur de Django.
+EMAIL_ERROR_MESSAGES = {"invalid": "Saisissez une adresse e-mail valide."}
+# autocomplete : le navigateur peut remplir les informations de la personne (WCAG 1.3.5).
 CLIENT_WIDGETS = {
-    "birth_date": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
+    "first_name": forms.TextInput(attrs={"autocomplete": "given-name"}),
+    "last_name": forms.TextInput(attrs={"autocomplete": "family-name"}),
+    "birth_date": forms.DateInput(attrs={"type": "date", "autocomplete": "bday"}, format="%Y-%m-%d"),
     "email": forms.EmailInput(attrs={"autocomplete": "email"}),
     "phone": forms.TextInput(attrs={"autocomplete": "tel", "inputmode": "tel"}),
 }
@@ -58,6 +64,7 @@ class SignUpForm(BaseUserCreationForm):
         fields = CLIENT_FIELDS
         widgets = CLIENT_WIDGETS
         help_texts = CLIENT_HELP_TEXTS
+        error_messages = {"email": EMAIL_ERROR_MESSAGES}
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -73,7 +80,9 @@ class SignUpForm(BaseUserCreationForm):
 
 class ResendConfirmationForm(forms.Form):
     email = forms.EmailField(
-        label="Adresse e-mail", widget=forms.EmailInput(attrs={"autocomplete": "email"})
+        label="Adresse e-mail",
+        widget=forms.EmailInput(attrs={"autocomplete": "email"}),
+        error_messages=EMAIL_ERROR_MESSAGES,
     )
 
 
@@ -81,47 +90,69 @@ class LoginForm(AuthenticationForm):
     error_messages = {
         **AuthenticationForm.error_messages,
         "invalid_login": "Adresse e-mail ou mot de passe incorrect.",
+        # « Mot de passe oublié » débloque le compte depuis l'appareil utilisé (voir unlock_login).
         "locked": (
-            "Trop de tentatives échouées. Pour votre sécurité, réessayez dans 15 minutes "
-            "ou utilisez « Mot de passe oublié »."
+            "Trop de tentatives échouées. Pour votre sécurité, réessayez dans "
+            f"{login_failures.window_text} ou utilisez « Mot de passe oublié »."
+        ),
+        "locked_ip": (
+            "Trop de tentatives échouées depuis cette connexion. "
+            f"Réessayez dans {login_failures_by_ip.window_text}."
         ),
     }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["username"].label = "Adresse e-mail"
+        # Champ e-mail : clavier adapté sur téléphone et remplissage automatique.
+        self.fields["username"].widget.input_type = "email"
+        self.fields["username"].widget.attrs.update(autocomplete="email", inputmode="email")
 
     def clean(self):
         email = self.cleaned_data.get("username") or ""
         ip = get_client_ip(self.request)
         just_signed_up = recent_sign_ups_by_ip.is_locked(ip)
-        if (
-            (email and login_failures.is_locked(email))
-            or login_failures_by_ip.is_locked(ip)
-            or (just_signed_up and login_failures_after_sign_up_by_ip.is_locked(ip))
+        account_limits = [(login_failures, login_key(email, ip)), (login_failures_by_account, email)] if email else []
+        if login_failures_by_ip.is_locked(ip) or (
+            just_signed_up and login_failures_after_sign_up_by_ip.is_locked(ip)
         ):
+            raise ValidationError(self.error_messages["locked_ip"], code="locked_ip")
+        if any(limiter.is_locked(key) for limiter, key in account_limits):
             raise ValidationError(self.error_messages["locked"], code="locked")
+        # L'essai est compté avant la vérification du mot de passe (lente) et non après un échec :
+        # des requêtes envoyées en même temps ne dépassent pas la limite du compte.
+        # Il est effacé en cas de succès.
+        for limiter, key in account_limits:
+            limiter.record(key)
         try:
             cleaned_data = super().clean()
         except ValidationError:
-            if email:
-                login_failures.record(email)
             login_failures_by_ip.record(ip)
             if just_signed_up:
                 login_failures_after_sign_up_by_ip.record(ip)
             raise
         # Le compteur de l'IP n'est pas remis à zéro : un compte valide ne doit pas
         # permettre de relancer une série d'essais sur d'autres comptes.
-        login_failures.reset(email)
+        for limiter, key in account_limits:
+            limiter.reset(key)
         return cleaned_data
 
 
 class PasswordResetRequestForm(PasswordResetForm):
-    """« Mot de passe oublié » limité par adresse, pour empêcher d'inonder une boîte e-mail.
+    """« Mot de passe oublié » limité par adresse et par IP, pour empêcher d'inonder une boîte e-mail.
 
-    Au-delà de la limite, aucun e-mail ne part mais la page affichée reste la même :
-    rien ne révèle si l'adresse existe ni si la limite est atteinte.
+    Rien ne révèle si l'adresse existe ni si la limite est atteinte : la page affichée reste la même,
+    et l'e-mail est mis en file d'attente au lieu d'être envoyé pendant la requête (la durée de la
+    réponse trahirait sinon l'existence du compte). La commande process_emails l'envoie à son
+    passage suivant, avec un lien neuf valable 1 heure (voir email_rebuilders.py).
     """
+
+    email = forms.EmailField(
+        label="Adresse e-mail",
+        max_length=254,
+        widget=forms.EmailInput(attrs={"autocomplete": "email"}),
+        error_messages=EMAIL_ERROR_MESSAGES,
+    )
 
     def save(self, *args, request=None, **kwargs) -> None:
         email = self.cleaned_data["email"]
@@ -130,16 +161,8 @@ class PasswordResetRequestForm(PasswordResetForm):
             return
         password_reset_requests.record(email)
         password_reset_requests_by_ip.record(ip)
-        super().save(*args, request=request, **kwargs)
-
-    def send_mail(
-        self, subject_template_name, email_template_name, context, from_email, to_email, html_email_template_name=None
-    ) -> None:
-        # Envoi par le service commun (journal, HTML, mode test) : l'objet et le texte viennent du
-        # type d'e-mail, les gabarits de Django ne servent pas. Lien construit avec le jeton de Django.
-        path = reverse("password_reset_confirm", kwargs={"uidb64": context["uid"], "token": context["token"]})
-        fields = {"prénom": context["user"].first_name, "lien": f"{context['protocol']}://{context['domain']}{path}"}
-        send_email(to_email, EmailKind.PASSWORD_RESET, fields, user=context["user"])
+        # get_users : comptes actifs avec un mot de passe, à cette adresse (sans tenir compte des majuscules).
+        queue_emails(self.get_users(email), EmailKind.PASSWORD_RESET)
 
 
 class ClientDataForm(forms.ModelForm):
@@ -174,8 +197,14 @@ class ClientCorrectionForm(ClientDataForm):
     """Correction par un agent : ni mot de passe ni e-mail (identifiant géré par le client),
     ni consentement aux e-mails promotionnels (choix du client seul)."""
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Les données sont celles du client : le navigateur ne doit pas proposer celles de l'agent.
+        for field in self.fields.values():
+            field.widget.attrs["autocomplete"] = "off"
 
-TOO_MANY_PASSWORD_ATTEMPTS = "Trop d'essais. Pour votre sécurité, réessayez dans 15 minutes."
+
+TOO_MANY_PASSWORD_ATTEMPTS = f"Trop d'essais. Pour votre sécurité, réessayez dans {password_confirmations.window_text}."
 
 
 def check_current_password(user: User, password: str) -> None:
@@ -189,8 +218,19 @@ def check_current_password(user: User, password: str) -> None:
     password_confirmations.reset(key)
 
 
-class CurrentPasswordMixin:
-    """Champ « password » : le mot de passe actuel, vérifié par check_current_password."""
+class CurrentPasswordForm(forms.Form):
+    """Formulaire d'un utilisateur connecté qui ressaisit son mot de passe actuel (champ « password »),
+    vérifié par check_current_password. L'utilisateur est le premier argument."""
+
+    password = forms.CharField(
+        label="Votre mot de passe actuel",
+        strip=False,
+        widget=forms.PasswordInput(attrs={"autocomplete": "current-password"}),
+    )
+
+    def __init__(self, user: User, *args, **kwargs):
+        self.user = user
+        super().__init__(*args, **kwargs)
 
     def clean_password(self) -> str:
         password = self.cleaned_data["password"]
@@ -205,19 +245,13 @@ class AccountPasswordChangeForm(PasswordChangeForm):
         return password
 
 
-class EmailChangeForm(CurrentPasswordMixin, forms.Form):
+class EmailChangeForm(CurrentPasswordForm):
     new_email = forms.EmailField(
-        label="Nouvelle adresse e-mail", widget=forms.EmailInput(attrs={"autocomplete": "email"})
+        label="Nouvelle adresse e-mail",
+        widget=forms.EmailInput(attrs={"autocomplete": "email"}),
+        error_messages=EMAIL_ERROR_MESSAGES,
     )
-    password = forms.CharField(
-        label="Votre mot de passe actuel",
-        strip=False,
-        widget=forms.PasswordInput(attrs={"autocomplete": "current-password"}),
-    )
-
-    def __init__(self, user: User, *args, **kwargs):
-        self.user = user
-        super().__init__(*args, **kwargs)
+    field_order = ["new_email", "password"]
 
     def clean_new_email(self) -> str:
         new_email = normalize_email_address(self.cleaned_data["new_email"])
@@ -226,16 +260,8 @@ class EmailChangeForm(CurrentPasswordMixin, forms.Form):
         return new_email
 
 
-class AccountDeletionForm(CurrentPasswordMixin, forms.Form):
-    password = forms.CharField(
-        label="Votre mot de passe",
-        strip=False,
-        widget=forms.PasswordInput(attrs={"autocomplete": "current-password"}),
-    )
-
-    def __init__(self, user: User, *args, **kwargs):
-        self.user = user
-        super().__init__(*args, **kwargs)
+class AccountDeletionForm(CurrentPasswordForm):
+    pass
 
 
 class AgentCreationForm(forms.ModelForm):
@@ -245,6 +271,7 @@ class AgentCreationForm(forms.ModelForm):
         model = User
         fields = ("first_name", "last_name", "email")
         labels = {"email": "Adresse e-mail professionnelle"}
+        error_messages = {"email": EMAIL_ERROR_MESSAGES}
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -268,6 +295,7 @@ class StaffMemberForm(forms.ModelForm):
         model = User
         fields = ("first_name", "last_name", "email", "role")
         labels = {"email": "Adresse e-mail professionnelle"}
+        error_messages = {"email": EMAIL_ERROR_MESSAGES}
 
     def __init__(self, *args, actor: User, **kwargs):
         self.actor = actor

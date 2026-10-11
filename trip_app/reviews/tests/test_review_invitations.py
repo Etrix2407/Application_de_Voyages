@@ -12,6 +12,7 @@ from accounts.services.email_retry import retry_due_emails
 from accounts.tests.email_delivery import SendEmailsImmediately
 from accounts.tests.factories import create_client
 from catalog.tests.factories import create_country, create_destination
+from reviews.services.invitations import INVITATION_WINDOW
 
 from .factories import create_review, create_trip_done
 
@@ -21,6 +22,7 @@ class ReviewInvitationTests(SendEmailsImmediately, TestCase):
     def setUp(self):
         self.marie = create_client()
         self.kyoto = create_destination(create_country())
+        self.yesterday = timezone.localdate() - timedelta(days=1)
 
     def run_command(self):
         call_command("send_trip_reminders", stdout=StringIO())
@@ -41,17 +43,28 @@ class ReviewInvitationTests(SendEmailsImmediately, TestCase):
         self.assertEqual((log.kind, log.user, log.order_number), (EmailKind.REVIEW_INVITATION, self.marie, order.pk))
 
     def test_no_invitation_once_reviewed(self):
-        create_review(create_trip_done(self.marie, self.kyoto))
+        create_review(create_trip_done(self.marie, self.kyoto, return_date=self.yesterday))
 
         self.run_command()
 
         self.assertEqual(len(mail.outbox), 0)
 
+    def test_no_invitation_for_trips_back_for_more_than_7_days(self):
+        # Premier lancement : les anciens voyages sans avis ne reçoivent rien.
+        today = timezone.localdate()
+        last_day = create_trip_done(self.marie, self.kyoto, return_date=today - INVITATION_WINDOW)
+        create_trip_done(self.marie, self.kyoto, return_date=today - INVITATION_WINDOW - timedelta(days=1))
+        create_trip_done(self.marie, self.kyoto, return_date=today - timedelta(days=800))
+
+        self.run_command()
+
+        self.assertEqual(list(EmailLog.objects.values_list("order_number", flat=True)), [last_day.pk])
+
     def test_retry_not_sent_once_reviewed(self):
-        order = create_trip_done(self.marie, self.kyoto)
+        order = create_trip_done(self.marie, self.kyoto, return_date=self.yesterday)
         with mock.patch(
             "accounts.services.emails.EmailMultiAlternatives.send", side_effect=OSError("serveur injoignable")
-        ):
+        ), self.assertLogs("accounts.services.emails", level="ERROR"):
             self.run_command()
         create_review(order)
         EmailLog.objects.update(last_attempt_at=timezone.now() - timedelta(minutes=6))

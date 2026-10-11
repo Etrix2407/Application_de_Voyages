@@ -11,10 +11,5 @@
     {% endif %}
     <p>Pour simplement le masquer aux clients, préférez le désactiver.</p>
 
-    <form method="post">
-        {% csrf_token %}
-        <button type="submit" class="button-danger">Supprimer définitivement</button>
-    </form>
-
-    <p><a href="{{ back_url }}">Annuler et revenir</a></p>
+    {% include "_confirm_delete.html" with cancel_url=back_url cancel_label="Annuler et revenir" %}
 {% endblock %}

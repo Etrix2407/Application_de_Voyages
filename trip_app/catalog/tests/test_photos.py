@@ -53,6 +53,35 @@ class DestinationPhotoTests(TemporaryMediaMixin, TestCase):
         self.assertContains(response, "5 Mo")
         self.assertFalse(Destination.objects.exists())
 
+    def test_size_limit_applies_to_sent_file(self):
+        # Le fichier envoyé dépasse la limite, mais pas sa copie nettoyée (sans le texte caché).
+        photo = photo_with_metadata("PNG", hidden_text="x" * 5000)
+        with mock.patch("catalog.validators.MAX_PHOTO_SIZE", 4000):
+            response = self.create(photo)
+
+        self.assertContains(response, "5 Mo")
+        self.assertFalse(Destination.objects.exists())
+
+    def test_photo_with_too_many_pixels_rejected_before_decoding(self):
+        with (
+            mock.patch("catalog.validators.MAX_PHOTO_PIXELS", 99),
+            mock.patch("catalog.forms.without_metadata") as decode,
+        ):
+            response = self.create(make_image())  # 10 × 10 = 100 pixels
+
+        self.assertContains(response, "40 millions de pixels")
+        decode.assert_not_called()
+        self.assertFalse(Destination.objects.exists())
+
+    def test_large_photo_reduced(self):
+        buffer = io.BytesIO()
+        Image.new("RGB", (2000, 1000), "blue").save(buffer, format="JPEG")
+
+        self.create(SimpleUploadedFile("grande.jpg", buffer.getvalue(), content_type="image/jpeg"))
+
+        with Image.open(TEST_MEDIA_ROOT / Destination.objects.get().photo.name) as image:
+            self.assertEqual(image.size, (1600, 800))
+
     def test_replacing_photo_deletes_old_file(self):
         destination = create_destination(self.country, photo=make_image("ancienne.png"))
         old_file = TEST_MEDIA_ROOT / destination.photo.name
@@ -86,7 +115,9 @@ class DestinationPhotoTests(TemporaryMediaMixin, TestCase):
         self.assertContains(response, 'alt="Photo : Kyoto"')
 
 
-def photo_with_metadata(image_format: str, size=(40, 20), orientation=None) -> SimpleUploadedFile:
+def photo_with_metadata(
+    image_format: str, size=(40, 20), orientation=None, hidden_text="Rue des Lilas 12, Namur"
+) -> SimpleUploadedFile:
     """Photo « de téléphone » : position GPS, appareil et commentaire cachés dans le fichier."""
     image = Image.new("RGB", size, "green")
     exif = Image.Exif()
@@ -98,7 +129,7 @@ def photo_with_metadata(image_format: str, size=(40, 20), orientation=None) -> S
     options = {"exif": exif.tobytes()}
     if image_format == "PNG":
         info = PngImagePlugin.PngInfo()
-        info.add_text("Comment", "Rue des Lilas 12, Namur")
+        info.add_text("Comment", hidden_text)
         options["pnginfo"] = info
     image.save(buffer, format=image_format, **options)
     extension = {"JPEG": "jpg", "PNG": "png", "WEBP": "webp"}[image_format]

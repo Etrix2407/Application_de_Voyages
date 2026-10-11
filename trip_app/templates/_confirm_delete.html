@@ -1,0 +1,8 @@
+{# Bouton de suppression définitive et lien d'annulation, communs aux pages de suppression.
+   Paramètres : cancel_url (adresse de retour), cancel_label (texte du lien de retour). #}
+<form method="post">
+    {% csrf_token %}
+    <button type="submit" class="button-danger">Supprimer définitivement</button>
+</form>
+
+<p><a href="{{ cancel_url }}">{{ cancel_label }}</a></p>

@@ -16,19 +16,16 @@
                 <li><a class="button" href="{% url 'manage_send_promotion_mailing' %}?promotion={{ promotion.pk }}">Envoyer par e-mail aux clients</a></li>
             {% endif %}
             {% if can_disable %}
-                <li>
-                    <form method="post" action="{% url 'manage_disable_promotion' promotion.pk %}">
-                        {% csrf_token %}
-                        <button type="submit" class="button-secondary">Désactiver (plus proposée)</button>
-                    </form>
-                </li>
+                <li><a class="button button-secondary" href="{% url 'manage_disable_promotion' promotion.pk %}">Désactiver (plus proposée)</a></li>
             {% endif %}
-            {% if not used %}
+            {% if can_delete %}
                 <li><a class="button button-danger" href="{% url 'manage_delete_promotion' promotion.pk %}">Supprimer</a></li>
             {% endif %}
         </ul>
         {% if used %}
             <p>Cette promotion a déjà été utilisée : seuls son nom, sa description et sa date de fin peuvent être modifiés, et elle ne peut pas être supprimée.</p>
+        {% elif mailings %}
+            <p>Cette promotion a déjà été envoyée par e-mail : elle ne peut pas être supprimée, pour garder l'historique des envois.</p>
         {% endif %}
     {% endif %}
 

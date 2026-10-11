@@ -228,12 +228,22 @@ class Destination(models.Model):
         return f"{prefix}{start} à {Month(self.end_month).label}"
 
 
+# Durée maximale d'une activité : 30 jours.
+MAX_ACTIVITY_MINUTES = 30 * 24 * 60
+
+
 class Activity(models.Model):
     name = models.CharField("nom", max_length=150)
     description = models.TextField()
     category = models.CharField("catégorie", max_length=20, choices=Category.choices)
     duration_minutes = models.PositiveIntegerField(
-        "durée (en minutes)", validators=[MinValueValidator(1)]
+        "durée (en minutes)",
+        validators=[
+            MinValueValidator(1),
+            MaxValueValidator(
+                MAX_ACTIVITY_MINUTES, message="La durée ne peut pas dépasser 30 jours (43 200 minutes)."
+            ),
+        ],
     )
     price_per_person = _price_field("prix par personne")
     difficulty = models.CharField("niveau de difficulté", max_length=20, choices=Difficulty.choices)
@@ -262,6 +272,13 @@ class Activity(models.Model):
     class Meta:
         verbose_name = "activité"
         ordering = ["name", "pk"]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(duration_minutes__gte=1, duration_minutes__lte=MAX_ACTIVITY_MINUTES),
+                name="activity_duration_1_minute_to_30_days",
+                violation_error_message="La durée doit être comprise entre 1 minute et 30 jours.",
+            )
+        ]
 
     def __str__(self) -> str:
         return self.name

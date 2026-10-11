@@ -94,7 +94,9 @@ class CountryDetailTests(TemporaryMediaMixin, TestCase):
         response = self.client.get(reverse("country_detail", args=[self.country.pk]))
 
         self.assertContains(response, "Kyoto")
-        self.assertContains(response, 'alt="Photo : Kyoto"')
+        self.assertContains(response, '<img class="card-photo"')
+        # Photo décorative : le nom de la destination est juste à côté.
+        self.assertContains(response, 'alt=""')
         self.assertContains(response, "Sumo")
         self.assertNotContains(response, "Osaka")
         self.assertNotContains(response, "Karaoké")

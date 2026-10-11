@@ -4,9 +4,10 @@ from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
-from accounts.tests.factories import create_admin, create_agent
+from accounts.tests.factories import create_admin, create_agent, create_client
 from catalog.tests.factories import create_country
-from promotions.models import Action, Promotion, Scope, State
+from promotions.models import Action, Promotion, PromotionMailing, Scope, State
+from promotions.services.mailing import send_promotion_mailing
 from promotions.tests.factories import create_promotion
 
 
@@ -39,7 +40,6 @@ class CreatePromotionTests(TestCase):
         promotion = Promotion.objects.get()
         self.assertContains(response, "a été créée")
         self.assertEqual(promotion.code, "BIENVENUE15")
-        self.assertEqual(promotion.created_by_name, "Marc Dupont")
         self.assertContains(response, "<dt>Créée par</dt><dd>Marc Dupont</dd>", html=True)
 
     def test_country_scope_needs_a_country(self):
@@ -106,6 +106,13 @@ class DisableAndDeleteTests(TestCase):
         self.client.force_login(create_admin())
         self.promotion = create_promotion()
 
+    def test_disable_asks_for_confirmation_first(self):
+        response = self.client.get(reverse("manage_disable_promotion", args=[self.promotion.pk]))
+
+        self.assertContains(response, "cette action est définitive")
+        self.promotion.refresh_from_db()
+        self.assertTrue(self.promotion.is_active)
+
     def test_disable_once_with_history(self):
         url = reverse("manage_disable_promotion", args=[self.promotion.pk])
 
@@ -122,6 +129,15 @@ class DisableAndDeleteTests(TestCase):
 
         self.assertContains(response, "a été supprimée")
         self.assertFalse(Promotion.objects.exists())
+
+    def test_mailed_promotion_kept_with_its_mailings(self):
+        create_client(accepts_promotional_emails=True)
+        send_promotion_mailing(self.promotion, "Le printemps arrive !", create_admin(email="autre@example.com"))
+
+        response = self.client.post(reverse("manage_delete_promotion", args=[self.promotion.pk]), follow=True)
+
+        self.assertContains(response, "a déjà été envoyée par e-mail")
+        self.assertTrue(PromotionMailing.objects.filter(promotion=self.promotion).exists())
 
 
 class AgentConsultationTests(TestCase):

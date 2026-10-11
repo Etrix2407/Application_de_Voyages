@@ -6,6 +6,7 @@
     <h1>Tous les avis</h1>
     <p><a href="{% url 'manage_pending_reviews' %}">Voir les avis à modérer</a></p>
 
+    {% include "_form_errors.html" %}
     <form method="get" class="search-form" role="search">
         {{ form }}
         <button type="submit">Filtrer</button>
@@ -15,7 +16,7 @@
     <p class="result-count" role="status">{{ page.paginator.count }} avis</p>
 
     {% if page.object_list %}
-        <div class="table-scroll">
+        <div class="table-scroll" tabindex="0" role="region" aria-label="Tableau des avis">
             <table>
                 <caption>Avis, du plus récent au plus ancien{% if page.paginator.num_pages > 1 %}, page {{ page.number }} sur {{ page.paginator.num_pages }}{% endif %}</caption>
                 <thead>
@@ -37,12 +38,12 @@
                             <td>{{ review.order.departure_date|date:"F Y" }}</td>
                             <td>
                                 {% include "reviews/_rating.html" %}
-                                {% if review.is_negative %}<span class="badge-negative">Avis négatif</span>{% endif %}
+                                {% if review.is_negative %}<span class="badge badge-negative">Avis négatif</span>{% endif %}
                                 <br>« {{ review.title }} »
                             </td>
                             <td>{% include "reviews/manage/_client.html" %}</td>
                             <td><span class="status status-{{ review.status }}">{{ review.get_status_display }}</span></td>
-                            <td><a href="{% url 'manage_review_detail' review.pk %}">Voir</a></td>
+                            <td><a href="{% url 'manage_review_detail' review.pk %}">Voir<span class="sr-only"> l'avis « {{ review.title }} »</span></a></td>
                         </tr>
                     {% endfor %}
                 </tbody>

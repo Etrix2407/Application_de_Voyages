@@ -9,6 +9,7 @@
         Le client verra le motif et pourra corriger son avis tant qu'il est modifiable.
     </p>
 
+    {% include "_form_errors.html" %}
     <form method="post" novalidate>
         {% csrf_token %}
         <input type="hidden" name="version" value="{{ version }}">

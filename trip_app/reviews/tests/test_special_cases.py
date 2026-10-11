@@ -126,7 +126,7 @@ class ReviewJourneyTests(TestCase):
         self.client.post(reverse("manage_respond_review", args=[review.pk]), {"text": "Merci Julie, à bientôt !"})
         page = self.client.get(public_page)
         self.assertContains(page, "Très beau voyage")
-        self.assertContains(page, "✓ Voyage vérifié")
+        self.assertContains(page, '<span aria-hidden="true">✓</span> Voyage vérifié')
         self.assertContains(page, "Julie D.")
         self.assertContains(page, "Merci Julie, à bientôt !")
         self.assertContains(page, "4,0 sur 5 (1 avis)")

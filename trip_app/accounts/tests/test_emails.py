@@ -1,9 +1,11 @@
+import re
+import smtplib
 from unittest import mock
 
 from django.core import mail
 from django.test import TestCase, override_settings
 
-from accounts.models import EmailKind, EmailLog, EmailStatus
+from accounts.models import EmailKind, EmailLog, EmailStatus, EmailText
 from accounts.services.emails import MAX_ATTEMPTS, deliver, send_email
 
 from .factories import create_client
@@ -57,6 +59,7 @@ class SendEmailTests(TestCase):
         html, mimetype = message.alternatives[0]
         self.assertEqual(mimetype, "text/html")
         self.assertIn(f'href="{LINK}"', html)
+        self.assertIn("Choisir un nouveau mot de passe</a>", html)  # bouton au texte explicite
         self.assertIn("Bonjour Marie,", html)
         self.assertTrue(message.body.endswith("\n\nL'équipe Horizons Lointains\n"))
         self.assertIn("L&#x27;équipe Horizons Lointains", html)
@@ -84,6 +87,24 @@ class SendEmailTests(TestCase):
                 deliver(log, mail.EmailMultiAlternatives())
         self.assertEqual(log.status, EmailStatus.FAILED)
 
+    def test_only_link_fields_are_clickable(self):
+        # Hameçonnage : une adresse saisie dans un prénom ou écrite par l'administrateur reste du texte.
+        EmailText.objects.create(
+            kind=EmailKind.CLIENT_PASSWORD_LINK,
+            subject="Objet",
+            body="Bonjour {prénom}, voir https://admin.example/page\n\n{lien}",
+            updated_by_name="Admin",
+        )
+        fields = {"prénom": "Cliquez https://evil.example/login", "lien": LINK}
+        with self.captureOnCommitCallbacks(execute=True):
+            send_email("marie@example.com", EmailKind.CLIENT_PASSWORD_LINK, fields)
+
+        message = mail.outbox[0]
+        html = message.alternatives[0][0]
+        self.assertEqual(re.findall(r'href="([^"]*)"', html), [LINK])
+        self.assertIn("Cliquez https://evil.example/login", html)
+        self.assertIn(LINK, message.body)  # adresse complète dans la version texte
+
     def test_account_deletion_erases_address_and_link(self):
         self.send()
 
@@ -91,3 +112,15 @@ class SendEmailTests(TestCase):
 
         log = EmailLog.objects.get()
         self.assertEqual((log.recipient, log.user), ("", None))
+
+    def test_account_deletion_erases_error_detail(self):
+        refused = smtplib.SMTPRecipientsRefused({"marie@example.com": (550, b"<marie@example.com> rejected")})
+        with mock.patch("accounts.services.emails.EmailMultiAlternatives.send", side_effect=refused):
+            with self.assertLogs("accounts.services.emails", level="ERROR") as logs:
+                self.send()
+        self.assertNotIn("marie@example.com", "".join(logs.output))
+        self.assertIn("marie@example.com", EmailLog.objects.get().last_error)
+
+        self.marie.delete()
+
+        self.assertEqual(EmailLog.objects.get().last_error, "")

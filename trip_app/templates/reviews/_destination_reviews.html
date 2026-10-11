@@ -3,7 +3,8 @@
 <p>Seuls les clients partis avec l'agence peuvent donner leur avis : chaque avis correspond à un voyage vérifié.</p>
 
 {% if destination.rating_summary.has_reviews %}
-    <form method="get" class="filters">
+    {% include "_form_errors.html" with form=review_filters %}
+    <form method="get" action="#avis" class="filters">
         {{ review_filters }}
         <button type="submit">Afficher</button>
     </form>

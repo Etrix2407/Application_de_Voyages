@@ -7,8 +7,13 @@ from django.core import mail
 from django.test import TestCase
 from django.urls import reverse
 
+from accounts.forms import AgentCreationForm
 from accounts.models import Role
-from accounts.services.password_links import AgentInvitationTokenGenerator, agent_invitation_token_generator
+from accounts.services.password_links import (
+    AgentInvitationTokenGenerator,
+    agent_invitation_token_generator,
+    staff_link_path,
+)
 
 from .email_delivery import SendEmailsImmediately
 from .factories import create_admin, create_agent, create_client
@@ -101,6 +106,18 @@ class AgentCreationTests(SendEmailsImmediately, TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(len(mail.outbox), 0)
+
+    def test_email_taken_at_the_same_time_rejected(self):
+        # L'adresse est prise entre la validation du formulaire et l'enregistrement.
+        create_client(email="pris@example.com")
+
+        with mock.patch.object(AgentCreationForm, "validate_unique"):
+            response = self.client.post(
+                reverse("create_agent"), {"first_name": "L", "last_name": "M", "email": "pris@example.com"}
+            )
+
+        self.assertContains(response, "Un compte existe déjà avec cette adresse e-mail.")
+        self.assertEqual(User.objects.filter(email="pris@example.com").count(), 1)
 
 
 class StaffMemberEditTests(TestCase):
@@ -259,7 +276,7 @@ class EmailFailureTests(SendEmailsImmediately, TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTrue(User.objects.filter(email="luc@example.com").exists())
         self.assertContains(response, "n&#x27;a pas pu être envoyé")
-        self.assertIn("serveur SMTP injoignable", logs.output[0])
+        self.assertIn("OSError", logs.output[0])
 
     def test_resend_link_failure_is_reported(self, _send_mail):
         agent = create_agent()
@@ -269,10 +286,20 @@ class EmailFailureTests(SendEmailsImmediately, TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "n&#x27;a pas pu être envoyé")
-        self.assertIn("serveur SMTP injoignable", logs.output[0])
+        self.assertIn("OSError", logs.output[0])
 
 
 class InactiveMemberLinkTests(TestCase):
+    def test_link_received_before_deactivation_refused(self):
+        agent = create_agent()
+        agent.set_unusable_password()
+        agent.save()
+        link = staff_link_path(agent)
+        agent.is_active = False
+        agent.save()
+
+        self.assertFalse(self.client.get(link, follow=True).context["validlink"])
+
     def test_no_password_link_for_inactive_member(self):
         self.client.force_login(create_admin())
         agent = create_agent(is_active=False)

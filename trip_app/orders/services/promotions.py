@@ -3,9 +3,9 @@
 - Pas de cumul : la meilleure remise en euros l'emporte (voir promotions.services.discounts).
 - Un code saisi qui est battu par une promotion automatique n'est pas consommé.
 - Limites : seules les demandes non annulées comptent (une annulation rend l'utilisation).
-- Un code dont la promotion n'a pas encore commencé est « invalide » : les offres à venir
-  ne sont pas révélées. Les codes invalides sont limités (10 par heure et par client,
-  30 par heure et par adresse IP).
+- Un code dont la promotion est désactivée ou n'a pas encore commencé est « invalide » : les
+  offres à venir ou retirées ne sont pas révélées. Les codes invalides sont limités (10 par heure
+  et par client, 30 par heure et par adresse IP).
 """
 
 from dataclasses import dataclass
@@ -14,7 +14,7 @@ from datetime import date
 from django.db.models import Count, F, Q
 from django.utils import timezone
 
-from accounts.services.throttling import Limiter
+from accounts.services.throttling import wrong_promo_codes, wrong_promo_codes_by_ip
 from catalog.models import Destination
 from orders.models import Order, Status, client_fingerprint
 from promotions.models import Promotion, normalize_code
@@ -39,11 +39,6 @@ ALREADY_USED = "Vous avez déjà utilisé ce code"
 NO_LONGER_AVAILABLE = "Ce code n'est plus disponible"
 TOO_MANY_WRONG_CODES = "Trop de codes incorrects ont été essayés. Réessayez dans une heure, ou appelez l'agence."
 
-wrong_codes = Limiter("promo-codes", max_attempts=10, window_seconds=60 * 60)
-# Par adresse IP : empêche de contourner la limite en changeant de compte.
-wrong_codes_by_ip = Limiter("promo-codes-ip", max_attempts=30, window_seconds=60 * 60)
-
-
 @dataclass(frozen=True)
 class PromotionChoice:
     """Résultat pour une demande : l'offre retenue et, le cas échéant, un message sur le code saisi."""
@@ -62,16 +57,21 @@ class PromotionChoice:
         return f"Code appliqué : -{euros(self.offer.discount)}" if self.code_applied else ""
 
 
-def uses(promotion: Promotion, client=None) -> int:
-    """Demandes non annulées qui ont utilisé la promotion (toutes, ou celles du client).
+# Seules les demandes non annulées comptent dans les limites (une annulation rend l'utilisation).
+_NOT_CANCELLED = ~Q(orders__status=Status.CANCELLED)
+
+
+def _usage(client) -> dict:
+    """Annotations : demandes non annulées qui ont utilisé la promotion, au total et celles du client.
 
     Le client est reconnu à l'empreinte de son adresse e-mail (voir orders.models.client_fingerprint) :
     ses demandes comptent encore après une suppression du compte suivie d'une réinscription.
     """
-    orders = Order.objects.filter(promotion=promotion).exclude(status=Status.CANCELLED)
-    if client is not None:
-        orders = orders.filter(client_fingerprint=client_fingerprint(client.email))
-    return orders.count()
+    fingerprint = client_fingerprint(client.email)
+    return {
+        "total_uses": Count("orders", filter=_NOT_CANCELLED),
+        "client_uses": Count("orders", filter=_NOT_CANCELLED & Q(orders__client_fingerprint=fingerprint)),
+    }
 
 
 def refresh_client_fingerprint(client) -> int:
@@ -83,7 +83,7 @@ def exhausted_promotions():
     """Promotions dont le maximum au total est atteint (demandes non annulées), en une requête."""
     return (
         Promotion.objects.filter(max_uses__isnull=False)
-        .annotate(used=Count("orders", filter=~Q(orders__status=Status.CANCELLED)))
+        .annotate(used=Count("orders", filter=_NOT_CANCELLED))
         .filter(used__gte=F("max_uses"))
         .values_list("pk", flat=True)
     )
@@ -95,9 +95,17 @@ def public_offers(today=None) -> list[Promotion]:
 
 
 def limit_problem(promotion: Promotion, client) -> str:
-    if promotion.max_uses_per_client and uses(promotion, client) >= promotion.max_uses_per_client:
+    """Limite atteinte pour ce client ou au total ; les deux comptes en une seule requête."""
+    if not (promotion.max_uses or promotion.max_uses_per_client):
+        return ""
+    counts = Promotion.objects.filter(pk=promotion.pk).aggregate(**_usage(client))
+    return _limit_reached(promotion, counts["total_uses"], counts["client_uses"])
+
+
+def _limit_reached(promotion: Promotion, total_uses: int, client_uses: int) -> str:
+    if promotion.max_uses_per_client and client_uses >= promotion.max_uses_per_client:
         return ALREADY_USED
-    if promotion.max_uses and uses(promotion) >= promotion.max_uses:
+    if promotion.max_uses and total_uses >= promotion.max_uses:
         return NO_LONGER_AVAILABLE
     return ""
 
@@ -113,23 +121,31 @@ def choose_promotion(
 ) -> PromotionChoice:
     """`ip` : adresse du client, telle que donnée par accounts.services.throttling.get_client_ip."""
     today = today or timezone.localdate()
+    # Nombre fixe de requêtes, quel que soit le nombre de promotions automatiques en cours.
+    running = (
+        Promotion.objects.running(today)
+        .automatic()
+        .prefetch_related("countries", "destinations")
+        .annotate(**_usage(client))
+    )
     automatic = best_offer(
         offer_for(promotion, prices)
-        for promotion in Promotion.objects.running(today).automatic()
-        if covers(promotion, destination, departure_date) and not limit_problem(promotion, client)
+        for promotion in running
+        if covers(promotion, destination, departure_date)
+        and not _limit_reached(promotion, promotion.total_uses, promotion.client_uses)
     )
     if not code:
         return PromotionChoice(automatic)
 
     attempts_key = str(client.pk)
-    if wrong_codes.is_locked(attempts_key) or wrong_codes_by_ip.is_locked(ip):
+    if wrong_promo_codes.is_locked(attempts_key) or wrong_promo_codes_by_ip.is_locked(ip):
         return PromotionChoice(automatic, code_error=TOO_MANY_WRONG_CODES)
     promotion = Promotion.objects.filter(code=normalize_code(code)).first()
     problem = _code_problem(promotion, client, destination, departure_date, today)
     offer = None if problem else offer_for(promotion, prices)
     if problem == INVALID_CODE:
-        wrong_codes.record(attempts_key)
-        wrong_codes_by_ip.record(ip)
+        wrong_promo_codes.record(attempts_key)
+        wrong_promo_codes_by_ip.record(ip)
     if offer is None:
         return PromotionChoice(automatic, code_error=problem or NOT_FOR_THIS_ORDER)
 
@@ -142,10 +158,9 @@ def choose_promotion(
 
 
 def _code_problem(promotion: Promotion | None, client, destination, departure_date, today) -> str:
-    if promotion is None or (promotion.is_active and today < promotion.starts_on):
+    # Inconnu, désactivé ou pas encore commencé : même réponse, comptée comme un essai.
+    if promotion is None or not promotion.is_active or today < promotion.starts_on:
         return INVALID_CODE
-    if not promotion.is_active:
-        return NO_LONGER_AVAILABLE
     if today > promotion.ends_on:
         return EXPIRED_CODE
     if not in_scope(promotion, destination):

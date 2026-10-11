@@ -71,8 +71,9 @@ INACTIVE_COUNTRY = {
     "activities": [],
 }
 
-CLIENT_EMAIL = "client.demo@example.com"
-AGENT_EMAIL = "agent.demo@example.com"
+DEMO_EMAIL_DOMAIN = "@example.com"
+CLIENT_EMAIL = f"client.demo{DEMO_EMAIL_DOMAIN}"
+AGENT_EMAIL = f"agent.demo{DEMO_EMAIL_DOMAIN}"
 
 ACCOUNTS = [
     (CLIENT_EMAIL, Role.CLIENT, "Client", "Démo"),
@@ -157,6 +158,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         if not settings.DEBUG:
             raise CommandError("Données de démonstration refusées : DJANGO_DEBUG doit valoir 1.")
+        _refuse_real_accounts()
         User = get_user_model()
         with transaction.atomic():
             for data in COUNTRIES:
@@ -245,7 +247,7 @@ class Command(BaseCommand):
         promotion.full_clean()
         promotion.save()
         if data["country"]:
-            promotion.countries.add(Country.objects.get(name=data["country"]))
+            promotion.countries.add(_get_demo(Country, name=data["country"]))
         # Pas d'entrée d'historique : l'historique exige un administrateur comme auteur et la
         # démonstration n'en crée pas. La fiche affiche alors « Créée par — » et « Aucun historique ».
         self.stdout.write(f"Créé : {promotion.name}")
@@ -279,8 +281,39 @@ class Command(BaseCommand):
         self.stdout.write(f"Créé : avis publié « {review.title} »")
 
 
+def _refuse_real_accounts() -> None:
+    """Refuse une base qui contient de vrais comptes (et donc de vraies demandes).
+
+    Sécurité en plus de DJANGO_DEBUG : lancée par erreur sur la base de l'agence, la commande
+    créerait un agent et le code promo public EXEMPLE10. Toutes les adresses de démonstration
+    sont en @example.com, domaine réservé aux exemples qui n'appartient à personne. Les comptes
+    administrateurs ne comptent pas : le premier est créé avant la démonstration (README).
+    """
+    real_accounts = (
+        get_user_model().objects.exclude(email__iendswith=DEMO_EMAIL_DOMAIN).exclude(role=Role.ADMINISTRATOR)
+    )
+    if real_accounts.exists():
+        raise CommandError(
+            "Données de démonstration refusées : la base contient des comptes clients ou agents "
+            f"réels (adresse qui ne se termine pas par {DEMO_EMAIL_DOMAIN}). Utilisez une base de "
+            "développement."
+        )
+
+
+def _get_demo(model, **lookup):
+    """Élément de démonstration retrouvé par son nom fixe, avec un message clair s'il manque."""
+    try:
+        return model.objects.get(**lookup)
+    except model.DoesNotExist:
+        name = next(iter(lookup.values()))
+        raise CommandError(
+            f"Élément de démonstration introuvable : « {name} » ({model._meta.verbose_name}). "
+            "A-t-il été renommé ou supprimé ? Rétablissez-le ou repartez d'une base vide."
+        ) from None
+
+
 def _place_order(client, data: dict) -> Order:
-    destination = Destination.objects.get(name=data["destination"])
+    destination = _get_demo(Destination, name=data["destination"])
     activities = list(Activity.objects.filter(country=destination.country, name__in=data["activities"]))
     departure = timezone.localdate() + DEPARTURE_DELAY
     adults, children = 2, 0

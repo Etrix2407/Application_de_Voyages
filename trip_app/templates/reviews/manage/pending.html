@@ -7,7 +7,7 @@
     <p><a href="{% url 'manage_reviews' %}">Voir tous les avis (filtres, avis négatifs)</a></p>
 
     {% if reviews %}
-        <div class="table-scroll">
+        <div class="table-scroll" tabindex="0" role="region" aria-label="Tableau des avis à modérer">
             <table>
                 <caption>Avis en attente de validation, du plus ancien au plus récent</caption>
                 <thead>
@@ -26,11 +26,11 @@
                             <td>{{ review.order.destination_name }} ({{ review.order.country_name }})</td>
                             <td>
                                 {% include "reviews/_rating.html" %}
-                                {% if review.is_negative %}<span class="badge-negative">Avis négatif</span>{% endif %}
+                                {% if review.is_negative %}<span class="badge badge-negative">Avis négatif</span>{% endif %}
                                 <br>« {{ review.title }} »
                             </td>
                             <td>{% include "reviews/manage/_client.html" %}</td>
-                            <td><a href="{% url 'manage_review_detail' review.pk %}">Lire et modérer</a></td>
+                            <td><a href="{% url 'manage_review_detail' review.pk %}">Lire et modérer<span class="sr-only"> l'avis « {{ review.title }} »</span></a></td>
                         </tr>
                     {% endfor %}
                 </tbody>

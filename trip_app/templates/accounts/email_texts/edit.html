@@ -14,6 +14,7 @@
         Le logo et la signature de l'agence sont ajoutés automatiquement : ne les écrivez pas.
     </p>
 
+    {% include "_form_errors.html" %}
     <form method="post" novalidate>
         {% csrf_token %}
         {{ form }}
@@ -33,7 +34,7 @@
     {% if custom %}
         <form method="post" action="{% url 'reset_email_text' kind.value %}">
             {% csrf_token %}
-            <button type="submit">Rétablir le texte d'origine</button>
+            <button type="submit">Rétablir le texte d'origine (le texte actuel sera perdu)</button>
         </form>
     {% endif %}
 
