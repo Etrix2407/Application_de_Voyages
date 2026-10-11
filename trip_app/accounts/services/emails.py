@@ -6,6 +6,7 @@ Un échec d'envoi ne bloque jamais l'action de l'utilisateur : il est noté dans
 """
 
 import logging
+from collections.abc import Iterable
 
 from django.conf import settings
 from django.core.mail import EmailMultiAlternatives
@@ -45,6 +46,7 @@ SUBJECTS = {
     EmailKind.UNCONFIRMED_ACCOUNT_DELETED: "Votre compte a été supprimé",
     EmailKind.STAFF_ACCOUNT_DELETED: "Votre compte a été supprimé",
     EmailKind.STAFF_PASSWORD_LINK: "Choisissez un nouveau mot de passe",
+    EmailKind.PROMOTION: "Une offre pour votre prochain voyage",
 }
 
 
@@ -82,8 +84,33 @@ def send_email(
     return results[0] if results else True
 
 
-def build_message(to: str, subject: str, body: str) -> EmailMultiAlternatives:
-    """Message en texte et en HTML ; en mode test, il part à l'adresse de test."""
+def queue_emails(users: Iterable[User], kind: EmailKind, *, promotion_mailing_number: int | None = None) -> int:
+    """Met en attente un e-mail par compte, sans l'envoyer : seules les lignes du journal sont créées.
+
+    Pour les envois en nombre (jusqu'à 1 000 e-mails promotionnels) : les envoyer pendant la requête
+    serait trop long. La commande planifiée process_emails les envoie à son prochain passage
+    (voir retry_due_emails) ; le message est construit à ce moment par la reconstruction du type.
+    Renvoie le nombre d'e-mails mis en attente.
+    """
+    subject = SUBJECTS[kind]
+    logs = [
+        EmailLog(
+            recipient=user.email,
+            kind=kind,
+            subject=subject,
+            user=user,
+            promotion_mailing_number=promotion_mailing_number,
+        )
+        for user in users
+    ]
+    return len(EmailLog.objects.bulk_create(logs, batch_size=500))
+
+
+def build_message(to: str, subject: str, body: str, headers: dict[str, str] | None = None) -> EmailMultiAlternatives:
+    """Message en texte et en HTML ; en mode test, il part à l'adresse de test.
+
+    `headers` : en-têtes supplémentaires (ex. List-Unsubscribe des e-mails promotionnels).
+    """
     if settings.EMAIL_TEST_MODE and settings.EMAIL_TEST_RECIPIENT:
         subject = f"[Test : {to}] {subject}"
         to = settings.EMAIL_TEST_RECIPIENT
@@ -95,6 +122,7 @@ def build_message(to: str, subject: str, body: str) -> EmailMultiAlternatives:
         text,
         to=[to],
         reply_to=[settings.EMAIL_REPLY_TO] if settings.EMAIL_REPLY_TO else None,
+        headers=headers,
     )
     html = render_to_string(
         "emails/base.html",

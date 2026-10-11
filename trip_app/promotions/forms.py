@@ -80,3 +80,24 @@ class PromotionForm(forms.ModelForm):
         if scope != Scope.DESTINATIONS:
             data["destinations"] = []
         return data
+
+
+class PromotionMailingForm(forms.Form):
+    """Envoi d'une promotion par e-mail : seules les promotions en cours ou à venir sont proposées."""
+
+    promotion = forms.ModelChoiceField(label="Promotion à envoyer", queryset=Promotion.objects.none())
+    message = forms.CharField(
+        label="Votre message",
+        max_length=2000,
+        widget=forms.Textarea(attrs={"rows": 8}),
+        help_text=(
+            "Placé après « Bonjour » et le prénom du client. Le détail de l'offre, le lien vers le site "
+            "et le lien de désinscription sont ajoutés automatiquement."
+        ),
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["promotion"].queryset = Promotion.objects.filter(
+            is_active=True, ends_on__gte=timezone.localdate()
+        ).order_by("starts_on", "name")

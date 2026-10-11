@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+
+{% block title %}Ne plus recevoir nos offres{% endblock %}
+
+{% block content %}
+    <h1>Ne plus recevoir nos offres par e-mail</h1>
+    <p>Confirmez que vous ne souhaitez plus recevoir les e-mails promotionnels de l'agence.</p>
+    <p>Vous continuerez à recevoir les e-mails utiles à vos voyages (suivi de vos demandes, rappels avant le départ).</p>
+
+    <form method="post">
+        {% csrf_token %}
+        <button type="submit">Me désinscrire</button>
+    </form>
+{% endblock %}

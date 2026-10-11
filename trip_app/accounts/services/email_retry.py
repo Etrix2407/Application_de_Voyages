@@ -31,16 +31,22 @@ logger = logging.getLogger(__name__)
 RETRY_DELAYS = {1: timedelta(minutes=5), 2: timedelta(minutes=15)}
 # Envoi jamais tenté (serveur arrêté juste après l'action) : repris au bout de 5 minutes.
 NEVER_ATTEMPTED_DELAY = timedelta(minutes=5)
+# Types mis en attente sans envoi immédiat (queue_emails) : envoyés dès le passage suivant.
+QUEUED_KINDS = (EmailKind.PROMOTION,)
 
 NOT_REBUILDABLE = "Ce type d'e-mail ne peut pas être renvoyé."
 OBSOLETE = "Message devenu sans objet (compte supprimé ou modifié depuis) : il n'a pas été renvoyé."
 
 
 class RebuiltEmail(NamedTuple):
-    """Gabarit et variables d'un message reconstruit (liens de sécurité neufs)."""
+    """Gabarit et variables d'un message reconstruit (liens de sécurité neufs).
+
+    `headers` : en-têtes supplémentaires, facultatifs (ex. List-Unsubscribe).
+    """
 
     template_name: str
     context: dict
+    headers: dict[str, str] | None = None
 
 
 Rebuilder = Callable[[EmailLog], RebuiltEmail | None]
@@ -59,9 +65,18 @@ def rebuilder(kind: EmailKind) -> Callable[[Rebuilder], Rebuilder]:
 
 
 def retry_due_emails(now: datetime | None = None) -> int:
-    """Retente les envois en attente dont le délai est écoulé. Renvoie le nombre de messages repris."""
+    """Retente les envois en attente dont le délai est écoulé. Renvoie le nombre de messages repris.
+
+    Les e-mails mis en attente par queue_emails (QUEUED_KINDS) partent sans délai : c'est leur
+    premier envoi. Un message déjà pris par une autre reprise (date de tentative posée) n'est repris
+    qu'au bout de 5 minutes : pas de doublon pendant un envoi en nombre.
+    """
     now = now or timezone.now()
-    due = Q(attempts=0, created_at__lte=now - NEVER_ATTEMPTED_DELAY)
+    never_taken = Q(attempts=0, last_attempt_at__isnull=True)
+    due = (
+        (never_taken & (Q(created_at__lte=now - NEVER_ATTEMPTED_DELAY) | Q(kind__in=QUEUED_KINDS)))
+        | Q(attempts=0, last_attempt_at__lte=now - NEVER_ATTEMPTED_DELAY)
+    )
     for attempts, delay in RETRY_DELAYS.items():
         due |= Q(attempts=attempts, last_attempt_at__lte=now - delay)
     retried = 0
@@ -101,7 +116,7 @@ def redeliver(log: EmailLog) -> bool:
         log.save(update_fields=["status", "last_error"])
         return False
     body = render_to_string(rebuilt.template_name, rebuilt.context)
-    return deliver(log, build_message(log.recipient, log.subject, body))
+    return deliver(log, build_message(log.recipient, log.subject, body, rebuilt.headers))
 
 
 def _claim(log: EmailLog, now: datetime) -> bool:

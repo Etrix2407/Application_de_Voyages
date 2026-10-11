@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block title %}Envoyer une promotion par e-mail — Promotions{% endblock %}
+
+{% block content %}
+    <p><a href="{% url 'manage_promotions' %}">← Toutes les promotions</a></p>
+
+    <h1>Envoyer une promotion par e-mail</h1>
+    {% if recipients_count %}
+        <p>Cet e-mail sera envoyé à <strong>{{ recipients_count }} client{{ recipients_count|pluralize }}</strong> : ceux qui ont accepté de recevoir nos offres et dont l'adresse est confirmée.</p>
+    {% else %}
+        <p><strong>Aucun client n'accepte les e-mails promotionnels pour l'instant : l'envoi n'est pas possible.</strong></p>
+    {% endif %}
+    <p>Chaque client reçoit un e-mail personnel, avec un lien pour se désinscrire en un clic. Les e-mails partent dans les minutes qui suivent l'envoi.</p>
+
+    <form method="post" novalidate>
+        {% csrf_token %}
+        {{ form }}
+        <button type="submit">Envoyer</button>
+    </form>
+
+    <p><a href="{% url 'manage_promotions' %}">Annuler et revenir</a></p>
+{% endblock %}
