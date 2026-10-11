@@ -20,7 +20,7 @@ from typing import NamedTuple
 from django.db.models import Q
 from django.utils import timezone
 
-from accounts.models import EmailKind, EmailLog, EmailStatus
+from accounts.models import EmailFailure, EmailKind, EmailLog, EmailStatus
 from accounts.services.email_texts import render_email
 from accounts.services.emails import build_message, deliver
 
@@ -34,6 +34,7 @@ NEVER_ATTEMPTED_DELAY = timedelta(minutes=5)
 # Types mis en attente sans envoi immédiat (queue_emails) : envoyés dès le passage suivant.
 QUEUED_KINDS = (EmailKind.PROMOTION,)
 
+# Raisons affichées (last_error) ; l'état « non renvoyable » est porté par EmailLog.failure.
 NOT_REBUILDABLE = "Ce type d'e-mail ne peut pas être renvoyé."
 OBSOLETE = "Message devenu sans objet (compte supprimé ou modifié depuis) : il n'a pas été renvoyé."
 
@@ -113,8 +114,9 @@ def redeliver(log: EmailLog) -> bool:
     rebuilt = rebuild(log) if rebuild and log.recipient else None
     if rebuilt is None:
         log.status = EmailStatus.FAILED
+        log.failure = EmailFailure.OBSOLETE if rebuild else EmailFailure.NOT_REBUILDABLE
         log.last_error = OBSOLETE if rebuild else NOT_REBUILDABLE
-        log.save(update_fields=["status", "last_error"])
+        log.save(update_fields=["status", "failure", "last_error"])
         return False
     subject, body = render_email(log.kind, rebuilt.fields)
     if subject != log.subject:

@@ -226,6 +226,23 @@ class EmailStatus(models.TextChoices):
     FAILED = "failed", "Échec"
 
 
+class EmailFailure(models.TextChoices):
+    """Raison d'un échec, résumée pour le personnel ; le détail technique reste dans last_error."""
+
+    # Seul échec définitif dû à l'adresse (code 5xx) : il compte pour « adresse à vérifier ».
+    RECIPIENT_REFUSED = "recipient_refused", "Destinataire refusé (adresse inconnue ou invalide)"
+    UNREACHABLE = "unreachable", "Serveur d'envoi injoignable"
+    TIMEOUT = "timeout", "Délai dépassé"
+    OTHER = "other", "Autre erreur"
+    # Messages qui ne peuvent plus être renvoyés : ils restent au journal, hors de la liste des échecs.
+    OBSOLETE = "obsolete", "Message devenu sans objet"
+    NOT_REBUILDABLE = "not_rebuildable", "Type d'e-mail impossible à renvoyer"
+
+
+# Raisons qui excluent tout renvoi.
+NOT_RESENDABLE_FAILURES = (EmailFailure.OBSOLETE, EmailFailure.NOT_REBUILDABLE)
+
+
 class EmailLog(models.Model):
     """Journal des envois (Recap 5) : une ligne par e-mail, sans son contenu ni ses liens de sécurité.
 
@@ -243,7 +260,9 @@ class EmailLog(models.Model):
     )
     attempts = models.PositiveSmallIntegerField("nombre de tentatives", default=0)
     last_attempt_at = models.DateTimeField("date de la dernière tentative", null=True, blank=True)
+    # Détail technique du dernier échec (message de l'erreur), vidé à la suppression du compte (RGPD).
     last_error = models.CharField("raison du dernier échec", max_length=500, blank=True)
+    failure = models.CharField("type du dernier échec", max_length=20, choices=EmailFailure.choices, blank=True)
     user = models.ForeignKey(
         User, on_delete=models.SET_NULL, null=True, blank=True, related_name="email_logs", verbose_name="compte lié"
     )

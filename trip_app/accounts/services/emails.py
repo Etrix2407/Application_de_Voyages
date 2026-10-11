@@ -6,6 +6,7 @@ Un échec d'envoi ne bloque jamais l'action de l'utilisateur : il est noté dans
 """
 
 import logging
+import smtplib
 from collections.abc import Iterable, Mapping
 
 from django.conf import settings
@@ -15,7 +16,7 @@ from django.template.loader import render_to_string
 from django.templatetags.static import static
 from django.utils import timezone
 
-from accounts.models import EmailKind, EmailLog, EmailStatus, User
+from accounts.models import EmailFailure, EmailKind, EmailLog, EmailStatus, User
 from accounts.services.email_texts import current_subject, render_email
 
 logger = logging.getLogger(__name__)
@@ -118,13 +119,34 @@ def deliver(log: EmailLog, message: EmailMultiAlternatives) -> bool:
     except Exception as error:  # Toute erreur : un échec d'envoi ne doit jamais bloquer l'action.
         logger.exception("Échec de l'envoi de l'e-mail « %s » à %s", log.subject, log.recipient)
         log.last_error = (str(error) or type(error).__name__)[:500]
+        log.failure = failure_of(error)
         log.status = EmailStatus.FAILED if log.attempts >= MAX_ATTEMPTS else EmailStatus.PENDING
-        log.save(update_fields=["attempts", "last_attempt_at", "last_error", "status"])
+        log.save(update_fields=["attempts", "last_attempt_at", "last_error", "failure", "status"])
         return False
     log.status = EmailStatus.SENT
     log.last_error = ""
-    log.save(update_fields=["attempts", "last_attempt_at", "last_error", "status"])
+    log.failure = ""
+    log.save(update_fields=["attempts", "last_attempt_at", "last_error", "failure", "status"])
     return True
+
+
+def failure_of(error: Exception) -> EmailFailure:
+    """Type d'un échec d'envoi, pour le résumé affiché au personnel et « adresse à vérifier »."""
+    if isinstance(error, smtplib.SMTPRecipientsRefused):
+        # Refus définitif (5xx) seulement : un refus temporaire (4xx) ne dit rien de l'adresse.
+        codes = [code for code, _ in error.recipients.values()]
+        if codes and all(code >= 500 for code in codes):
+            return EmailFailure.RECIPIENT_REFUSED
+        return EmailFailure.OTHER
+    if isinstance(error, TimeoutError):
+        return EmailFailure.TIMEOUT
+    if isinstance(error, (smtplib.SMTPConnectError, smtplib.SMTPServerDisconnected)):
+        return EmailFailure.UNREACHABLE
+    if isinstance(error, smtplib.SMTPException):  # autre réponse du serveur (authentification...)
+        return EmailFailure.OTHER
+    if isinstance(error, OSError):  # connexion refusée, nom de serveur inconnu, réseau coupé...
+        return EmailFailure.UNREACHABLE
+    return EmailFailure.OTHER
 
 
 def site_url(path: str) -> str:

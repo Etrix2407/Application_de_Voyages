@@ -6,7 +6,7 @@ from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
-from accounts.models import EmailKind, EmailLog, EmailStatus
+from accounts.models import EmailFailure, EmailKind, EmailLog, EmailStatus
 from accounts.services.account_deletion import delete_account
 from accounts.services.email_retry import NOT_REBUILDABLE, OBSOLETE, retry_due_emails
 from accounts.services.privacy import purge_old_email_log
@@ -114,7 +114,7 @@ class ManualResendTests(TestCase):
         self.assertEqual((self.log.status, self.log.attempts), (EmailStatus.PENDING, 1))
 
     def test_emails_that_cannot_be_resent_are_not_listed(self):
-        self.log.last_error = OBSOLETE
+        self.log.failure = EmailFailure.OBSOLETE
         self.log.save()
 
         self.assertNotContains(self.client.get(reverse("email_failure_list")), "marie@example.com")
@@ -195,7 +195,9 @@ class AddressToCheckTests(TestCase):
 
     def fail(self, count):
         for _ in range(count):
-            pending_log(self.marie, attempts=3, minutes_ago=30, status=EmailStatus.FAILED)
+            pending_log(
+                self.marie, attempts=3, minutes_ago=30, status=EmailStatus.FAILED, failure=EmailFailure.RECIPIENT_REFUSED
+            )
 
     def is_marked(self):
         return "Adresse à vérifier" in self.client.get(reverse("client_list")).content.decode()

@@ -7,8 +7,8 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
 from accounts.decorators import staff_required
-from accounts.models import EmailKind, EmailLog, EmailStatus, User
-from accounts.services.email_retry import NOT_REBUILDABLE, OBSOLETE, resend
+from accounts.models import NOT_RESENDABLE_FAILURES, EmailKind, EmailLog, EmailStatus, User
+from accounts.services.email_retry import resend
 
 FAILURES_PER_PAGE = 25
 
@@ -22,7 +22,7 @@ def _failures():
     return (
         EmailLog.objects.filter(status=EmailStatus.FAILED)
         .exclude(recipient="")
-        .exclude(last_error__in=(OBSOLETE, NOT_REBUILDABLE))
+        .exclude(failure__in=NOT_RESENDABLE_FAILURES)
         .select_related("user")
     )
 
