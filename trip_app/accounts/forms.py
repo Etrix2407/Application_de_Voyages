@@ -82,9 +82,14 @@ class LoginForm(AuthenticationForm):
     error_messages = {
         **AuthenticationForm.error_messages,
         "invalid_login": "Adresse e-mail ou mot de passe incorrect.",
+        # « Mot de passe oublié » débloque le compte depuis l'appareil utilisé (voir unlock_login).
         "locked": (
-            "Trop de tentatives échouées. Pour votre sécurité, réessayez dans 15 minutes "
-            "ou utilisez « Mot de passe oublié »."
+            "Trop de tentatives échouées. Pour votre sécurité, réessayez dans "
+            f"{login_failures.window_text} ou utilisez « Mot de passe oublié »."
+        ),
+        "locked_ip": (
+            "Trop de tentatives échouées depuis cette connexion. "
+            f"Réessayez dans {login_failures_by_ip.window_text}."
         ),
     }
 
@@ -97,11 +102,9 @@ class LoginForm(AuthenticationForm):
         ip = get_client_ip(self.request)
         just_signed_up = recent_sign_ups_by_ip.is_locked(ip)
         account_limits = [(login_failures, login_key(email, ip)), (login_failures_by_account, email)] if email else []
-        if (
-            any(limiter.is_locked(key) for limiter, key in account_limits)
-            or login_failures_by_ip.is_locked(ip)
-            or (just_signed_up and login_failures_after_sign_up_by_ip.is_locked(ip))
-        ):
+        if login_failures_by_ip.is_locked(ip) or (just_signed_up and login_failures_after_sign_up_by_ip.is_locked(ip)):
+            raise ValidationError(self.error_messages["locked_ip"], code="locked_ip")
+        if any(limiter.is_locked(key) for limiter, key in account_limits):
             raise ValidationError(self.error_messages["locked"], code="locked")
         # L'essai est compté avant la vérification du mot de passe (lente) : des requêtes envoyées
         # en même temps ne dépassent pas la limite du compte. Il est effacé en cas de succès.
@@ -174,7 +177,7 @@ class ClientCorrectionForm(ClientDataForm):
     ni consentement aux e-mails promotionnels (choix du client seul)."""
 
 
-TOO_MANY_PASSWORD_ATTEMPTS = "Trop d'essais. Pour votre sécurité, réessayez dans 15 minutes."
+TOO_MANY_PASSWORD_ATTEMPTS = f"Trop d'essais. Pour votre sécurité, réessayez dans {password_confirmations.window_text}."
 
 
 def check_current_password(user: User, password: str) -> None:
@@ -188,8 +191,19 @@ def check_current_password(user: User, password: str) -> None:
     password_confirmations.reset(key)
 
 
-class CurrentPasswordMixin:
-    """Champ « password » : le mot de passe actuel, vérifié par check_current_password."""
+class CurrentPasswordForm(forms.Form):
+    """Formulaire d'un utilisateur connecté qui ressaisit son mot de passe actuel (champ « password »),
+    vérifié par check_current_password. L'utilisateur est le premier argument."""
+
+    password = forms.CharField(
+        label="Votre mot de passe actuel",
+        strip=False,
+        widget=forms.PasswordInput(attrs={"autocomplete": "current-password"}),
+    )
+
+    def __init__(self, user: User, *args, **kwargs):
+        self.user = user
+        super().__init__(*args, **kwargs)
 
     def clean_password(self) -> str:
         password = self.cleaned_data["password"]
@@ -204,19 +218,11 @@ class AccountPasswordChangeForm(PasswordChangeForm):
         return password
 
 
-class EmailChangeForm(CurrentPasswordMixin, forms.Form):
+class EmailChangeForm(CurrentPasswordForm):
     new_email = forms.EmailField(
         label="Nouvelle adresse e-mail", widget=forms.EmailInput(attrs={"autocomplete": "email"})
     )
-    password = forms.CharField(
-        label="Votre mot de passe actuel",
-        strip=False,
-        widget=forms.PasswordInput(attrs={"autocomplete": "current-password"}),
-    )
-
-    def __init__(self, user: User, *args, **kwargs):
-        self.user = user
-        super().__init__(*args, **kwargs)
+    field_order = ["new_email", "password"]
 
     def clean_new_email(self) -> str:
         new_email = normalize_email_address(self.cleaned_data["new_email"])
@@ -225,16 +231,8 @@ class EmailChangeForm(CurrentPasswordMixin, forms.Form):
         return new_email
 
 
-class AccountDeletionForm(CurrentPasswordMixin, forms.Form):
-    password = forms.CharField(
-        label="Votre mot de passe",
-        strip=False,
-        widget=forms.PasswordInput(attrs={"autocomplete": "current-password"}),
-    )
-
-    def __init__(self, user: User, *args, **kwargs):
-        self.user = user
-        super().__init__(*args, **kwargs)
+class AccountDeletionForm(CurrentPasswordForm):
+    pass
 
 
 class AgentCreationForm(forms.ModelForm):

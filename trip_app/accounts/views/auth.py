@@ -26,7 +26,7 @@ def sign_up(request):
     form = SignUpForm(request.POST or None)
     ip = get_client_ip(request)
     if request.method == "POST" and sign_ups_by_ip.is_locked(ip):
-        messages.error(request, "Trop d'inscriptions depuis cette connexion. Réessayez dans une heure.")
+        messages.error(request, f"Trop d'inscriptions depuis cette connexion. Réessayez dans {sign_ups_by_ip.window_text}.")
     elif request.method == "POST" and form.is_valid():
         sign_ups_by_ip.record(ip)
         recent_sign_ups_by_ip.reset(ip)
