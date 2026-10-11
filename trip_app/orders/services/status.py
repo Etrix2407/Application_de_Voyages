@@ -55,7 +55,8 @@ def departure_passed(order: Order) -> bool:
 
 def staff_can_confirm(order: Order) -> bool:
     # Décision de la cliente : une demande dont le départ est passé ne se confirme plus.
-    return order.status in CONFIRMABLE and not departure_passed(order)
+    # Une demande anonymisée (compte supprimé) non plus : personne à rappeler ni à prévenir.
+    return order.status in CONFIRMABLE and order.client_id is not None and not departure_passed(order)
 
 
 def staff_can_cancel(order: Order) -> bool:
@@ -86,6 +87,8 @@ def confirm_by_staff(order: Order, staff_member, expected_price: Decimal | None 
         raise TransitionNotAllowed(CONFIRM_REFUSAL)
     if departure_passed(order):
         raise TransitionNotAllowed("La date de départ est passée : cette demande ne peut plus être confirmée.")
+    if order.client_id is None:
+        raise TransitionNotAllowed("Le compte du client a été supprimé : cette demande ne peut plus être confirmée.")
     quote = price_at_current_rates(order)
     if expected_price is not None and expected_price != quote.price:
         raise PriceChanged

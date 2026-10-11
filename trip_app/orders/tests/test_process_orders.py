@@ -55,6 +55,17 @@ class StaffProcessingTests(TestCase):
         self.assertContains(response, "Le prix aux tarifs du jour a changé")
         self.assertEqual(self.refreshed_status(), OrderStatus.PENDING)
 
+    def test_order_without_client_cannot_be_confirmed(self):
+        # Demande anonymisée restée en attente (compte supprimé avant l'annulation automatique).
+        Order.objects.filter(pk=self.order.pk).update(client=None)
+
+        page = self.client.get(self.detail)
+        response = self.client.post(self.confirm_url, {"expected_price": str(self.order.estimated_price)}, follow=True)
+
+        self.assertNotContains(page, self.confirm_url)
+        self.assertContains(response, "Le compte du client a été supprimé")
+        self.assertEqual(self.refreshed_status(), OrderStatus.PENDING)
+
     def test_confirm_refused_without_a_readable_price(self):
         for posted in [{}, {"expected_price": "abc"}, {"expected_price": "sNaN"}, {"expected_price": "Infinity"}]:
             with self.subTest(posted=posted):
