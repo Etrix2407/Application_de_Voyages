@@ -152,6 +152,17 @@ class PendingOrdersOfDeletedAccountTests(TestCase):
         self.confirmed.refresh_from_db()
         self.assertEqual(self.confirmed.status, OrderStatus.CONFIRMED)
 
+    def test_confirmed_order_of_deleted_account_can_be_cancelled(self):
+        # Plus de client : l'annulation passe, sans e-mail à envoyer ni erreur.
+        self.marie.delete()
+        order = Order.objects.get(pk=self.confirmed.pk)  # rechargée, comme par la page du personnel
+
+        cancel_by_staff(order, create_agent(email="autre.agent@example.com"), "Voyage annulé par l'hôtel.")
+
+        self.confirmed.refresh_from_db()
+        self.assertEqual(self.confirmed.status, OrderStatus.CANCELLED)
+        self.assertEqual(mail.outbox, [])
+
     def test_staff_sees_why_and_cannot_confirm(self):
         self.marie.delete()
         self.client.force_login(create_agent(email="autre.agent@example.com"))

@@ -8,6 +8,8 @@ accounts/services/email_texts.py) ; elles servent aussi à reconstruire un messa
 nouvelle tentative (voir orders/services/email_rebuilders.py).
 """
 
+from collections.abc import Callable
+
 from django.conf import settings
 from django.urls import reverse
 from django.utils.formats import date_format
@@ -23,22 +25,24 @@ QUOTE_NOTE = "Le prix de la destination sera donné sur devis par votre conseill
 
 def send_order_placed(order: Order) -> None:
     """Accusé de réception au client, avec le récapitulatif et le prix estimé."""
-    _send_to_client(order, EmailKind.ORDER_PLACED, placed_context(order))
+    _send_to_client(order, EmailKind.ORDER_PLACED, lambda: placed_context(order))
 
 
 def send_order_confirmed(order: Order, staff_member) -> None:
     """Confirmation au client : récapitulatif au prix confirmé et nom du conseiller."""
-    _send_to_client(order, EmailKind.ORDER_CONFIRMED, confirmed_context(order, staff_member.get_full_name()))
+    _send_to_client(order, EmailKind.ORDER_CONFIRMED, lambda: confirmed_context(order, staff_member.get_full_name()))
 
 
 def send_order_cancelled_by_client(order: Order) -> None:
     """Accusé de réception de l'annulation faite par le client."""
-    _send_to_client(order, EmailKind.ORDER_CANCELLED_BY_CLIENT, client_context(order))
+    _send_to_client(order, EmailKind.ORDER_CANCELLED_BY_CLIENT, lambda: client_context(order))
 
 
 def send_order_cancelled_by_agency(order: Order, explanation: str) -> None:
     """Annulation par l'agence : l'explication pour le client, s'il y en a une, et un mot d'excuse."""
-    _send_to_client(order, EmailKind.ORDER_CANCELLED_BY_AGENCY, cancelled_by_agency_context(order, explanation))
+    _send_to_client(
+        order, EmailKind.ORDER_CANCELLED_BY_AGENCY, lambda: cancelled_by_agency_context(order, explanation)
+    )
 
 
 def send_new_order_alert(order: Order) -> None:
@@ -90,11 +94,13 @@ def order_dates(order: Order) -> str:
     return f"du {date_format(order.departure_date, 'j F Y')} au {date_format(order.return_date, 'j F Y')}"
 
 
-def _send_to_client(order: Order, kind: EmailKind, fields: dict) -> None:
+def _send_to_client(order: Order, kind: EmailKind, build_fields: Callable[[], dict]) -> None:
+    # Champs construits après le contrôle : une demande anonymisée (compte supprimé) n'a plus de
+    # client, ni de prénom à lire. Rien n'est envoyé.
     client = order.client
     if client is None:
         return
-    send_email(client.email, kind, fields, user=client, order_number=order.pk)
+    send_email(client.email, kind, build_fields(), user=client, order_number=order.pk)
 
 
 def _lines(summary: list[tuple[str, str]]) -> str:
