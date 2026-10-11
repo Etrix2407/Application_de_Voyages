@@ -11,7 +11,8 @@ from django.utils import timezone
 from django.utils.formats import date_format
 
 from accounts.services.emails import send_email, site_url
-from reviews.models import AgencyResponse, RefusalReason, Review, ReviewEmail
+from common.text import duration_text
+from reviews.models import EDIT_PERIOD, AgencyResponse, RefusalReason, Review, ReviewEmail
 from reviews.services.writing import client_can_edit
 
 
@@ -54,7 +55,7 @@ def refused_context(review: Review) -> dict:
             f"{site_url(reverse('my_reviews'))}"
         )
     elif not review.can_be_changed_by_client() and review.refusal_reason != RefusalReason.TRIP_CANCELLED:
-        correction = "Le délai de 30 jours pour corriger cet avis est dépassé."
+        correction = f"Le délai de {duration_text(EDIT_PERIOD)} pour corriger cet avis est dépassé."
     return {**_base_context(review), "motif": review.refusal_label, "correction": correction}
 
 
