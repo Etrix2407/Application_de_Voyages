@@ -17,6 +17,7 @@ trip_app/
 │   ├── views/
 │   └── services/
 ├── promotions/        # promotions : remises automatiques ou sur code (v4)
+│   ├── views/
 │   └── services/
 ├── orders/            # demandes de voyage (v2)
 │   ├── views/
@@ -24,7 +25,7 @@ trip_app/
 ├── reviews/           # avis clients vérifiés, modération, réponse de l'agence (v3)
 │   ├── views/
 │   └── services/
-├── templates/         # rangés par application : accounts/, catalog/, orders/, reviews/
+├── templates/         # rangés par application : accounts/, catalog/, orders/, promotions/, reviews/ ; emails/ pour les e-mails
 └── static/
 ```
 
