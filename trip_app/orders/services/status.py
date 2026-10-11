@@ -51,8 +51,13 @@ def staff_can_cancel(order: Order) -> bool:
 
 def cancel_by_client(order: Order, reason: str = "") -> None:
     _change_status(
-        order, CLIENT_CANCELLABLE, Status.CANCELLED, order.client, StatusChange.CLIENT_AUTHOR, reason,
-        "Seule une demande en attente peut être annulée par le client.", by_client=True,
+        order, Status.CANCELLED,
+        allowed_from=CLIENT_CANCELLABLE,
+        author=order.client,
+        author_name=StatusChange.CLIENT_AUTHOR,
+        reason=reason,
+        refusal="Seule une demande en attente peut être annulée par le client.",
+        by_client=True,
     )
     send_order_cancelled_by_client(order)
 
@@ -76,8 +81,13 @@ def confirm_by_staff(order: Order, staff_member) -> None:
         "has_confirmed_destination_price": True,
     }
     _change_status(
-        order, CONFIRMABLE, Status.CONFIRMED, staff_member, staff_member.get_full_name(), note,
-        "Seule une demande en attente peut être confirmée.", updates=updates,
+        order, Status.CONFIRMED,
+        allowed_from=CONFIRMABLE,
+        author=staff_member,
+        author_name=staff_member.get_full_name(),
+        reason=note,
+        refusal="Seule une demande en attente peut être confirmée.",
+        updates=updates,
     )
     for field, value in updates.items():
         setattr(order, field, value)
@@ -95,8 +105,13 @@ def cancel_by_staff(order: Order, staff_member, internal_reason: str, explanatio
     if not internal_reason.strip():
         raise ValueError("Le motif interne est obligatoire quand le personnel annule une demande.")
     _change_status(
-        order, STAFF_CANCELLABLE, Status.CANCELLED, staff_member, staff_member.get_full_name(),
-        explanation, "Cette demande est déjà annulée.", internal_reason=internal_reason,
+        order, Status.CANCELLED,
+        allowed_from=STAFF_CANCELLABLE,
+        author=staff_member,
+        author_name=staff_member.get_full_name(),
+        reason=explanation,
+        refusal="Cette demande est déjà annulée.",
+        internal_reason=internal_reason,
     )
     send_order_cancelled_by_agency(order, explanation)
 
@@ -108,17 +123,34 @@ ACCOUNT_DELETED_REASON = "Compte client supprimé : demande annulée automatique
 def cancel_after_account_deletion(order: Order) -> None:
     """Le client supprime son compte : sa demande en attente n'a plus à être traitée."""
     _change_status(
-        order, CLIENT_CANCELLABLE, Status.CANCELLED, None, StatusChange.CLIENT_AUTHOR, "",
-        "Seule une demande en attente est annulée à la suppression du compte.", by_client=True,
+        order, Status.CANCELLED,
+        allowed_from=CLIENT_CANCELLABLE,
+        author=None,
+        author_name=StatusChange.CLIENT_AUTHOR,
+        refusal="Seule une demande en attente est annulée à la suppression du compte.",
+        by_client=True,
         internal_reason=ACCOUNT_DELETED_REASON,
     )
 
 
 @transaction.atomic
 def _change_status(
-    order, allowed_from, new_status, author, author_name, reason, refusal, by_client=False, updates=None,
-    internal_reason="",
+    order: Order,
+    new_status: str,
+    *,
+    allowed_from: frozenset,
+    author,
+    author_name: str,
+    refusal: str,
+    reason: str = "",
+    internal_reason: str = "",
+    by_client: bool = False,
+    updates: dict | None = None,
 ) -> None:
+    """Passe la demande à `new_status` si son état est dans `allowed_from`, sinon lève TransitionNotAllowed(refusal).
+
+    `reason` est visible par le client ; `internal_reason` ne l'est pas sur le site (voir en tête).
+    """
     # Mise à jour conditionnelle : deux actions simultanées ne peuvent pas passer toutes les deux.
     updated = Order.objects.filter(pk=order.pk, status__in=allowed_from).update(
         status=new_status, **(updates or {})
