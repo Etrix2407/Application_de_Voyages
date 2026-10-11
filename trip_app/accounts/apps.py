@@ -7,7 +7,6 @@ from common.db import register_sql_normalize
 
 
 class AccountsConfig(AppConfig):
-    default_auto_field = 'django.db.models.BigAutoField'
     name = 'accounts'
 
     def ready(self):
