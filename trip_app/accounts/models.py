@@ -192,8 +192,12 @@ class User(AbstractBaseUser):
         return f"{EMPLOYEE_NUMBER_PREFIX}{next_number:04d}"
 
 
-class EmailKind(models.TextChoices):
-    """Type de chaque e-mail : clé stable, qui fixe son objet et son texte (modifiables par l'administrateur)."""
+class AccountEmail(models.TextChoices):
+    """Types des e-mails des comptes. Chaque application déclare les siens de la même façon (ex. OrderEmail),
+    avec leur texte d'origine : voir accounts/services/email_texts.py.
+
+    La valeur est la clé stockée au journal et dans les textes modifiés : elle ne change jamais.
+    """
 
     SIGN_UP_CONFIRMATION = "sign_up_confirmation", "Confirmation d'inscription"
     SIGN_UP_EXISTING = "sign_up_existing", "Inscription avec une adresse déjà utilisée"
@@ -202,22 +206,11 @@ class EmailKind(models.TextChoices):
     PASSWORD_RESET = "password_reset", "Mot de passe oublié"
     CLIENT_PASSWORD_LINK = "client_password_link", "Lien de mot de passe envoyé par un agent"
     AGENT_ACTIVATION = "agent_activation", "Activation d'un compte agent"
-    REVIEW_PUBLISHED = "review_published", "Avis publié"
-    REVIEW_REFUSED = "review_refused", "Avis refusé ou retiré"
-    REVIEW_RESPONSE = "review_response", "Réponse de l'agence à un avis"
-    ORDER_PLACED = "order_placed", "Demande de voyage reçue"
-    ORDER_CONFIRMED = "order_confirmed", "Demande de voyage confirmée"
-    ORDER_CANCELLED_BY_CLIENT = "order_cancelled_by_client", "Demande de voyage annulée par le client"
-    ORDER_CANCELLED_BY_AGENCY = "order_cancelled_by_agency", "Demande de voyage annulée par l'agence"
-    NEW_ORDER_ALERT = "new_order_alert", "Alerte au personnel : nouvelle demande de voyage"
-    DEPARTURE_REMINDER = "departure_reminder", "Rappel 7 jours avant le départ"
-    REVIEW_INVITATION = "review_invitation", "Invitation à donner un avis"
     PASSWORD_CHANGED = "password_changed", "Mot de passe modifié"
     ACCOUNT_DELETED = "account_deleted", "Compte supprimé"
     UNCONFIRMED_ACCOUNT_DELETED = "unconfirmed_account_deleted", "Compte jamais confirmé supprimé"
     STAFF_ACCOUNT_DELETED = "staff_account_deleted", "Compte du personnel supprimé"
     STAFF_PASSWORD_LINK = "staff_password_link", "Lien de mot de passe envoyé à un membre du personnel"
-    PROMOTION = "promotion", "E-mail promotionnel"
 
 
 class EmailStatus(models.TextChoices):
@@ -253,7 +246,10 @@ class EmailLog(models.Model):
     created_at = models.DateTimeField("date", default=timezone.now)
     # Vidé à la suppression du compte (RGPD) : la ligne reste pour les statistiques anonymes.
     recipient = models.EmailField("destinataire", blank=True)
-    kind = models.CharField("type", max_length=40, choices=EmailKind.choices)
+    # Type déclaré par l'application qui envoie l'e-mail (accounts/services/email_texts.py). Pas de
+    # choices : accounts ne connaît pas les types des autres applications, et un nouveau type
+    # ne demande aucune migration.
+    kind = models.CharField("type", max_length=40)
     subject = models.CharField("objet", max_length=200)
     status = models.CharField(
         "état", max_length=20, choices=EmailStatus.choices, default=EmailStatus.PENDING, db_index=True
@@ -286,7 +282,7 @@ class EmailLog(models.Model):
         ]
 
     def __str__(self) -> str:
-        return f"{self.get_kind_display()} — {self.get_status_display()}"
+        return f"{self.kind} — {self.get_status_display()}"
 
 
 class TaskLock(models.Model):
@@ -314,7 +310,7 @@ class EmailText(models.Model):
     Seul le texte change : la mise en page et les champs variables restent ceux du site.
     """
 
-    kind = models.CharField("type", max_length=40, choices=EmailKind.choices, unique=True)
+    kind = models.CharField("type", max_length=40, unique=True)  # sans choices : voir EmailLog.kind
     subject = models.CharField("objet", max_length=200)
     body = models.TextField("texte")
     updated_at = models.DateTimeField("modifié le", default=timezone.now)
@@ -327,4 +323,4 @@ class EmailText(models.Model):
         verbose_name_plural = "textes d'e-mails modifiés"
 
     def __str__(self) -> str:
-        return self.get_kind_display()
+        return self.kind

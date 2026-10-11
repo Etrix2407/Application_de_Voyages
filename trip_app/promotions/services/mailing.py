@@ -15,11 +15,11 @@ from django.urls import reverse
 from django.utils import timezone
 from django.utils.formats import date_format
 
-from accounts.models import EmailKind, User
+from accounts.models import User
 from accounts.services.email_texts import render_email
 from accounts.services.emails import queue_emails, site_url
 from accounts.services.unsubscribe import unsubscribe_link
-from promotions.models import Promotion, PromotionMailing, State
+from promotions.models import Promotion, PromotionEmail, PromotionMailing, State
 from promotions.services.public import offers_something, visible_targets
 
 # Aperçu avant l'envoi : chaque client lit son prénom et son propre lien de désinscription.
@@ -96,7 +96,7 @@ def _create_mailing(promotion: Promotion, message: str, author: User, submission
         recipients_count=len(recipients),
         submission_token=submission_token,
     )
-    queue_emails(recipients, EmailKind.PROMOTION, promotion_mailing_number=mailing.pk)
+    queue_emails(recipients, PromotionEmail.PROMOTION, promotion_mailing_number=mailing.pk)
     return mailing
 
 
@@ -104,7 +104,7 @@ def mailing_preview(promotion: Promotion, message: str) -> tuple[str, str]:
     """Objet et texte de l'e-mail, avant l'envoi. Prénom et lien de désinscription : des exemples."""
     prefetch_related_objects([promotion], *visible_targets(promotion.scope))
     rendered = render_email(
-        EmailKind.PROMOTION, _email_fields(promotion, message, PREVIEW_FIRST_NAME, PREVIEW_UNSUBSCRIBE_LINK)
+        PromotionEmail.PROMOTION, _email_fields(promotion, message, PREVIEW_FIRST_NAME, PREVIEW_UNSUBSCRIBE_LINK)
     )
     return rendered.subject, rendered.text
 

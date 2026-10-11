@@ -56,6 +56,15 @@ class Action(models.TextChoices):
     DISABLED = "disabled", "Désactivation"
 
 
+class PromotionEmail(models.TextChoices):
+    """Type des e-mails promotionnels ; texte d'origine dans promotions/services/email_texts.py.
+
+    La valeur est la clé stockée au journal des e-mails : elle ne change jamais.
+    """
+
+    PROMOTION = "promotion", "E-mail promotionnel"
+
+
 def normalize_code(code: str) -> str:
     """Saisie acceptée en minuscules et avec des espaces autour : « bienvenue15 » → « BIENVENUE15 »."""
     return code.strip().upper()

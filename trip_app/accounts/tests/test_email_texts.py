@@ -2,7 +2,7 @@ from django.core import mail
 from django.test import TestCase
 from django.urls import reverse
 
-from accounts.models import EmailKind, EmailLog, EmailText
+from accounts.models import AccountEmail, EmailLog, EmailText
 from accounts.services.email_texts import fill_fields
 from accounts.services.emails import send_email
 
@@ -17,10 +17,10 @@ class EmailTextPageTests(SendEmailsImmediately, TestCase):
 
     def setUp(self):
         self.client.force_login(create_admin(first_name="Anne", last_name="Durand"))
-        self.url = reverse("edit_email_text", args=[EmailKind.CLIENT_PASSWORD_LINK])
+        self.url = reverse("edit_email_text", args=[AccountEmail.CLIENT_PASSWORD_LINK])
 
     def send(self):
-        send_email("marie@example.com", EmailKind.CLIENT_PASSWORD_LINK, FIELDS)
+        send_email("marie@example.com", AccountEmail.CLIENT_PASSWORD_LINK, FIELDS)
         return mail.outbox[-1]
 
     def test_administrator_text_is_sent_with_fields_filled(self):
@@ -55,10 +55,10 @@ class EmailTextPageTests(SendEmailsImmediately, TestCase):
     def test_reset_restores_original_text(self):
         """« Rétablir le texte d'origine » supprime le texte modifié : le texte d'origine repart."""
         EmailText.objects.create(
-            kind=EmailKind.CLIENT_PASSWORD_LINK, subject="Ancien objet", body="{prénom} {lien}", updated_by_name="Anne"
+            kind=AccountEmail.CLIENT_PASSWORD_LINK, subject="Ancien objet", body="{prénom} {lien}", updated_by_name="Anne"
         )
 
-        reset_url = reverse("reset_email_text", args=[EmailKind.CLIENT_PASSWORD_LINK])
+        reset_url = reverse("reset_email_text", args=[AccountEmail.CLIENT_PASSWORD_LINK])
         # Une page de confirmation d'abord : rien n'est perdu sur un simple clic.
         self.assertContains(self.client.get(reset_url), "Rétablir le texte d'origine")
         self.assertTrue(EmailText.objects.exists())

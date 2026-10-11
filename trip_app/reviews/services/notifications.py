@@ -2,7 +2,7 @@
 
 Le client dont le compte est supprimé (avis anonymisé) ne reçoit rien.
 Les fonctions *_context donnent la valeur des champs variables de chaque e-mail (voir
-accounts/services/email_texts.py) ; elles servent aussi à reconstruire un message pour une
+reviews/services/email_texts.py) ; elles servent aussi à reconstruire un message pour une
 nouvelle tentative (voir reviews/services/email_rebuilders.py).
 """
 
@@ -10,23 +10,22 @@ from django.urls import reverse
 from django.utils import timezone
 from django.utils.formats import date_format
 
-from accounts.models import EmailKind
 from accounts.services.emails import send_email, site_url
-from reviews.models import AgencyResponse, RefusalReason, Review
+from reviews.models import AgencyResponse, RefusalReason, Review, ReviewEmail
 from reviews.services.writing import client_can_edit
 
 
 def notify_published(review: Review) -> None:
-    _notify(review, EmailKind.REVIEW_PUBLISHED, published_context)
+    _notify(review, ReviewEmail.REVIEW_PUBLISHED, published_context)
 
 
 def notify_refused(review: Review) -> None:
-    _notify(review, EmailKind.REVIEW_REFUSED, refused_context)
+    _notify(review, ReviewEmail.REVIEW_REFUSED, refused_context)
 
 
 def notify_response(response: AgencyResponse, created: bool) -> None:
     """Réponse de l'agence publiée (`created`) ou modifiée sous l'avis du client."""
-    _notify(response.review, EmailKind.REVIEW_RESPONSE, lambda review: response_context(response, created))
+    _notify(response.review, ReviewEmail.REVIEW_RESPONSE, lambda review: response_context(response, created))
 
 
 def published_context(review: Review) -> dict:
@@ -81,7 +80,7 @@ def _base_context(review: Review) -> dict:
     }
 
 
-def _notify(review: Review, kind: EmailKind, build_context) -> None:
+def _notify(review: Review, kind: ReviewEmail, build_context) -> None:
     client = review.order.client
     if client is None:
         return

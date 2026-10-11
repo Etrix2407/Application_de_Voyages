@@ -20,7 +20,7 @@ from django.db import IntegrityError, transaction
 from django.urls import reverse
 from django.utils import timezone
 
-from accounts.models import EmailKind, Role, User, normalize_email_address
+from accounts.models import AccountEmail, Role, User, normalize_email_address
 from accounts.services.account_deletion import delete_account
 from accounts.services.emails import send_email, site_url
 from accounts.services.throttling import confirmation_emails
@@ -58,7 +58,7 @@ def request_sign_up(data: dict) -> None:
     if existing and not existing.is_awaiting_confirmation:
         # Hachage sans usage : la réponse prend le même temps que pour une inscription nouvelle.
         make_password(data["password1"])
-        _notify(existing, EmailKind.SIGN_UP_EXISTING, account_fields(existing))
+        _notify(existing, AccountEmail.SIGN_UP_EXISTING, account_fields(existing))
         return
 
     user = User(email=email, role=Role.CLIENT, consent_date=timezone.now())
@@ -82,7 +82,7 @@ def request_sign_up(data: dict) -> None:
 
 def send_confirmation(user: User) -> bool:
     """Envoie le lien de confirmation. Renvoie False s'il n'est pas parti (limite ou panne)."""
-    return _notify(user, EmailKind.SIGN_UP_CONFIRMATION, confirmation_fields(user))
+    return _notify(user, AccountEmail.SIGN_UP_CONFIRMATION, confirmation_fields(user))
 
 
 def resend_confirmation(email: str) -> None:
@@ -105,7 +105,7 @@ def purge_unconfirmed(now=None) -> int:
     # Un par un : chaque titulaire reçoit un dernier e-mail (quelques comptes par jour au plus).
     deleted = 0
     for user in accounts:
-        delete_account(user, EmailKind.UNCONFIRMED_ACCOUNT_DELETED)
+        delete_account(user, AccountEmail.UNCONFIRMED_ACCOUNT_DELETED)
         deleted += 1
     return deleted
 
@@ -125,7 +125,7 @@ def confirmation_fields(user: User) -> dict:
     return {**account_fields(user), "lien": link}
 
 
-def _notify(user: User, kind: EmailKind, fields: dict) -> bool:
+def _notify(user: User, kind: AccountEmail, fields: dict) -> bool:
     # Limite par adresse : on ne peut pas se servir du site pour inonder une boîte e-mail.
     if confirmation_emails.is_locked(user.email):
         return False

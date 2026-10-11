@@ -8,13 +8,14 @@ from django.template.defaultfilters import date
 from django.test import TestCase
 from django.utils import timezone
 
-from accounts.models import EmailKind, EmailLog, EmailStatus
+from accounts.models import EmailLog, EmailStatus
 from accounts.services.email_retry import OBSOLETE, retry_due_emails
 from accounts.tests.email_delivery import SendEmailsImmediately
 from accounts.tests.factories import create_agent, create_client
 from catalog.tests.factories import create_country, create_destination
+from orders.models import OrderEmail
 from orders.services.status import cancel_by_staff
-from reviews.models import RefusalReason, ReviewStatus
+from reviews.models import RefusalReason, ReviewEmail, ReviewStatus
 from reviews.services.moderation import hide, publish, refuse
 from reviews.services.responses import save_response
 
@@ -39,7 +40,7 @@ class ReviewEmailTests(SendEmailsImmediately, TestCase):
     def test_published(self):
         publish(self.review)
 
-        body = self.assertSentToJulie(EmailKind.REVIEW_PUBLISHED)
+        body = self.assertSentToJulie(ReviewEmail.REVIEW_PUBLISHED)
         self.assertEqual(mail.outbox[0].subject, "Merci, votre avis est en ligne")
         self.assertIn(f"« Séjour inoubliable » sur Kyoto ({self.trip.country_name})", body)
         self.assertIn(f"/catalogue/destinations/{self.trip.destination_id}/", body)
@@ -54,7 +55,7 @@ class ReviewEmailTests(SendEmailsImmediately, TestCase):
 
         refuse(self.review, RefusalReason.OTHER, "Merci de retirer le nom du guide.")
 
-        body = self.assertSentToJulie(EmailKind.REVIEW_REFUSED)
+        body = self.assertSentToJulie(ReviewEmail.REVIEW_REFUSED)
         self.assertIn("Motif : Autre — Merci de retirer le nom du guide.", body)
         self.assertIn(f"Vous pouvez corriger votre avis jusqu'au {date(deadline, 'j F Y')}", body)
 
@@ -64,7 +65,7 @@ class ReviewEmailTests(SendEmailsImmediately, TestCase):
 
         refuse(self.review, RefusalReason.OFF_TOPIC)
 
-        body = self.assertSentToJulie(EmailKind.REVIEW_REFUSED)
+        body = self.assertSentToJulie(ReviewEmail.REVIEW_REFUSED)
         self.assertIn("Motif : Hors sujet", body)
         self.assertIn("Le délai de 30 jours pour corriger cet avis est dépassé.", body)
         self.assertNotIn("Vous pouvez corriger", body)
@@ -75,7 +76,7 @@ class ReviewEmailTests(SendEmailsImmediately, TestCase):
 
         hide(self.review, RefusalReason.ABUSIVE)
 
-        body = self.assertSentToJulie(EmailKind.REVIEW_REFUSED)
+        body = self.assertSentToJulie(ReviewEmail.REVIEW_REFUSED)
         self.assertIn("Motif : Langage injurieux", body)
         self.assertIn("Vous pouvez corriger votre avis", body)
 
@@ -85,7 +86,7 @@ class ReviewEmailTests(SendEmailsImmediately, TestCase):
         # Deux e-mails : l'annulation de la demande (orders) et le retrait de l'avis.
         self.assertEqual(
             set(EmailLog.objects.values_list("kind", flat=True)),
-            {EmailKind.ORDER_CANCELLED_BY_AGENCY, EmailKind.REVIEW_REFUSED},
+            {OrderEmail.ORDER_CANCELLED_BY_AGENCY, ReviewEmail.REVIEW_REFUSED},
         )
         (body,) = [message.body for message in mail.outbox if message.subject == "Votre avis n'est pas publié"]
         self.assertIn("Motif : Voyage annulé", body)
@@ -102,7 +103,7 @@ class ReviewEmailTests(SendEmailsImmediately, TestCase):
         self.assertIn("L'agence a répondu à votre avis", mail.outbox[0].body)
         self.assertIn("L'agence a modifié sa réponse", mail.outbox[1].body)
         self.assertIn("Merci beaucoup Julie !", mail.outbox[1].body)
-        self.assertEqual(EmailLog.objects.filter(kind=EmailKind.REVIEW_RESPONSE, user=self.julie).count(), 2)
+        self.assertEqual(EmailLog.objects.filter(kind=ReviewEmail.REVIEW_RESPONSE, user=self.julie).count(), 2)
 
     def test_failed_email_rebuilt_by_retry(self):
         with mock.patch(
@@ -114,14 +115,14 @@ class ReviewEmailTests(SendEmailsImmediately, TestCase):
         self.assertEqual(retry_due_emails(), 1)
 
         self.assertEqual(EmailLog.objects.get().status, EmailStatus.SENT)
-        self.assertIn("Motif : Hors sujet", self.assertSentToJulie(EmailKind.REVIEW_REFUSED))
+        self.assertIn("Motif : Hors sujet", self.assertSentToJulie(ReviewEmail.REVIEW_REFUSED))
 
     def test_published_and_response_rebuilt_on_retry(self):
         publish(self.review)
         save_response(self.review, self.agent, "Merci Julie !")
         cases = {
-            EmailKind.REVIEW_PUBLISHED: f"/catalogue/destinations/{self.trip.destination_id}/",
-            EmailKind.REVIEW_RESPONSE: "Merci Julie !",
+            ReviewEmail.REVIEW_PUBLISHED: f"/catalogue/destinations/{self.trip.destination_id}/",
+            ReviewEmail.REVIEW_RESPONSE: "Merci Julie !",
         }
         for kind, expected in cases.items():
             with self.subTest(kind=kind):

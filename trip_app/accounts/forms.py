@@ -11,7 +11,7 @@ from django.core.exceptions import ValidationError
 
 from common.forms import DateInput
 
-from .models import STAFF_ROLES, EmailKind, EmailText, Role, User, normalize_email_address
+from .models import STAFF_ROLES, AccountEmail, EmailText, Role, User, normalize_email_address
 from .services.email_texts import DEFAULT_TEXTS, fields_in, has_lone_brace
 from .services.password_links import send_password_link
 from .services.throttling import (
@@ -164,7 +164,7 @@ class PasswordResetRequestForm(PasswordResetForm):
         password_reset_requests_by_ip.record(ip)
         # get_users : comptes actifs avec un mot de passe, à cette adresse (sans tenir compte des majuscules).
         for user in self.get_users(email):
-            send_password_link(user, EmailKind.PASSWORD_RESET)
+            send_password_link(user, AccountEmail.PASSWORD_RESET)
 
 
 class ClientDataForm(forms.ModelForm):

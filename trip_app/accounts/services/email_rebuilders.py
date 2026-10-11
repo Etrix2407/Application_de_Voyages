@@ -7,7 +7,7 @@ du compte : jamais à une ancienne adresse.
 
 from collections.abc import Callable
 
-from accounts.models import EmailKind, EmailLog, User
+from accounts.models import AccountEmail, EmailLog, User
 from accounts.services.email_retry import RebuiltEmail, rebuilder
 from accounts.services.emails import site_url
 from accounts.services.password_links import password_link_path, staff_link_fields, staff_link_path
@@ -20,7 +20,7 @@ def account_at_recipient(log: EmailLog) -> User | None:
     return user if user is not None and user.email == log.recipient else None
 
 
-@rebuilder(EmailKind.SIGN_UP_CONFIRMATION)
+@rebuilder(AccountEmail.SIGN_UP_CONFIRMATION)
 def _sign_up_confirmation(log: EmailLog) -> RebuiltEmail | None:
     user = account_at_recipient(log)
     if user is None or not user.is_awaiting_confirmation:
@@ -28,7 +28,7 @@ def _sign_up_confirmation(log: EmailLog) -> RebuiltEmail | None:
     return RebuiltEmail(confirmation_fields(user))
 
 
-@rebuilder(EmailKind.SIGN_UP_EXISTING)
+@rebuilder(AccountEmail.SIGN_UP_EXISTING)
 def _sign_up_existing(log: EmailLog) -> RebuiltEmail | None:
     user = account_at_recipient(log)
     if user is None:
@@ -40,8 +40,8 @@ def _sign_up_existing(log: EmailLog) -> RebuiltEmail | None:
 # partie du lien, n'est pas conservée. En cas d'échec, le client refait sa demande.
 
 
-@rebuilder(EmailKind.EMAIL_CHANGE_NOTICE)
-@rebuilder(EmailKind.PASSWORD_CHANGED)
+@rebuilder(AccountEmail.EMAIL_CHANGE_NOTICE)
+@rebuilder(AccountEmail.PASSWORD_CHANGED)
 def _security_notice(log: EmailLog) -> RebuiltEmail | None:
     # Alerte sans lien, destinée à l'adresse d'alors (elle a pu changer depuis).
     if log.user is None:
@@ -57,13 +57,13 @@ def _password_link(log: EmailLog, may_receive: Callable[[User], bool]) -> Rebuil
     return RebuiltEmail({"prénom": user.first_name, "lien": site_url(password_link_path(user))})
 
 
-@rebuilder(EmailKind.PASSWORD_RESET)
+@rebuilder(AccountEmail.PASSWORD_RESET)
 def _password_reset(log: EmailLog) -> RebuiltEmail | None:
     # Mêmes conditions que « Mot de passe oublié » (PasswordResetForm.get_users).
     return _password_link(log, lambda user: user.is_active and user.has_usable_password())
 
 
-@rebuilder(EmailKind.CLIENT_PASSWORD_LINK)
+@rebuilder(AccountEmail.CLIENT_PASSWORD_LINK)
 def _client_password_link(log: EmailLog) -> RebuiltEmail | None:
     return _password_link(log, lambda user: user.is_client)
 
@@ -76,13 +76,13 @@ def _staff_link(log: EmailLog, has_password: bool) -> RebuiltEmail | None:
     return RebuiltEmail(staff_link_fields(user, site_url(staff_link_path(user))))
 
 
-@rebuilder(EmailKind.AGENT_ACTIVATION)
+@rebuilder(AccountEmail.AGENT_ACTIVATION)
 def _agent_activation(log: EmailLog) -> RebuiltEmail | None:
     # Invitation : sans objet si l'agent a déjà choisi son mot de passe.
     return _staff_link(log, has_password=False)
 
 
-@rebuilder(EmailKind.STAFF_PASSWORD_LINK)
+@rebuilder(AccountEmail.STAFF_PASSWORD_LINK)
 def _staff_password_link(log: EmailLog) -> RebuiltEmail | None:
     # Membre qui a déjà un mot de passe (sinon c'est une invitation).
     return _staff_link(log, has_password=True)

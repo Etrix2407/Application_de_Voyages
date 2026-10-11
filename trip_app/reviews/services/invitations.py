@@ -13,10 +13,10 @@ from django.db import transaction
 from django.urls import reverse
 from django.utils import timezone
 
-from accounts.models import EmailKind
 from accounts.services.emails import send_email, site_url
 from orders.models import Order
 from orders.services.emails import order_dates
+from reviews.models import ReviewEmail
 from reviews.services.eligibility import all_reviewable_orders
 
 # Au-delà, plus d'invitation : le client peut toujours donner son avis depuis le détail de sa demande.
@@ -55,7 +55,7 @@ def _send_invitation(order: Order) -> bool:
         return False
     send_email(
         order.client.email,
-        EmailKind.REVIEW_INVITATION,
+        ReviewEmail.REVIEW_INVITATION,
         review_invitation_context(order),
         user=order.client,
         order_number=order.pk,

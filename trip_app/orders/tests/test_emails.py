@@ -6,13 +6,13 @@ from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
-from accounts.models import EmailKind, EmailLog, EmailStatus
+from accounts.models import EmailLog, EmailStatus
 from accounts.services.email_retry import OBSOLETE, retry_due_emails
 from accounts.tests.email_delivery import SendEmailsImmediately
 from accounts.tests.factories import PASSWORD, create_agent, create_client
 from catalog.tests.factories import create_country, create_destination
 from common.text import euros
-from orders.models import Order, OrderStatus
+from orders.models import Order, OrderEmail, OrderStatus
 from orders.services.status import cancel_by_client, cancel_by_staff, confirm_by_staff
 from promotions.tests.factories import create_promotion
 
@@ -54,7 +54,7 @@ class OrderEmailsTests(SendEmailsImmediately, TestCase):
         logged = EmailLog.objects.filter(order_number=order.pk)
         self.assertEqual(
             set(logged.values_list("kind", "user")),
-            {(EmailKind.ORDER_PLACED, self.marie.pk), (EmailKind.NEW_ORDER_ALERT, None)},
+            {(OrderEmail.ORDER_PLACED, self.marie.pk), (OrderEmail.NEW_ORDER_ALERT, None)},
         )
 
     def test_confirmation_gives_confirmed_price_and_advisor_name(self):
@@ -127,19 +127,19 @@ class OrderEmailsRebuildTests(SendEmailsImmediately, TestCase):
     def test_rebuilt_on_retry(self):
         # Type → (action qui amène la demande dans l'état annoncé, textes attendus, texte jamais repris).
         cases = {
-            EmailKind.ORDER_PLACED: (lambda order: None, ["Kyoto (Japon)", "Prix estimé"], None),
-            EmailKind.ORDER_CONFIRMED: (lambda order: confirm_by_staff(order, self.agent), ["Luc Martin"], None),
-            EmailKind.ORDER_CANCELLED_BY_CLIENT: (
+            OrderEmail.ORDER_PLACED: (lambda order: None, ["Kyoto (Japon)", "Prix estimé"], None),
+            OrderEmail.ORDER_CONFIRMED: (lambda order: confirm_by_staff(order, self.agent), ["Luc Martin"], None),
+            OrderEmail.ORDER_CANCELLED_BY_CLIENT: (
                 lambda order: cancel_by_client(order, "Changement de programme."),
                 ["bien enregistré l'annulation"],
                 None,
             ),
-            EmailKind.ORDER_CANCELLED_BY_AGENCY: (
+            OrderEmail.ORDER_CANCELLED_BY_AGENCY: (
                 lambda order: cancel_by_staff(order, self.agent, "Client agressif.", "Plus de places disponibles."),
                 ["Plus de places disponibles."],
                 "agressif",
             ),
-            EmailKind.NEW_ORDER_ALERT: (lambda order: None, ["Marie Dupont", "Kyoto (Japon)"], None),
+            OrderEmail.NEW_ORDER_ALERT: (lambda order: None, ["Marie Dupont", "Kyoto (Japon)"], None),
         }
         for kind, (action, expected, never) in cases.items():
             with self.subTest(kind=kind):
@@ -147,7 +147,7 @@ class OrderEmailsRebuildTests(SendEmailsImmediately, TestCase):
                 action(order)
                 EmailLog.objects.all().delete()
                 mail.outbox.clear()
-                failed_once(None if kind == EmailKind.NEW_ORDER_ALERT else self.marie, kind, order)
+                failed_once(None if kind == OrderEmail.NEW_ORDER_ALERT else self.marie, kind, order)
 
                 self.assertEqual(retry_due_emails(), 1)
 
@@ -160,7 +160,7 @@ class OrderEmailsRebuildTests(SendEmailsImmediately, TestCase):
                     self.assertNotIn(never, html)
 
     def test_never_rebuilt_for_a_former_address(self):
-        log = failed_once(self.marie, EmailKind.ORDER_PLACED, self.order)
+        log = failed_once(self.marie, OrderEmail.ORDER_PLACED, self.order)
         self.marie.email = "marie.nouvelle@example.com"
         self.marie.save()
 

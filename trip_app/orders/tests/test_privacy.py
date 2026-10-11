@@ -4,7 +4,7 @@ from django.core import mail
 from django.test import TestCase
 from django.urls import reverse
 
-from accounts.models import EmailKind, EmailLog, EmailStatus
+from accounts.models import AccountEmail, EmailLog, EmailStatus
 from accounts.tests.factories import PASSWORD, create_agent, create_client
 from catalog.tests.factories import create_activity, create_country, create_destination
 from orders.models import Order, OrderStatus, StatusChange
@@ -189,5 +189,5 @@ class AccountDeletionEmailTests(TestCase):
             [(["client@example.com"], "Votre compte a été supprimé")],
         )
         # Le journal garde la ligne, sans l'adresse (RGPD), avec le résultat de l'envoi.
-        log = EmailLog.objects.get(kind=EmailKind.ACCOUNT_DELETED)
+        log = EmailLog.objects.get(kind=AccountEmail.ACCOUNT_DELETED)
         self.assertEqual((log.recipient, log.status), ("", EmailStatus.SENT))

@@ -46,6 +46,20 @@ class OrderStatus(models.TextChoices):
     CANCELLED = "cancelled", "Annulée"
 
 
+class OrderEmail(models.TextChoices):
+    """Types des e-mails des demandes de voyage ; textes d'origine dans orders/services/email_texts.py.
+
+    La valeur est la clé stockée au journal des e-mails : elle ne change jamais.
+    """
+
+    ORDER_PLACED = "order_placed", "Demande de voyage reçue"
+    ORDER_CONFIRMED = "order_confirmed", "Demande de voyage confirmée"
+    ORDER_CANCELLED_BY_CLIENT = "order_cancelled_by_client", "Demande de voyage annulée par le client"
+    ORDER_CANCELLED_BY_AGENCY = "order_cancelled_by_agency", "Demande de voyage annulée par l'agence"
+    NEW_ORDER_ALERT = "new_order_alert", "Alerte au personnel : nouvelle demande de voyage"
+    DEPARTURE_REMINDER = "departure_reminder", "Rappel 7 jours avant le départ"
+
+
 def departure_window():
     """Premier et dernier jour de départ possibles pour une nouvelle demande."""
     today = timezone.localdate()
