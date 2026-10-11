@@ -10,20 +10,17 @@ from accounts.decorators import client_required
 from accounts.services.throttling import get_client_ip
 from catalog.models import Destination
 from orders.forms import ClientCancelForm, OrderForm
-from orders.models import Order, Status
+from orders.models import Order, OrderActivity, OrderStatus
 from orders.services.placing import (
-    NO_DISCOUNT,
     AlreadySubmitted,
     DailyLimitReached,
     EmailNotConfirmed,
     PromotionUnavailable,
     daily_limit_reached,
     find_pending_duplicates,
-    parts_for,
     place_order,
-    quote_for,
+    price_request,
 )
-from orders.services.promotions import choose_promotion
 from orders.services.status import TransitionNotAllowed, cancel_by_client, client_can_cancel
 from reviews.services.eligibility import can_review
 
@@ -83,14 +80,7 @@ def create_order(request, destination_pk):
 
 
 def _price(request, destination, data):
-    """Promotion retenue et prix de la demande, recalculés à chaque passage (vérification, envoi)."""
-    activities, adults, children = data["activities"], data["adults"], data["children"]
-    choice = choose_promotion(
-        request.user, destination, data["departure_date"], parts_for(destination, activities, adults, children),
-        data["promo_code"], ip=get_client_ip(request),
-    )
-    discount = choice.offer.discount if choice.offer else NO_DISCOUNT
-    return choice, quote_for(destination, activities, adults, children, discount)
+    return price_request(request.user, destination, data, ip=get_client_ip(request))
 
 
 def _code_refused(request, form, destination, choice):
@@ -126,10 +116,25 @@ def _expected(quote, choice) -> str:
 
 def _review(request, form, destination, quote, choice, price_changed=False):
     data = form.cleaned_data
+    # Demande pas encore enregistrée : même récapitulatif qu'une demande envoyée (orders/_trip_details.html).
+    draft = Order(
+        destination_name=destination.name,
+        country_name=destination.country.name,
+        departure_date=data["departure_date"],
+        return_date=data["return_date"],
+        adults=data["adults"],
+        children=data["children"],
+        remarks=data["remarks"],
+        destination_price=destination.price_from,
+    )
     context = {
         "form": form,
         "destination": destination,
-        "activities": data["activities"],
+        "order": draft,
+        "activities": [
+            OrderActivity(activity_name=activity.name, unit_price=activity.price_per_person)
+            for activity in data["activities"]
+        ],
         "quote": quote,
         "choice": choice,
         "expected_price": _expected(quote, choice),
@@ -166,7 +171,7 @@ def my_order_detail(request, pk):
         "activities": order.activities.select_related("activity"),
         "history": order.history.all(),
         "can_cancel": client_can_cancel(order),
-        "is_confirmed": order.status == Status.CONFIRMED,
+        "is_confirmed": order.status == OrderStatus.CONFIRMED,
         "can_review": can_review(request.user, order),
         "review": getattr(order, "review", None),
     }

@@ -94,6 +94,15 @@ class DestinationPageTests(ReviewsMixin, TestCase):
         self.assertEqual(list(self.page().context["reviews_page"]), [new_average, old_good])
         self.assertEqual(list(self.page(sort="meilleures-notes").context["reviews_page"]), [old_good, new_average])
 
+    def test_old_sort_key_still_accepted(self):
+        self.published(5, title="Cinq")
+        self.published(2, comment="Bof", title="Deux")
+
+        response = self.page(sort="recents", stars="2")
+
+        self.assertContains(response, "Deux")
+        self.assertNotContains(response, "Cinq")
+
     def test_filter_by_stars(self):
         self.published(5, title="Cinq")
         self.published(2, comment="Bof", title="Deux")

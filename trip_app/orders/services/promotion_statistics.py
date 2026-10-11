@@ -12,7 +12,7 @@ from decimal import Decimal
 from django.db.models import Count, Q, QuerySet, Sum
 from django.db.models.functions import Coalesce
 
-from orders.models import Order, Status
+from orders.models import Order, OrderStatus
 from promotions.models import Promotion
 
 
@@ -34,7 +34,7 @@ def promotion_statistics(promotion: Promotion) -> PromotionStatistics:
         .select_related("client")
         .defer("remarks")
     )
-    kept = orders.exclude(status=Status.CANCELLED)
+    kept = orders.exclude(status=OrderStatus.CANCELLED)
     figures = kept.aggregate(
         order_count=Count("pk"),
         total_discount=Coalesce(Sum("latest_discount"), Decimal("0.00")),
@@ -42,5 +42,5 @@ def promotion_statistics(promotion: Promotion) -> PromotionStatistics:
         anonymized_count=Count("pk", filter=Q(client__isnull=True)),
     )
     return PromotionStatistics(
-        orders=kept, cancelled_orders=orders.filter(status=Status.CANCELLED), **figures
+        orders=kept, cancelled_orders=orders.filter(status=OrderStatus.CANCELLED), **figures
     )

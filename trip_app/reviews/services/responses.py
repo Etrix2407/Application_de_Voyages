@@ -7,7 +7,7 @@
 - supprimée si le client modifie son avis (voir services/writing.py).
 """
 
-from django.db import IntegrityError, transaction
+from django.db import DatabaseError, transaction
 from django.utils import timezone
 
 from reviews.models import AgencyResponse, Review, ReviewStatus
@@ -49,9 +49,19 @@ def save_response(review: Review, staff_member, text: str) -> AgencyResponse:
     response.full_clean(exclude=["review"])
     try:
         with transaction.atomic():
-            response.save()
-    except IntegrityError:
-        # Deux agents ont répondu au même instant : la base garde une seule réponse.
+            # Revérifié dans la transaction, qui détient déjà le verrou d'écriture (réglage « IMMEDIATE »
+            # de settings.py) : le client a pu modifier son avis entre-temps (avis repassé en attente,
+            # réponse supprimée). Sans ce contrôle, la réponse serait recréée sous le nouveau texte.
+            still_published = Review.objects.filter(
+                pk=review.pk, status=ReviewStatus.PUBLISHED, version=review.version
+            ).exists()
+            if not still_published:
+                raise ResponseNotAllowed
+            # Modification : jamais de création si la réponse a disparu entre-temps.
+            response.save(force_update=not created)
+    except DatabaseError:
+        # IntegrityError : deux agents ont répondu au même instant, la base garde une seule réponse.
+        # Sinon : la réponse modifiée n'existe plus (mise à jour forcée sans ligne).
         raise ResponseNotAllowed from None
     # Le client est prévenu à la création comme à chaque modification de la réponse.
     notify_response(response, created)

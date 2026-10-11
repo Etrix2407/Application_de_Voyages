@@ -6,7 +6,7 @@ from django.utils import timezone
 
 from accounts.tests.factories import create_agent, create_client
 from catalog.tests.factories import create_country, create_destination
-from orders.models import Status
+from orders.models import OrderStatus
 from orders.services.status import cancel_by_staff
 from orders.tests.factories import create_order
 from reviews.models import EDIT_PERIOD, RefusalReason, Review, ReviewStatus
@@ -44,7 +44,7 @@ class WriteReviewTests(TestCase):
         self.assertNotIn(review, Review.objects.public())
 
     def test_trip_not_done_cannot_be_reviewed(self):
-        upcoming = create_order(self.marie, self.destination, status=Status.CONFIRMED)
+        upcoming = create_order(self.marie, self.destination, status=OrderStatus.CONFIRMED)
         url = reverse("create_review", args=[upcoming.pk])
 
         self.assertNotContains(self.client.get(reverse("my_order_detail", args=[upcoming.pk])), url)
@@ -64,6 +64,8 @@ class WriteReviewTests(TestCase):
         self.client.force_login(create_client(email="paul@example.com"))
 
         self.assertEqual(self.client.get(self.url).status_code, 404)
+        self.assertEqual(self.client.post(self.url, GOOD_REVIEW).status_code, 404)
+        self.assertFalse(Review.objects.exists())
 
 
 class MyReviewsTests(TestCase):
@@ -138,7 +140,7 @@ class EditReviewTests(TestCase):
 
     def test_review_of_cancelled_trip_cannot_be_republished(self):
         review = create_review(self.trip, status=ReviewStatus.PUBLISHED)
-        self.trip.status = Status.CANCELLED
+        self.trip.status = OrderStatus.CANCELLED
         self.trip.save()
 
         self.edit(review)
@@ -165,10 +167,14 @@ class EditReviewTests(TestCase):
         )
 
     def test_other_client_review_not_found(self):
-        review = create_review(self.trip)
+        review = create_review(self.trip, title="Avant")
         self.client.force_login(create_client(email="paul@example.com"))
+        url = reverse("edit_review", args=[review.pk])
 
-        self.assertEqual(self.client.get(reverse("edit_review", args=[review.pk])).status_code, 404)
+        self.assertEqual(self.client.get(url).status_code, 404)
+        self.assertEqual(self.client.post(url, {**GOOD_REVIEW, "title": "Piraté"}).status_code, 404)
+        review.refresh_from_db()
+        self.assertEqual(review.title, "Avant")
 
 
 class DeleteReviewTests(TestCase):
@@ -192,6 +198,12 @@ class DeleteReviewTests(TestCase):
         self.assertContains(response, "Votre avis a été supprimé.")
         self.assertNotContains(response, reverse("create_review", args=[trip.pk]))
         self.assertFalse(Review.objects.exists())
+
+    def test_other_client_cannot_delete(self):
+        self.client.force_login(create_client(email="paul@example.com"))
+
+        self.assertEqual(self.client.post(self.url).status_code, 404)
+        self.assertTrue(Review.objects.exists())
 
     def test_can_still_delete_after_thirty_days(self):
         age_beyond_edit_period(self.review)

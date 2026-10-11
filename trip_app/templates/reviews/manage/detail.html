@@ -11,7 +11,7 @@
         {% if review.is_negative %}<span class="badge badge-negative">Avis négatif</span>{% endif %}
     </p>
     {% if review.refusal_reason %}
-        <p>Motif : {{ review.get_refusal_reason_display }}{% if review.refusal_details %} — {{ review.refusal_details }}{% endif %}</p>
+        <p>Motif : {{ review.refusal_label }}</p>
     {% endif %}
 
     <h2>Avis du client</h2>
@@ -35,7 +35,7 @@
         <dt>Demande</dt>
         <dd>
             <a href="{% url 'manage_order_detail' review.order.pk %}">Demande n° {{ review.order.pk }}</a> :
-            {{ review.order.destination_name }} ({{ review.order.country_name }}),
+            {{ review.order.destination_label }},
             du {{ review.order.departure_date|date:"j F Y" }} au {{ review.order.return_date|date:"j F Y" }}
         </dd>
     </dl>

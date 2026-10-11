@@ -1,11 +1,8 @@
-"""Formulaire d'avis du client."""
+"""Formulaires des avis : avis du client, tri public, modération, réponse et filtres (personnel)."""
 
 from django import forms
 
-from catalog.models import Country, Destination
-
-from reviews.services.ratings import BEST_REVIEWS_FIRST, NEWEST_REVIEWS_FIRST
-
+from common.forms import StaffFilterForm, optional_date_field
 from reviews.models import (
     MAX_COMMENT_LENGTH,
     MAX_RATING,
@@ -16,8 +13,8 @@ from reviews.models import (
     STAFF_REFUSAL_REASONS,
     Review,
     ReviewStatus,
-    refusal_problem,
 )
+from reviews.services.ratings import BEST_REVIEWS_FIRST, NEWEST_REVIEWS_FIRST
 
 RATING_CHOICES = [
     (rating, f"{rating} étoile{'s' if rating > 1 else ''} sur {MAX_RATING}")
@@ -52,28 +49,23 @@ class ReviewForm(forms.ModelForm):
 
 
 class RefusalForm(forms.Form):
-    """Refus ou masquage d'un avis : motif obligatoire, visible par le client."""
+    """Refus ou masquage d'un avis : motif obligatoire, visible par le client.
 
-    reason = forms.ChoiceField(
+    Les champs portent le nom de ceux de l'avis : les erreurs du service de modération s'y rangent.
+    """
+
+    refusal_reason = forms.ChoiceField(
         label="Motif",
         choices=[("", "— Choisir un motif —")] + [(reason.value, reason.label) for reason in STAFF_REFUSAL_REASONS],
         error_messages={"required": "Le motif est obligatoire."},
     )
-    details = forms.CharField(
+    refusal_details = forms.CharField(
         label="Précision",
         required=False,
         max_length=MAX_REFUSAL_DETAILS_LENGTH,
         widget=forms.Textarea(attrs={"rows": 3}),
         help_text="Facultative, sauf pour le motif « Autre ». Elle sera visible par le client.",
     )
-
-    def clean(self):
-        data = super().clean()
-        if data.get("reason"):
-            problem = refusal_problem(data["reason"], data.get("details", ""))
-            if "refusal_details" in problem:
-                self.add_error("details", problem["refusal_details"])
-        return data
 
 
 class PublicReviewFilterForm(forms.Form):
@@ -95,6 +87,15 @@ class PublicReviewFilterForm(forms.Form):
         choices=[("", "Toutes les notes"), *[(rating, label) for rating, label in RATING_CHOICES]],
     )
 
+    # Anciennes clés de tri encore présentes dans des liens enregistrés.
+    LEGACY_SORTS = {"recents": NEWEST_REVIEWS_FIRST}
+
+    def __init__(self, data=None, **kwargs):
+        if data is not None and data.get("sort") in self.LEGACY_SORTS:
+            data = data.copy()
+            data["sort"] = self.LEGACY_SORTS[data["sort"]]
+        super().__init__(data, **kwargs)
+
 
 class ResponseForm(forms.Form):
     text = forms.CharField(
@@ -106,37 +107,20 @@ class ResponseForm(forms.Form):
     )
 
 
-def _date_field(label: str) -> forms.DateField:
-    return forms.DateField(label=label, required=False, widget=forms.DateInput(attrs={"type": "date"}))
-
-
-class StaffReviewFilterForm(forms.Form):
+class StaffReviewFilterForm(StaffFilterForm):
     """Filtres de la liste « Tous les avis » (personnel). Tous facultatifs."""
 
+    field_order = ["status", "country", "destination"]
+    periods = (("written_from", "written_to"), ("stay_from", "stay_to"))
+
     status = forms.ChoiceField(label="État", required=False, choices=[("", "Tous les états"), *ReviewStatus.choices])
-    country = forms.ModelChoiceField(
-        label="Pays", required=False, queryset=Country.objects.all(), empty_label="Tous les pays"
-    )
-    destination = forms.ModelChoiceField(
-        label="Destination",
-        required=False,
-        queryset=Destination.objects.select_related("country").order_by("country__name", "name", "pk"),
-        empty_label="Toutes les destinations",
-    )
     rating = forms.TypedChoiceField(
         label="Note", required=False, coerce=int, empty_value=None, choices=[("", "Toutes les notes"), *RATING_CHOICES]
     )
     negative_only = forms.BooleanField(
         label=f"Avis négatifs seulement ({NEGATIVE_RATING} étoiles ou moins)", required=False
     )
-    written_from = _date_field("Avis écrit à partir du")
-    written_to = _date_field("Avis écrit jusqu'au")
-    stay_from = _date_field("Séjour (départ) à partir du")
-    stay_to = _date_field("Séjour (départ) jusqu'au")
-
-    def clean(self):
-        data = super().clean()
-        for start, end in [("written_from", "written_to"), ("stay_from", "stay_to")]:
-            if data.get(start) and data.get(end) and data[end] < data[start]:
-                self.add_error(end, "La fin de la période doit être après son début.")
-        return data
+    written_from = optional_date_field("Avis écrit à partir du")
+    written_to = optional_date_field("Avis écrit jusqu'au")
+    stay_from = optional_date_field("Séjour (départ) à partir du")
+    stay_to = optional_date_field("Séjour (départ) jusqu'au")

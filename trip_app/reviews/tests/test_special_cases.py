@@ -5,7 +5,7 @@ from django.urls import reverse
 
 from accounts.tests.factories import PASSWORD, create_agent, create_client
 from catalog.tests.factories import create_country, create_destination
-from orders.models import Status
+from orders.models import OrderStatus
 from reviews.models import ANONYMOUS_NAME, Review, ReviewStatus
 from reviews.services.ratings import attach_ratings
 from reviews.services.writing import update_review
@@ -52,7 +52,7 @@ class DeletedAccountTests(TestCase):
         self.delete_account()
 
         review = Review.objects.select_related("order").get(pk=self.review.pk)
-        self.assertEqual(review.order.status, Status.CONFIRMED)
+        self.assertEqual(review.order.status, OrderStatus.CONFIRMED)
         self.assertEqual(review.status, ReviewStatus.PUBLISHED)
 
     def test_name_removed_for_staff_too(self):

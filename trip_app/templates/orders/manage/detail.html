@@ -34,10 +34,11 @@
                         Prix aux tarifs actuels : <strong>{{ price_if_confirmed.price }} €</strong>
                         {% if order.promotion_name %}(remise « {{ order.promotion_name }} » de {{ price_if_confirmed.discount }} € déduite){% endif %}
                         (estimation à la demande : {{ order.estimated_price }} €). C'est ce prix qui sera enregistré.
-                        {% if destination_on_quote_now %}<br>Le prix de la destination est donné sur devis.{% endif %}
+                        {% if destination_on_quote_now %}<br>{% include "orders/_quote_note.html" with for_staff=True %}{% endif %}
                     </p>
                     <form method="post" action="{% url 'manage_confirm_order' order.pk %}">
                         {% csrf_token %}
+                        <input type="hidden" name="expected_price" value="{{ expected_price }}">
                         <button type="submit">Confirmer la demande (client rappelé)</button>
                     </form>
                 </li>
@@ -49,7 +50,7 @@
     {% endif %}
 
     <h2>Demande</h2>
-    {% include "orders/_order_summary.html" %}
+    {% include "orders/_order_summary.html" with for_staff=True %}
 
     <h2>Historique</h2>
     {% include "orders/_history.html" %}

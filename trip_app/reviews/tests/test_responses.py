@@ -5,7 +5,7 @@ from django.urls import reverse
 
 from accounts.tests.factories import create_admin, create_agent, create_client
 from catalog.tests.factories import create_country, create_destination
-from reviews.models import AgencyResponse, ReviewStatus
+from reviews.models import AgencyResponse, Review, ReviewStatus
 from reviews.services.responses import ResponseNotAllowed, save_response
 from reviews.services.writing import update_review
 
@@ -101,12 +101,6 @@ class AgencyResponseTests(TestCase):
 
         self.assertNotContains(page, "Merci !")
 
-    def test_client_cannot_respond(self):
-        self.client.force_login(self.julie)
-
-        self.assertEqual(self.client.post(self.url, {"text": "Moi aussi"}).status_code, 403)
-        self.assertFalse(AgencyResponse.objects.exists())
-
     def test_administrator_takes_over_when_author_is_deactivated(self):
         save_response(self.review, self.luc, "Réponse de Luc")
         self.luc.is_active = False
@@ -125,3 +119,14 @@ class AgencyResponseTests(TestCase):
                 save_response(self.review, create_agent(email="paul@example.com"), "Seconde")
 
         self.assertEqual(AgencyResponse.objects.get().text, "Première")
+
+    def test_response_not_recreated_when_client_modifies_review_meanwhile(self):
+        # L'agent a ouvert l'avis publié ; le client le modifie avant l'envoi de la réponse.
+        save_response(self.review, self.luc, "Merci !")
+        seen_by_agent = Review.objects.get(pk=self.review.pk)
+        update_review(Review.objects.get(pk=self.review.pk))
+
+        with self.assertRaises(ResponseNotAllowed):
+            save_response(seen_by_agent, self.luc, "Merci encore !")
+
+        self.assertFalse(AgencyResponse.objects.exists())

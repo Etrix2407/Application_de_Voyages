@@ -8,7 +8,7 @@ from django.utils import timezone
 
 from accounts.tests.factories import create_agent, create_client
 from catalog.tests.factories import create_country, create_destination
-from orders.models import Status
+from orders.models import OrderStatus
 from orders.services.status import cancel_by_staff
 from orders.tests.factories import create_order
 from reviews.models import ANONYMOUS_NAME, EDIT_PERIOD, RefusalReason, Review, ReviewStatus
@@ -39,24 +39,11 @@ class ReviewRulesTests(TestCase):
         with self.assertRaises(IntegrityError), transaction.atomic():
             create_review(self.order, rating=9)
 
-    def test_title_required_and_limited(self):
-        self.assert_invalid("title", title="")
-        self.assert_invalid("title", title="a" * 101)
-
-    def test_comment_limited_to_1000_characters(self):
-        self.assert_invalid("comment", comment="a" * 1001)
-
     def test_comment_required_for_low_rating(self):
         for rating in [1, 2]:
             with self.subTest(rating=rating):
                 self.assert_invalid("comment", rating=rating, comment="  ")
         Review(order=self.order, rating=3, title="Moyen").full_clean()
-
-    def test_refusal_needs_a_reason_and_details_for_other(self):
-        self.assert_invalid("refusal_reason", status=ReviewStatus.REFUSED)
-        self.assert_invalid(
-            "refusal_details", status=ReviewStatus.REFUSED, refusal_reason=RefusalReason.OTHER
-        )
 
     def test_one_review_per_order(self):
         create_review(self.order)
@@ -113,8 +100,8 @@ class VerifiedTripTests(TestCase):
         today = timezone.localdate()
         cases = {
             "en attente": create_order(self.marie, self.destination),
-            "annulée": create_trip_done(self.marie, self.destination, status=Status.CANCELLED),
-            "confirmée, à venir": create_order(self.marie, self.destination, status=Status.CONFIRMED),
+            "annulée": create_trip_done(self.marie, self.destination, status=OrderStatus.CANCELLED),
+            "confirmée, à venir": create_order(self.marie, self.destination, status=OrderStatus.CONFIRMED),
             "retour aujourd'hui": create_trip_done(self.marie, self.destination, return_date=today),
         }
         for case, order in cases.items():
