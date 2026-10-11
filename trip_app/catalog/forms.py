@@ -1,4 +1,4 @@
-"""Formulaires du catalogue : gestion (personnel) et recherche."""
+"""Formulaires du catalogue : gestion (personnel), recherche, et base des filtres des listes du personnel."""
 
 from django import forms
 from django.utils.html import format_html, format_html_join

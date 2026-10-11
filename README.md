@@ -183,7 +183,7 @@ Sur la page de connexion, **Mot de passe oublié ?** envoie un lien valable 1 he
 
 Après chaque changement de mot de passe (depuis le profil, par « Mot de passe oublié » ou par un lien envoyé par l'agence), un e-mail de sécurité prévient le titulaire du compte, client ou membre du personnel : « Si ce n'est pas vous, contactez-nous ». Il n'est pas envoyé quand un agent invité choisit son tout premier mot de passe.
 
-Limites par adresse IP, contre les robots : 20 échecs de connexion par 15 minutes, 5 inscriptions, 10 demandes « Mot de passe oublié », 10 renvois de l'e-mail de confirmation et 30 codes promo invalides par heure ; et, dans l'heure qui suit une inscription depuis cette IP, 3 échecs de connexion suffisent à la bloquer 15 minutes. Elles sont volontairement larges, car un bureau ou un wifi partage souvent une même IP. Après 5 tentatives de connexion échouées pour une même adresse depuis une même IP, la connexion à cette adresse est bloquée 15 minutes depuis cette IP seulement : le titulaire peut se connecter ailleurs. À partir de 50 échecs en 15 minutes pour une même adresse, toutes IP confondues, le compte est bloqué partout pendant 15 minutes. Une réinitialisation réussie du mot de passe lève le blocage du compte et celui de l'IP utilisée pour la réinitialisation (pas la limite générale par IP). Le changement d'adresse e-mail est limité à 3 demandes par heure par compte et 10 par IP ; son lien (24 heures) ne fonctionne plus si le mot de passe a changé entre-temps. Toutes les limites sont dans `accounts/services/throttling.py` et respectent la durée annoncée depuis le premier essai.
+Limites par adresse IP, contre les robots : 20 échecs de connexion par 15 minutes, 5 inscriptions, 10 demandes « Mot de passe oublié », 10 renvois de l'e-mail de confirmation et 30 codes promo invalides par heure ; et, dans l'heure qui suit une inscription depuis cette IP, 3 échecs de connexion suffisent à la bloquer 15 minutes. Elles sont volontairement larges, car un bureau ou un wifi partage souvent une même IP. Après 5 tentatives de connexion échouées pour une même adresse depuis une même IP, la connexion à cette adresse est bloquée 15 minutes depuis cette IP seulement : le titulaire peut se connecter ailleurs. À partir de 50 échecs en 15 minutes pour une même adresse, toutes IP confondues, le compte est bloqué partout pendant 15 minutes. Une réinitialisation réussie du mot de passe lève le blocage du compte et celui de l'IP utilisée pour la réinitialisation (pas la limite générale par IP). Le changement d'adresse e-mail est limité à 3 demandes par heure par compte et 10 par IP ; son lien (24 heures) ne fonctionne plus si le mot de passe a changé entre-temps. Les liens de confirmation (inscription, changement d'adresse) ne contiennent jamais l'adresse actuelle en clair, seulement son empreinte : elle n'apparaît ni dans l'historique du navigateur ni dans les journaux du serveur (seule la nouvelle adresse figure dans le lien qui lui est envoyé). Toutes les limites sont dans `accounts/services/throttling.py` et respectent la durée annoncée depuis le premier essai.
 
 ## Fonctionnalités par rôle
 
@@ -207,7 +207,7 @@ Limites par adresse IP, contre les robots : 20 échecs de connexion par 15 minut
 - Une demande de voyage garde les **noms** (pays, destination, activités) et l'**estimation** du jour où elle a été envoyée : un renommage ou un changement de tarif dans le catalogue ne les modifie pas. À la **confirmation**, le prix est **recalculé aux tarifs du jour** (le prix peut varier entre la demande et la confirmation) ; l'estimation de départ reste affichée, et un changement de prix est noté dans l'historique.
 - Un client ne voit jamais les données d'un autre client ni celles du personnel. Les agents ne voient pas les favoris des clients.
 - RGPD : consentement enregistré à l'inscription, page [politique de confidentialité](trip_app/templates/privacy.html), suppression réelle du compte par le client, téléchargement de ses données au format JSON (droit à la portabilité) : chaque application fournit les siennes (`services/data_export.py`), assemblées par la vue `accounts/views/data_export.py`.
-- RGPD, demandes de voyage : à la suppression d'un compte client, ses demandes sont conservées pour les statistiques, sans lien vers le compte (remarques et motifs effacés, motifs internes compris) ; seule une empreinte non lisible de l'adresse e-mail (HMAC) est gardée, pour appliquer les limites des promotions par client. Ses demandes encore « En attente » sont **annulées automatiquement** (motif interne « Compte client supprimé : demande annulée automatiquement. ») : le personnel n'a plus personne à rappeler ; les demandes confirmées restent confirmées, marquées « Client supprimé ». Automatique quel que soit le chemin de suppression (`orders/signals.py`).
+- RGPD, demandes de voyage : à la suppression d'un compte client, ses demandes sont conservées pour les statistiques, sans lien vers le compte (remarques et motifs effacés, motifs internes compris) ; seule une empreinte non lisible de l'adresse e-mail (HMAC) est gardée, pour appliquer les limites des promotions par client. Ses demandes encore « En attente » sont **annulées automatiquement** (motif interne « Compte client supprimé : demande annulée automatiquement. ») : le personnel n'a plus personne à rappeler ; les demandes confirmées restent confirmées, marquées « Client supprimé ». Automatique quel que soit le chemin de suppression (`orders/signals.py`). Une demande sans client ne peut pas être confirmée ; la migration `orders/0016` a annulé de la même façon les demandes restées « En attente » après la suppression d'un compte, avant cette règle.
 - La base refuse elle-même une demande incohérente (retour le jour du départ ou avant, aucun adulte, prix ou remise négatif, état inconnu) et une promotion incohérente : contraintes `CheckConstraint` dans `orders/models.py` et `promotions/models.py`, en plus des contrôles des formulaires.
 - Inscription avec une adresse déjà confirmée : aucun compte n'est créé, la page affichée est identique et la propriétaire de l'adresse est prévenue par e-mail. Limite atténuée : le compte étant utilisable avant confirmation, essayer de se connecter avec le mot de passe choisi permet de savoir si l'adresse avait déjà un compte confirmé ; pour freiner ce test en série, une adresse IP qui s'est inscrite dans l'heure est bloquée 15 minutes après 3 échecs de connexion.
 - Inscription avec l'adresse de quelqu'un d'autre (« pré-détournement ») : un tiers peut créer un compte non confirmé avec une adresse qui n'est pas la sienne et un mot de passe qu'il connaît. La page de confirmation affiche donc les informations du compte (nom, téléphone, date de naissance) et demande un clic sur un bouton : la vraie propriétaire de l'adresse voit que ce compte n'est pas le sien et, au lieu de le confirmer, recommence l'inscription, ce qui le remplace par le sien. Ouvrir le lien ne confirme rien.
@@ -224,7 +224,9 @@ Le site vise le niveau **WCAG 2.1 AA**, pour un public plutôt âgé :
 - autocomplétion des champs d'identité (prénom, nom, date de naissance, e-mail, téléphone), désactivée quand un agent corrige un client ;
 - tableaux défilables au clavier ; ceux des clients s'affichent en cartes sur téléphone ;
 - les liens répétés (« Modifier », « Supprimer »…) précisent leur objet aux lecteurs d'écran, et les symboles décoratifs ne sont pas lus ;
-- aucun style ni script dans les pages (compatible avec la `Content-Security-Policy`) : tout est dans `static/css/style.css`.
+- aucun style ni script dans les pages (compatible avec la `Content-Security-Policy`) : tout est dans `static/css/style.css` ;
+- montants avec séparateur des milliers (« 2 100,00 € », filtre `|euros`) ; le montant et le symbole € ne sont jamais coupés en fin de ligne ;
+- les durées annoncées (liens valables 48 heures, 1 heure, 24 heures ; avis modifiable 30 jours…) viennent des réglages du code : le texte suit toujours la règle appliquée.
 
 ## Promotions (v4) : décisions validées
 
@@ -467,10 +469,12 @@ Le code (identifiants, fichiers, routes internes) est en anglais ; l'interface, 
 ```
 trip_app/
 ├── config/                 # paramètres (settings.py), routes, page d'accueil (views.py), serveur WSGI (wsgi.py),
-│                           # context_processors.py (nom du site dans tous les gabarits) ; tests transversaux :
+│                           # context_processors.py (nom du site et durées affichées — liens, délais — tirées
+│                           # des réglages, dans tous les gabarits) ; tests transversaux :
 │                           # droits d'accès, nombre de requêtes, export RGPD
 ├── common/                 # application partagée (dans INSTALLED_APPS) : text.py (comparaison sans accents,
-│                           # montants en euros), db.py (Normalize : comparaison sans accents ni majuscules dans
+│                           # montants « 1 234,50 € », durées en toutes lettres), templatetags/money.py (filtre
+│                           # |euros des gabarits), db.py (Normalize : comparaison sans accents ni majuscules dans
 │                           # les requêtes SQLite), apps.py (enregistre Normalize à chaque connexion),
 │                           # middleware.py (en-tête Content-Security-Policy), forms.py (champ de date commun),
 │                           # error_reports.py (rapport d'erreur 500 sans champs envoyés ni cookies)
@@ -497,7 +501,7 @@ trip_app/
 │   ├── views/              # browse, search, favorites, manage
 │   ├── services/           # search (recherche et filtres), favorites, photos (nettoyage des photos),
 │   │                       # time_zones (fuseau du pays et décalage avec la Belgique), data_export (favoris)
-│   ├── models.py · forms.py · validators.py · urls.py
+│   ├── models.py · forms.py (dont StaffFilterForm, base des filtres des listes du personnel) · validators.py · urls.py
 │   └── tests/
 ├── promotions/             # promotions (v4) : modèle, règles, historique
 │   ├── views/              # manage (administrateur ; consultation par les agents), public (« Nos offres du moment »)
@@ -541,7 +545,7 @@ trip_app/
 └── static/css/             # feuille de style (texte lisible, adaptée au mobile)
 ```
 
-Règle de rangement : les **vues** ne font que recevoir la requête et afficher la page ; la logique réutilisable va dans **services/** ; un outil utilisé par plusieurs applications va dans **common/**.
+Règle de rangement : les **vues** ne font que recevoir la requête et afficher la page ; la logique réutilisable va dans **services/** ; un outil utilisé par plusieurs applications va dans **common/**, sauf s'il dépend des modèles d'une application : il reste alors dans celle-ci (par exemple `StaffFilterForm`, qui filtre par pays et destination, est dans `catalog/forms.py`), pour que `common` ne dépende d'aucune application.
 
 Dépendances entre applications : les **modèles et services** suivent l'ordre `accounts ← catalog ← promotions ← orders ← reviews` (une application ne dépend que de celles qui la précèdent ; les réactions en sens inverse passent par des signaux, par exemple l'anonymisation RGPD ou le retrait d'un avis quand un voyage est annulé). Les **vues et gabarits** peuvent assembler plusieurs applications (par exemple la note moyenne affichée dans le catalogue).
 
