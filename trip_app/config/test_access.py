@@ -9,10 +9,11 @@ from django.db import transaction
 from django.test import TestCase
 from django.urls import URLResolver, get_resolver, reverse
 
-from accounts.models import EmailKind, EmailLog, EmailStatus
+from accounts.models import AccountEmail, EmailLog, EmailStatus
 from accounts.tests.factories import create_admin, create_agent, create_client
 from catalog.tests.factories import create_activity, create_country, create_destination
 from orders.tests.factories import create_order
+from promotions.models import PromotionEmail
 from promotions.tests.factories import create_promotion
 from reviews.tests.factories import create_review, create_trip_done
 
@@ -138,7 +139,10 @@ class AccessMatrixTests(TestCase):
         cls.review = create_review(create_trip_done(cls.client_user, cls.destination))
         cls.promotion = create_promotion()
         cls.failed_email = EmailLog.objects.create(
-            recipient=cls.client_user.email, kind=EmailKind.CLIENT_PASSWORD_LINK, subject="Objet", status=EmailStatus.FAILED
+            recipient=cls.client_user.email,
+            kind=AccountEmail.CLIENT_PASSWORD_LINK,
+            subject="Objet",
+            status=EmailStatus.FAILED,
         )
 
     def url_kwargs(self, name):
@@ -152,8 +156,8 @@ class AccessMatrixTests(TestCase):
             "reactivate_staff_member": {"pk": member},
             "resend_staff_link": {"pk": member},
             "delete_staff_member": {"pk": member},
-            "edit_email_text": {"kind": EmailKind.PROMOTION},
-            "reset_email_text": {"kind": EmailKind.PROMOTION},
+            "edit_email_text": {"kind": PromotionEmail.PROMOTION},
+            "reset_email_text": {"kind": PromotionEmail.PROMOTION},
             "country_detail": {"pk": self.country.pk},
             "destination_detail": {"pk": self.destination.pk},
             "activity_detail": {"pk": self.activity.pk},

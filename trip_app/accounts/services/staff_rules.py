@@ -2,7 +2,7 @@
 
 from django.core.exceptions import ValidationError
 
-from accounts.models import EmailKind, User
+from accounts.models import AccountEmail, User
 from accounts.services.password_links import send_staff_link
 
 
@@ -26,5 +26,5 @@ def send_activation_link(agent: User) -> bool:
     déjà un mot de passe reçoit un autre texte que l'invitation (« nouveau mot de passe »).
     """
     if agent.has_usable_password():
-        return send_staff_link(agent, EmailKind.STAFF_PASSWORD_LINK)
-    return send_staff_link(agent, EmailKind.AGENT_ACTIVATION)
+        return send_staff_link(agent, AccountEmail.STAFF_PASSWORD_LINK)
+    return send_staff_link(agent, AccountEmail.AGENT_ACTIVATION)

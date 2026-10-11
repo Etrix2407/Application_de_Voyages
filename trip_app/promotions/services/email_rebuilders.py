@@ -12,15 +12,16 @@ puis les pays ou destinations visés.
 
 from django.db.models import Exists, prefetch_related_objects
 
-from accounts.models import EmailKind, EmailLog, User
+from accounts.models import EmailLog, User
 from accounts.services.email_retry import RebuiltEmail, rebuilder
 from accounts.services.unsubscribe import unsubscribe_headers
-from promotions.models import PromotionMailing
+from promotions.models import PromotionEmail, PromotionMailing
 from promotions.services.mailing import can_be_mailed, promotion_email_context
 from promotions.services.public import visible_targets
 
 
-@rebuilder(EmailKind.PROMOTION)
+# Envoi en nombre (queue_emails) : premier envoi au passage suivant de process_emails, après les autres e-mails.
+@rebuilder(PromotionEmail.PROMOTION, queued=True)
 def _promotion(log: EmailLog) -> RebuiltEmail | None:
     user = log.user
     if user is None or user.email != log.recipient or log.promotion_mailing_number is None:

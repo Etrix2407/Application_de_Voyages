@@ -14,10 +14,9 @@ from django.urls import reverse
 from django.utils import timezone
 from django.utils.formats import date_format
 
-from accounts.models import EmailKind
 from accounts.services.emails import send_email, site_url
 from catalog.services.time_zones import format_offset, offset_on
-from orders.models import Order, OrderStatus
+from orders.models import Order, OrderEmail, OrderStatus
 
 REMINDER_DAYS_BEFORE_DEPARTURE = 7
 
@@ -77,7 +76,7 @@ def _send_reminder(order: Order) -> bool:
         return False
     send_email(
         order.client.email,
-        EmailKind.DEPARTURE_REMINDER,
+        OrderEmail.DEPARTURE_REMINDER,
         departure_reminder_context(order),
         user=order.client,
         order_number=order.pk,

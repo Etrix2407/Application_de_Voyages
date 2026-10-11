@@ -5,28 +5,29 @@ accounts/services/email_texts.py. « Rétablir le texte d'origine » supprime le
 """
 
 from django.contrib import messages
+from django.db.models import TextChoices
 from django.http import Http404
 from django.shortcuts import redirect, render
 from django.utils import timezone
 
 from accounts.decorators import administrator_required
 from accounts.forms import EmailTextForm
-from accounts.models import EmailKind, EmailText
-from accounts.services.email_texts import DEFAULT_TEXTS
+from accounts.models import EmailText
+from accounts.services.email_texts import DEFAULT_TEXTS, email_kinds, find_email_kind
 
 
-def _email_kind(value: str) -> EmailKind:
-    try:
-        return EmailKind(value)
-    except ValueError:
-        raise Http404 from None
+def _email_kind(value: str) -> TextChoices:
+    kind = find_email_kind(value)
+    if kind is None:
+        raise Http404
+    return kind
 
 
 @administrator_required
 def email_text_list(request):
     custom_texts = {text.kind: text for text in EmailText.objects.all()}
     rows = []
-    for kind in EmailKind:
+    for kind in email_kinds():
         custom = custom_texts.get(kind)
         subject = custom.subject if custom else DEFAULT_TEXTS[kind].subject
         rows.append({"kind": kind, "subject": subject, "custom": custom})

@@ -12,7 +12,7 @@ from django.test import TestCase
 from django.urls import reverse
 from django.utils.dateparse import parse_datetime
 
-from accounts.models import EmailKind, EmailLog
+from accounts.models import AccountEmail, EmailLog
 from accounts.tests.factories import create_agent, create_client
 from catalog.models import FavoriteDestination
 from catalog.tests.factories import create_activity, create_country, create_destination
@@ -34,10 +34,10 @@ class DownloadMyDataTests(TestCase):
         create_review(create_trip_done(other, osaka), title="Avis du voisin")
         FavoriteDestination.objects.create(client=other, destination=osaka)
         EmailLog.objects.create(
-            recipient=marie.email, kind=EmailKind.PASSWORD_RESET, subject="Changement de votre mot de passe", user=marie
+            recipient=marie.email, kind=AccountEmail.PASSWORD_RESET, subject="Changement de votre mot de passe", user=marie
         )
         EmailLog.objects.create(
-            recipient=other.email, kind=EmailKind.PASSWORD_RESET, subject="Objet du voisin", user=other
+            recipient=other.email, kind=AccountEmail.PASSWORD_RESET, subject="Objet du voisin", user=other
         )
         self.client.force_login(marie)
 

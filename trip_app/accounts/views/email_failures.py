@@ -7,13 +7,14 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
 from accounts.decorators import staff_required
-from accounts.models import NOT_RESENDABLE_FAILURES, EmailKind, EmailLog, EmailStatus, User
+from accounts.models import NOT_RESENDABLE_FAILURES, AccountEmail, EmailLog, EmailStatus, User
 from accounts.services.email_retry import AlreadyResent, resend
+from accounts.services.email_texts import email_kind_label
 
 FAILURES_PER_PAGE = 25
 
 # Liens envoyés au personnel : leur renvoi relève de la gestion du personnel (administrateur).
-ADMINISTRATOR_ONLY_KINDS = (EmailKind.AGENT_ACTIVATION, EmailKind.STAFF_PASSWORD_LINK)
+ADMINISTRATOR_ONLY_KINDS = (AccountEmail.AGENT_ACTIVATION, AccountEmail.STAFF_PASSWORD_LINK)
 
 
 def _failures():
@@ -36,6 +37,7 @@ def email_failure_list(request):
     page = Paginator(_failures(), FAILURES_PER_PAGE).get_page(request.GET.get("page"))
     for log in page.object_list:
         log.can_resend = _can_resend(request.user, log)
+        log.kind_label = email_kind_label(log.kind)
     return render(request, "accounts/email_failures/list.html", {"page": page})
 
 

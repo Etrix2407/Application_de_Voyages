@@ -1,14 +1,19 @@
+from datetime import timedelta
+from unittest import mock
+
 from django.core import mail
 from django.test import TestCase
 from django.urls import reverse, reverse_lazy
+from django.utils import timezone
 
-from accounts.models import EmailKind, EmailLog, EmailStatus
+from accounts.models import AccountEmail, EmailLog, EmailStatus
 from accounts.services.email_retry import OBSOLETE, retry_due_emails
 from accounts.tests.factories import create_admin, create_agent, create_client
 from catalog.tests.factories import create_country, create_destination
 from orders.tests.factories import create_order
-from promotions.models import PromotionMailing, Scope
-from promotions.services.mailing import send_promotion_mailing
+from promotions.models import Promotion, PromotionEmail, PromotionMailing, Scope
+from promotions.services.mailing import can_be_mailed, send_promotion_mailing
+from promotions.services.public import visible_targets
 from promotions.tests.factories import create_promotion
 
 
@@ -69,7 +74,7 @@ class MailingPageTests(TestCase):
         self.assertEqual((mailing.recipients_count, mailing.author_name), (1, "Anne Durand"))
         log = EmailLog.objects.get()
         self.assertEqual(
-            (log.user, log.kind, log.status, log.attempts), (marie, EmailKind.PROMOTION, EmailStatus.PENDING, 0)
+            (log.user, log.kind, log.status, log.attempts), (marie, PromotionEmail.PROMOTION, EmailStatus.PENDING, 0)
         )
         self.assertEqual(log.promotion_mailing_number, mailing.pk)
         self.assertEqual(mail.outbox, [])  # rien n'est envoyé pendant la requête
@@ -112,6 +117,25 @@ class PromotionEmailTests(TestCase):
         self.assertRegex(message.extra_headers["List-Unsubscribe"], r"^<http.+/comptes/desinscription/[\w:-]+/>$")
         self.assertEqual(message.extra_headers["List-Unsubscribe-Post"], "List-Unsubscribe=One-Click")
 
+    def test_sent_after_other_emails(self):
+        """Une nouvelle tentative (lien de mot de passe...) n'attend pas la fin d'un envoi en nombre."""
+        password_reset = EmailLog.objects.create(
+            recipient=self.marie.email,
+            kind=AccountEmail.PASSWORD_RESET,
+            subject="Changement de votre mot de passe",
+            user=self.marie,
+            attempts=1,
+            last_attempt_at=timezone.now() - timedelta(minutes=6),
+        )
+
+        with mock.patch("accounts.services.email_retry.EMAILS_PER_PASS", 1):
+            retry_due_emails()
+
+        password_reset.refresh_from_db()
+        self.log.refresh_from_db()
+        self.assertEqual(password_reset.status, EmailStatus.SENT)
+        self.assertEqual((self.log.status, self.log.attempts), (EmailStatus.PENDING, 0))
+
     def test_not_sent_after_unsubscribing(self):
         self.marie.set_promotional_emails_consent(False)
         self.marie.save()
@@ -153,6 +177,16 @@ class MailablePromotionsTests(TestCase):
         self.assertContains(response, "Offre valable")
         self.assertNotContains(response, "Printemps à Nara")
         self.assertNotContains(response, "Offre épuisée")
+
+    def test_can_be_mailed_preloads_visible_targets_when_needed(self):
+        """Sans préchargement, un pays désactivé n'est pas compté ; préchargé, aucune requête de plus."""
+        portugal = create_country("Portugal", active=False)
+        create_promotion(scope=Scope.COUNTRIES, countries=[portugal])
+
+        self.assertFalse(can_be_mailed(Promotion.objects.get()))
+        preloaded = Promotion.objects.prefetch_related(*visible_targets()).get()
+        with self.assertNumQueries(0):
+            self.assertFalse(can_be_mailed(preloaded))
 
     def test_withdrawn_country_not_named_in_the_email(self):
         create_client("marie@example.com", accepts_promotional_emails=True)

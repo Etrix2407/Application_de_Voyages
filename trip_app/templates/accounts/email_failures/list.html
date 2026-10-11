@@ -30,7 +30,7 @@
                                 {% if log.user %}<br>{{ log.user.get_full_name }}{% endif %}
                                 {% if log.order_number %}<br><a href="{% url 'manage_order_detail' log.order_number %}">Demande n° {{ log.order_number }}</a>{% endif %}
                             </td>
-                            <td>{{ log.get_kind_display }}<br>« {{ log.subject }} »</td>
+                            <td>{{ log.kind_label }}<br>« {{ log.subject }} »</td>
                             <td>{{ log.attempts }}</td>
                             <td>
                                 {{ log.get_failure_display|default:"—" }}

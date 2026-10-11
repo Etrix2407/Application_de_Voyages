@@ -7,11 +7,12 @@ from django.core.management import call_command
 from django.test import TestCase, override_settings
 from django.utils import timezone
 
-from accounts.models import EmailKind, EmailLog, EmailStatus
+from accounts.models import EmailLog, EmailStatus
 from accounts.services.email_retry import retry_due_emails
 from accounts.tests.email_delivery import SendEmailsImmediately
 from accounts.tests.factories import create_client
 from catalog.tests.factories import create_country, create_destination
+from reviews.models import ReviewEmail
 from reviews.services.invitations import INVITATION_WINDOW
 
 from .factories import create_review, create_trip_done
@@ -40,7 +41,7 @@ class ReviewInvitationTests(SendEmailsImmediately, TestCase):
         self.assertEqual(message.subject, "Comment s'est passé votre voyage ?")
         self.assertIn(f"https://horizons-lointains.be/avis/voyage/{order.pk}/donner/", message.body)
         log = EmailLog.objects.get()
-        self.assertEqual((log.kind, log.user, log.order_number), (EmailKind.REVIEW_INVITATION, self.marie, order.pk))
+        self.assertEqual((log.kind, log.user, log.order_number), (ReviewEmail.REVIEW_INVITATION, self.marie, order.pk))
 
     def test_no_invitation_once_reviewed(self):
         create_review(create_trip_done(self.marie, self.kyoto, return_date=self.yesterday))

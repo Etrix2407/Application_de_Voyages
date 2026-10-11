@@ -12,7 +12,7 @@ from accounts.models import User
 from orders.services.promotion_statistics import promotion_statistics
 from orders.services.promotions import exhausted_promotions
 from promotions.forms import PromotionForm, PromotionMailingForm
-from promotions.models import Action, Promotion, State
+from promotions.models import Action, Promotion, PromotionState
 from promotions.services.management import (
     PromotionInUse,
     PromotionMailed,
@@ -68,7 +68,7 @@ def promotion_detail(request, pk):
         "history": history,
         "created_by": creation.author_name if creation else "",
         "can_manage": request.user.is_administrator,
-        "can_disable": state != State.DISABLED,
+        "can_disable": state != PromotionState.DISABLED,
         "can_mail": promotion in mailable_promotions(exclude=exhausted_promotions()),
         # Une promotion utilisée ou déjà envoyée par e-mail se désactive, elle ne se supprime pas.
         "can_delete": not used and not mailings,

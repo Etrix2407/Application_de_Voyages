@@ -5,10 +5,10 @@ a toujours une raison d'être : demande encore là, client non supprimé (toujou
 demande toujours dans l'état annoncé (ex. pas de « confirmée » pour une demande annulée depuis).
 """
 
-from accounts.models import EmailKind, EmailLog
+from accounts.models import EmailLog
 from accounts.services.email_rebuilders import account_at_recipient
 from accounts.services.email_retry import RebuiltEmail, rebuilder
-from orders.models import Order, OrderStatus, StatusChange
+from orders.models import Order, OrderEmail, OrderStatus, StatusChange
 from orders.services.emails import (
     cancelled_by_agency_context,
     client_context,
@@ -36,13 +36,13 @@ def _last_change(order: Order) -> StatusChange | None:
     return order.history.filter(status=order.status).last()
 
 
-@rebuilder(EmailKind.ORDER_PLACED)
+@rebuilder(OrderEmail.ORDER_PLACED)
 def _order_placed(log: EmailLog) -> RebuiltEmail | None:
     order = _order_of(log, OrderStatus.PENDING)
     return RebuiltEmail(placed_context(order)) if order else None
 
 
-@rebuilder(EmailKind.ORDER_CONFIRMED)
+@rebuilder(OrderEmail.ORDER_CONFIRMED)
 def _order_confirmed(log: EmailLog) -> RebuiltEmail | None:
     order = _order_of(log, OrderStatus.CONFIRMED)
     change = _last_change(order) if order else None
@@ -52,7 +52,7 @@ def _order_confirmed(log: EmailLog) -> RebuiltEmail | None:
     return RebuiltEmail(confirmed_context(order, change.author_name))
 
 
-@rebuilder(EmailKind.ORDER_CANCELLED_BY_CLIENT)
+@rebuilder(OrderEmail.ORDER_CANCELLED_BY_CLIENT)
 def _order_cancelled_by_client(log: EmailLog) -> RebuiltEmail | None:
     order = _order_of(log, OrderStatus.CANCELLED)
     change = _last_change(order) if order else None
@@ -61,7 +61,7 @@ def _order_cancelled_by_client(log: EmailLog) -> RebuiltEmail | None:
     return RebuiltEmail(client_context(order))
 
 
-@rebuilder(EmailKind.ORDER_CANCELLED_BY_AGENCY)
+@rebuilder(OrderEmail.ORDER_CANCELLED_BY_AGENCY)
 def _order_cancelled_by_agency(log: EmailLog) -> RebuiltEmail | None:
     order = _order_of(log, OrderStatus.CANCELLED)
     change = _last_change(order) if order else None
@@ -71,7 +71,7 @@ def _order_cancelled_by_agency(log: EmailLog) -> RebuiltEmail | None:
     return RebuiltEmail(cancelled_by_agency_context(order, change.reason))
 
 
-@rebuilder(EmailKind.NEW_ORDER_ALERT)
+@rebuilder(OrderEmail.NEW_ORDER_ALERT)
 def _new_order_alert(log: EmailLog) -> RebuiltEmail | None:
     # Envoyée à l'adresse commune (pas de compte lié) : reconstruite à partir de la demande seule.
     if log.order_number is None:
@@ -80,7 +80,7 @@ def _new_order_alert(log: EmailLog) -> RebuiltEmail | None:
     return RebuiltEmail(new_order_alert_context(order)) if order else None
 
 
-@rebuilder(EmailKind.DEPARTURE_REMINDER)
+@rebuilder(OrderEmail.DEPARTURE_REMINDER)
 def _departure_reminder(log: EmailLog) -> RebuiltEmail | None:
     # Plus de raison d'être une fois le départ passé (fiche pays relue : informations à jour).
     order = _order_of(log, OrderStatus.CONFIRMED)
