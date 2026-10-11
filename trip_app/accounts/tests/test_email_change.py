@@ -1,7 +1,7 @@
 import re
 from unittest import mock
 
-from django.core import mail
+from django.core import mail, signing
 from django.core.cache import cache
 from django.test import TestCase
 from django.urls import reverse
@@ -153,6 +153,14 @@ class EmailChangeTests(SendEmailsImmediately, TestCase):
 
         self.assertContains(response, "Trop de demandes de changement d&#x27;adresse")
         self.assertEqual(len(mail.outbox), sent)
+
+    def test_current_address_not_readable_in_link(self):
+        self.request_change()
+        token = self.link_sent_to("nouvelle@example.com").split("/")[-2]
+
+        payload = signing.b64_decode(token.split(":")[0].encode()).decode()
+
+        self.assertNotIn(self.user.email, payload)
 
     def test_tampered_link_refused(self):
         self.request_change()

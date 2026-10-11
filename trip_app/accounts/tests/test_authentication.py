@@ -7,7 +7,7 @@ from unittest import mock
 from django.apps import apps as django_apps
 from django.conf import settings
 from django.contrib.auth import get_user_model
-from django.core import mail
+from django.core import mail, signing
 from django.core.cache import cache
 from django.core.management import call_command
 from django.test import TestCase, TransactionTestCase
@@ -209,6 +209,12 @@ class ConfirmationLinkTests(SendEmailsImmediately, TestCase):
 
         self.assertRedirects(response, reverse("login"))
         self.assertFalse(User.objects.get().is_awaiting_confirmation)
+
+    def test_address_not_readable_in_link(self):
+        # Le jeton est signé mais lisible : il ne contient que l'empreinte de l'adresse.
+        payload = signing.b64_decode(self.link.split("/")[-2].split(":")[0].encode()).decode()
+
+        self.assertNotIn("@", payload)
 
     def test_link_valid_48_hours(self):
         now = timezone.now().timestamp()

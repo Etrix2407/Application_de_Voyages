@@ -37,7 +37,9 @@ def request_email_change(user: User, new_email: str) -> None:
 
 def make_email_change_token(user: User, new_email: str) -> str:
     return signing.dumps(
-        {"id": user.pk, "old": user.email, "new": new_email, "password": _password_fingerprint(user)},
+        # Ancienne adresse et mot de passe : seulement leur empreinte (le jeton est lisible dans l'URL).
+        # La nouvelle adresse y reste : c'est elle que le lien confirme, et il n'est envoyé qu'à elle.
+        {"id": user.pk, "old": _fingerprint(user.email), "new": new_email, "password": _fingerprint(user.password)},
         salt=_TOKEN_SALT,
     )
 
@@ -50,11 +52,13 @@ def pending_email_change(token: str) -> tuple[User, str] | None:
         return None
     # L'ancienne adresse doit être inchangée : un lien plus ancien ne s'applique plus.
     # Réservé aux clients : le personnel ne change pas d'adresse par ce parcours.
-    user = User.objects.filter(pk=data.get("id"), email=data.get("old"), role=Role.CLIENT).first()
+    user = User.objects.filter(pk=data.get("id"), role=Role.CLIENT).first()
     if user is None or User.objects.filter(email=data.get("new")).exists():
         return None
+    if not constant_time_compare(str(data.get("old", "")), _fingerprint(user.email)):
+        return None
     # Le mot de passe doit être inchangé : un lien demandé avant une reprise du compte ne sert plus.
-    if not constant_time_compare(str(data.get("password", "")), _password_fingerprint(user)):
+    if not constant_time_compare(str(data.get("password", "")), _fingerprint(user.password)):
         return None
     return user, data["new"]
 
@@ -82,9 +86,9 @@ def apply_email_change(user: User, new_email: str) -> bool:
     return True
 
 
-def _password_fingerprint(user: User) -> str:
-    """Empreinte du mot de passe haché : elle change avec le mot de passe, sans le révéler."""
-    return salted_hmac(_TOKEN_SALT, user.password).hexdigest()
+def _fingerprint(value: str) -> str:
+    """Empreinte d'une adresse ou du mot de passe haché : elle change avec eux, sans les révéler."""
+    return salted_hmac(_TOKEN_SALT, value).hexdigest()
 
 
 def _notify_current_address(user: User) -> None:

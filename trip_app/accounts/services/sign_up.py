@@ -19,6 +19,7 @@ from django.core import signing
 from django.db import IntegrityError, transaction
 from django.urls import reverse
 from django.utils import timezone
+from django.utils.crypto import constant_time_compare, salted_hmac
 
 from accounts.models import EmailKind, Role, User, normalize_email_address
 from accounts.services.account_deletion import delete_account
@@ -32,10 +33,12 @@ _PERSONAL_FIELDS = ("first_name", "last_name", "phone", "birth_date")
 
 
 def make_confirmation_token(user: User) -> str:
-    # L'adresse fait partie du jeton : un lien ne vaut que pour l'adresse qui l'a reçu.
+    # L'adresse fait partie du jeton : un lien ne vaut que pour l'adresse qui l'a reçu. Seule son
+    # empreinte y figure : le jeton est signé mais lisible, l'adresse n'apparaît pas dans l'URL.
     # La date d'inscription aussi : un lien ne vaut que pour les données envoyées avec lui.
     return signing.dumps(
-        {"id": user.pk, "email": user.email, "joined": user.date_joined.isoformat()}, salt=_TOKEN_SALT
+        {"id": user.pk, "address": _address_fingerprint(user.email), "joined": user.date_joined.isoformat()},
+        salt=_TOKEN_SALT,
     )
 
 
@@ -45,10 +48,16 @@ def user_from_token(token: str) -> User | None:
         data = signing.loads(token, salt=_TOKEN_SALT, max_age=CONFIRMATION_MAX_AGE)
     except signing.BadSignature:  # comprend les liens expirés
         return None
-    user = User.objects.filter(pk=data.get("id"), email=data.get("email"), role=Role.CLIENT).first()
+    user = User.objects.filter(pk=data.get("id"), role=Role.CLIENT).first()
     if user is None or user.date_joined.isoformat() != data.get("joined"):
         return None
+    if not constant_time_compare(str(data.get("address", "")), _address_fingerprint(user.email)):
+        return None
     return user
+
+
+def _address_fingerprint(email: str) -> str:
+    return salted_hmac(_TOKEN_SALT, email).hexdigest()
 
 
 def request_sign_up(data: dict) -> None:
