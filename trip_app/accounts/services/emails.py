@@ -11,6 +11,7 @@ from collections.abc import Iterable, Mapping
 
 from django.conf import settings
 from django.core.mail import EmailMultiAlternatives
+from django.core.mail.backends.base import BaseEmailBackend
 from django.db.transaction import on_commit
 from django.template.loader import render_to_string
 from django.templatetags.static import static
@@ -110,13 +111,21 @@ def build_message(to: str, subject: str, body: str, headers: dict[str, str] | No
     return message
 
 
-def deliver(log: EmailLog, message: EmailMultiAlternatives) -> bool:
-    """Tente l'envoi et note le résultat dans le journal. Renvoie True si le message est parti."""
+def deliver(log: EmailLog, message: EmailMultiAlternatives, connection: BaseEmailBackend | None = None) -> bool:
+    """Tente l'envoi et note le résultat dans le journal. Renvoie True si le message est parti.
+
+    `connection` : connexion déjà ouverte, partagée par tous les envois d'un même passage
+    (voir retry_due_emails) ; sans elle, le message ouvre et ferme sa propre connexion.
+    """
     log.attempts += 1
     log.last_attempt_at = timezone.now()
+    if connection is not None:
+        message.connection = connection
     try:
         message.send()
     except Exception as error:  # Toute erreur : un échec d'envoi ne doit jamais bloquer l'action.
+        if connection is not None and not isinstance(error, smtplib.SMTPRecipientsRefused):
+            _reopen(connection)
         log.last_error = (str(error) or type(error).__name__)[:500]
         log.failure = failure_of(error)
         # Ni adresse ni message d'erreur dans les logs (ils contiennent souvent l'adresse) : le
@@ -132,6 +141,16 @@ def deliver(log: EmailLog, message: EmailMultiAlternatives) -> bool:
     log.failure = ""
     log.save(update_fields=["attempts", "last_attempt_at", "last_error", "failure", "status"])
     return True
+
+
+def _reopen(connection: BaseEmailBackend) -> None:
+    # Après une erreur, la connexion peut être coupée : on repart d'une connexion neuve pour la suite.
+    # Une adresse refusée ne la coupe pas (le serveur annule seulement ce message).
+    connection.close()
+    try:
+        connection.open()
+    except Exception:  # Serveur toujours injoignable : le message suivant retentera l'ouverture.
+        pass
 
 
 def failure_of(error: Exception) -> EmailFailure:

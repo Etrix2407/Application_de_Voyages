@@ -8,7 +8,14 @@ from django.utils import timezone
 
 from accounts.models import EmailFailure, EmailKind, EmailLog, EmailStatus
 from accounts.services.account_deletion import delete_account
-from accounts.services.email_retry import NOT_REBUILDABLE, OBSOLETE, AlreadyResent, resend, retry_due_emails
+from accounts.services.email_retry import (
+    _REBUILDERS,
+    NOT_REBUILDABLE,
+    OBSOLETE,
+    AlreadyResent,
+    resend,
+    retry_due_emails,
+)
 from accounts.services.privacy import purge_old_email_log
 
 from .factories import create_admin, create_agent, create_client
@@ -67,6 +74,21 @@ class RetryTests(TestCase):
 
         log.refresh_from_db()
         self.assertEqual((log.status, log.attempts, log.last_error), (EmailStatus.FAILED, 3, "serveur injoignable"))
+
+    def test_error_on_one_email_does_not_block_the_next(self):
+        broken = pending_log(self.marie, attempts=1, minutes_ago=6)
+        next_one = pending_log(self.marie, attempts=1, minutes_ago=6, kind=EmailKind.PASSWORD_CHANGED)
+
+        def crash(log):
+            raise RuntimeError("bogue de reconstruction")
+
+        with mock.patch.dict(_REBUILDERS, {EmailKind.CLIENT_PASSWORD_LINK: crash}):
+            with self.assertLogs("accounts.services.email_retry", level="ERROR") as logs:
+                self.assertEqual(retry_due_emails(), 2)
+
+        self.assertIn(f"n° {broken.pk}", logs.output[0])
+        next_one.refresh_from_db()
+        self.assertEqual(next_one.status, EmailStatus.SENT)
 
     def test_no_security_link_to_a_former_address(self):
         log = pending_log(self.marie, attempts=1, minutes_ago=6)

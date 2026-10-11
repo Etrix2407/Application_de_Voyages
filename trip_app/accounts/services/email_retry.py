@@ -13,15 +13,18 @@ passe à l'état « échec » dès sa première tentative ratée.
 """
 
 import logging
+import time
 from collections.abc import Callable
 from datetime import datetime, timedelta
 from typing import NamedTuple
 
+from django.core.mail import get_connection
+from django.core.mail.backends.base import BaseEmailBackend
 from django.db.models import Q
 from django.utils import timezone
 
 from accounts.models import EmailFailure, EmailKind, EmailLog, EmailStatus
-from accounts.services.email_texts import render_email
+from accounts.services.email_texts import current_text, fill_fields
 from accounts.services.emails import build_message, deliver
 
 logger = logging.getLogger(__name__)
@@ -33,6 +36,10 @@ RETRY_DELAYS = {1: timedelta(minutes=5), 2: timedelta(minutes=15)}
 NEVER_ATTEMPTED_DELAY = timedelta(minutes=5)
 # Types mis en attente sans envoi immédiat (queue_emails) : envoyés dès le passage suivant.
 QUEUED_KINDS = (EmailKind.PROMOTION,)
+# Un passage envoie au plus 200 e-mails (le reste part aux passages suivants, toutes les 5 minutes)
+# et ne prend plus de nouveau message après 20 minutes (serveur très lent ou injoignable).
+EMAILS_PER_PASS = 200
+MAX_PASS_DURATION = timedelta(minutes=20)
 
 # Raisons affichées (last_error) ; l'état « non renvoyable » est porté par EmailLog.failure.
 NOT_REBUILDABLE = "Ce type d'e-mail ne peut pas être renvoyé."
@@ -57,6 +64,14 @@ Rebuilder = Callable[[EmailLog], RebuiltEmail | None]
 _REBUILDERS: dict[str, Rebuilder] = {}
 
 
+class PassTexts(dict):
+    """Objet et texte de chaque type (current_text), lus une seule fois par passage."""
+
+    def __missing__(self, kind: str) -> tuple[str, str]:
+        self[kind] = current_text(kind)
+        return self[kind]
+
+
 def rebuilder(kind: EmailKind) -> Callable[[Rebuilder], Rebuilder]:
     """Déclare la reconstruction d'un type d'e-mail. Elle renvoie None si le message n'a plus
     de raison d'être (compte supprimé, adresse changée, lien devenu inutile...)."""
@@ -74,8 +89,12 @@ def retry_due_emails(now: datetime | None = None) -> int:
     Les e-mails mis en attente par queue_emails (QUEUED_KINDS) partent sans délai : c'est leur
     premier envoi. Un message déjà pris par une autre reprise (date de tentative posée) n'est repris
     qu'au bout de 5 minutes : pas de doublon pendant un envoi en nombre.
+
+    Tout le passage utilise une seule connexion au serveur d'envoi, fermée à la fin ; il traite au
+    plus EMAILS_PER_PASS e-mails, les plus anciens d'abord. Le texte de chaque type n'est lu qu'une fois.
     """
     now = now or timezone.now()
+    deadline = time.monotonic() + MAX_PASS_DURATION.total_seconds()
     never_taken = Q(attempts=0, last_attempt_at__isnull=True)
     due = (
         (never_taken & (Q(created_at__lte=now - NEVER_ATTEMPTED_DELAY) | Q(kind__in=QUEUED_KINDS)))
@@ -83,15 +102,33 @@ def retry_due_emails(now: datetime | None = None) -> int:
     )
     for attempts, delay in RETRY_DELAYS.items():
         due |= Q(attempts=attempts, last_attempt_at__lte=now - delay)
+    logs = list(
+        EmailLog.objects.filter(due, status=EmailStatus.PENDING).select_related("user").order_by("pk")[
+            :EMAILS_PER_PASS
+        ]
+    )
+    if not logs:
+        return 0  # rien à envoyer : pas de connexion au serveur
     retried = 0
-    for log in EmailLog.objects.filter(due, status=EmailStatus.PENDING).select_related("user").order_by("pk"):
-        if not _claim(log, now):
-            continue
-        retried += 1
-        try:
-            redeliver(log)
-        except Exception:  # Un message en erreur ne doit pas empêcher la reprise des suivants.
-            logger.exception("Impossible de reprendre l'e-mail n° %s", log.pk)
+    texts = PassTexts()
+    connection = get_connection()
+    try:
+        connection.open()
+    except Exception:  # Serveur injoignable : chaque message retentera l'ouverture et notera l'échec.
+        logger.error("Connexion au serveur d'envoi impossible en début de passage.")
+    try:
+        for log in logs:
+            if time.monotonic() > deadline:
+                break
+            if not _claim(log):
+                continue
+            retried += 1
+            try:
+                redeliver(log, connection=connection, texts=texts)
+            except Exception:  # Un message en erreur ne doit pas empêcher la reprise des suivants.
+                logger.exception("Impossible de reprendre l'e-mail n° %s", log.pk)
+    finally:
+        connection.close()
     return retried
 
 
@@ -115,12 +152,15 @@ def resend(log: EmailLog) -> bool:
     return redeliver(log)
 
 
-def redeliver(log: EmailLog) -> bool:
+def redeliver(
+    log: EmailLog, *, connection: BaseEmailBackend | None = None, texts: PassTexts | None = None
+) -> bool:
     """Reconstruit le message et tente l'envoi ; renvoie True s'il est parti.
 
     Si le message ne peut pas être reconstruit, la ligne passe à l'état « échec » avec la raison.
     Le texte est celui du moment (modifié entre-temps par l'administrateur, peut-être) : l'objet
-    noté au journal est mis à jour s'il a changé.
+    noté au journal est mis à jour s'il a changé. `connection` et `texts` : connexion et textes
+    partagés par les envois d'un même passage (voir retry_due_emails).
     """
     rebuild = _REBUILDERS.get(log.kind)
     rebuilt = rebuild(log) if rebuild and log.recipient else None
@@ -130,17 +170,20 @@ def redeliver(log: EmailLog) -> bool:
         log.last_error = OBSOLETE if rebuild else NOT_REBUILDABLE
         log.save(update_fields=["status", "failure", "last_error"])
         return False
-    subject, body = render_email(log.kind, rebuilt.fields)
+    subject, text = (texts if texts is not None else PassTexts())[log.kind]
+    body = fill_fields(text, rebuilt.fields)
     if subject != log.subject:
         log.subject = subject
         log.save(update_fields=["subject"])
-    return deliver(log, build_message(log.recipient, subject, body, rebuilt.headers))
+    return deliver(log, build_message(log.recipient, subject, body, rebuilt.headers), connection)
 
 
-def _claim(log: EmailLog, now: datetime) -> bool:
+def _claim(log: EmailLog) -> bool:
     # Si deux reprises tournent en même temps, une seule prend chaque message : pas de doublon.
+    # L'heure réelle de la prise (et non celle du début du passage) : un passage long ne laisse
+    # pas ses derniers messages repris par un autre avant 5 minutes pleines.
     return bool(
         EmailLog.objects.filter(
             pk=log.pk, status=EmailStatus.PENDING, attempts=log.attempts, last_attempt_at=log.last_attempt_at
-        ).update(last_attempt_at=now)
+        ).update(last_attempt_at=timezone.now())
     )
