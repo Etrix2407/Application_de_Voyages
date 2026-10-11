@@ -19,7 +19,7 @@ from accounts.models import User
 from accounts.services.email_texts import render_email
 from accounts.services.emails import queue_emails, site_url
 from accounts.services.unsubscribe import unsubscribe_link
-from promotions.models import Promotion, PromotionEmail, PromotionMailing, State
+from promotions.models import Promotion, PromotionEmail, PromotionMailing, PromotionState
 from promotions.services.public import offers_something, visible_targets
 
 # Aperçu avant l'envoi : chaque client lit son prénom et son propre lien de désinscription.
@@ -45,7 +45,7 @@ def can_be_mailed(promotion: Promotion) -> bool:
     Les pays et destinations visés doivent être préchargés avec visible_targets : l'e-mail ne cite
     jamais un élément désactivé.
     """
-    return promotion.state() in (State.RUNNING, State.UPCOMING) and offers_something(promotion)
+    return promotion.state() in (PromotionState.RUNNING, PromotionState.UPCOMING) and offers_something(promotion)
 
 
 def mailable_promotions(exclude=()) -> list[Promotion]:
@@ -116,7 +116,7 @@ def promotion_email_context(mailing: PromotionMailing, user: User) -> dict:
 
 def _email_fields(promotion: Promotion, message: str, first_name: str, unsubscribe: str) -> dict:
     # La page « Nos offres du moment » ne montre que les promotions automatiques en cours.
-    on_offers_page = promotion.is_automatic and promotion.state() == State.RUNNING
+    on_offers_page = promotion.is_automatic and promotion.state() == PromotionState.RUNNING
     return {
         "prénom": first_name,
         "message": message,

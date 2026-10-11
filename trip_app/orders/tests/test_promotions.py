@@ -16,7 +16,7 @@ from orders.models import Order, OrderStatus
 from orders.services import promotions as messages
 from orders.services.placing import parts_for, place_order
 from orders.services.promotions import choose_promotion
-from promotions.models import Base, Kind, Promotion, Scope
+from promotions.models import DiscountBase, DiscountKind, Promotion, Scope
 from promotions.tests.factories import create_promotion
 
 from .factories import confirm_on_page, create_order, departure_in, review_tokens, submit_order
@@ -44,7 +44,7 @@ class ChoosePromotionTests(TestCase):
 
     def test_best_automatic_offer_applied_without_code(self):
         create_promotion(name="-10 %", value=Decimal("10"))
-        create_promotion(name="-100 €", kind=Kind.FIXED, value=Decimal("100"))
+        create_promotion(name="-100 €", kind=DiscountKind.FIXED, value=Decimal("100"))
 
         self.assertEqual(self.choose().offer.promotion.name, "-100 €")
 
@@ -57,7 +57,7 @@ class ChoosePromotionTests(TestCase):
                          destinations=[create_destination(create_country("Portugal"), "Lisbonne")])
         create_promotion(code="AUTOMNE", departure_from=self.departure + timedelta(days=1),
                          departure_until=self.departure + timedelta(days=30))
-        create_promotion(code="ACTIVITES", base=Base.ACTIVITIES)
+        create_promotion(code="ACTIVITES", base=DiscountBase.ACTIVITIES)
         expected = {
             "INCONNU": messages.INVALID_CODE,
             "FUTUR1": messages.INVALID_CODE,
@@ -158,7 +158,7 @@ class OrderWithPromotionTests(TestCase):
         }
 
     def test_code_applied_and_frozen_in_the_order(self):
-        promotion = create_promotion(name="Bienvenue", code="BIENVENUE", kind=Kind.FIXED, value=Decimal("100"))
+        promotion = create_promotion(name="Bienvenue", code="BIENVENUE", kind=DiscountKind.FIXED, value=Decimal("100"))
 
         review = self.client.post(self.url, {**self.data, "promo_code": "bienvenue"})
         self.client.post(self.url, {**self.data, "promo_code": "bienvenue", **review_tokens(review), "confirm": ""})
@@ -278,7 +278,7 @@ class ConfirmationTests(TestCase):
 
     def test_stay_discount_not_applicable_once_destination_is_on_quote(self):
         kyoto = create_destination(create_country(), "Kyoto", price_from=Decimal("1000"))
-        promotion = create_promotion(base=Base.STAY, value=Decimal("10"))
+        promotion = create_promotion(base=DiscountBase.STAY, value=Decimal("10"))
         client = create_client()
         order = create_order(client, kyoto, adults=1, promotion=promotion, promotion_name=promotion.name,
                              estimated_price=Decimal("900"), discount=Decimal("100"))
@@ -314,7 +314,7 @@ class UsedPromotionTests(TestCase):
         self.promotion.refresh_from_db()
         self.assertEqual(self.promotion.name, "Nouveau nom")
         self.assertEqual(self.promotion.ends_on, today + timedelta(days=5))
-        self.assertEqual((self.promotion.kind, self.promotion.value), (Kind.PERCENT, Decimal("10")))
+        self.assertEqual((self.promotion.kind, self.promotion.value), (DiscountKind.PERCENT, Decimal("10")))
 
     def test_cannot_be_deleted(self):
         response = self.client.post(reverse("manage_delete_promotion", args=[self.promotion.pk]), follow=True)

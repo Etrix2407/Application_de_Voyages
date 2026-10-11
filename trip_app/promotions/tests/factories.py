@@ -5,14 +5,14 @@ from decimal import Decimal
 
 from django.utils import timezone
 
-from promotions.models import Kind, Promotion
+from promotions.models import DiscountKind, Promotion
 
 
 def create_promotion(countries=(), destinations=(), **fields) -> Promotion:
     """Par défaut : -10 % sur tout le catalogue, automatique, en cours pendant 30 jours."""
     today = timezone.localdate()
     fields.setdefault("name", "Semaine du Portugal")
-    fields.setdefault("kind", Kind.PERCENT)
+    fields.setdefault("kind", DiscountKind.PERCENT)
     fields.setdefault("value", Decimal("10"))
     fields.setdefault("starts_on", today)
     fields.setdefault("ends_on", today + timedelta(days=30))
