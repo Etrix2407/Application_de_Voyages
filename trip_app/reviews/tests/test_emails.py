@@ -116,6 +116,26 @@ class ReviewEmailTests(SendEmailsImmediately, TestCase):
         self.assertEqual(EmailLog.objects.get().status, EmailStatus.SENT)
         self.assertIn("Motif : Hors sujet", self.assertSentToJulie(EmailKind.REVIEW_REFUSED))
 
+    def test_published_and_response_rebuilt_on_retry(self):
+        publish(self.review)
+        save_response(self.review, self.agent, "Merci Julie !")
+        cases = {
+            EmailKind.REVIEW_PUBLISHED: f"/catalogue/destinations/{self.trip.destination_id}/",
+            EmailKind.REVIEW_RESPONSE: "Merci Julie !",
+        }
+        for kind, expected in cases.items():
+            with self.subTest(kind=kind):
+                EmailLog.objects.all().delete()
+                mail.outbox.clear()
+                EmailLog.objects.create(
+                    recipient=self.julie.email, kind=kind, subject="Objet", user=self.julie,
+                    order_number=self.trip.pk, attempts=1, last_attempt_at=timezone.now() - timedelta(minutes=6),
+                )
+
+                self.assertEqual(retry_due_emails(), 1)
+
+                self.assertIn(expected, self.assertSentToJulie(kind))
+
     def test_never_rebuilt_for_a_former_address(self):
         with mock.patch(
             "accounts.services.emails.EmailMultiAlternatives.send", side_effect=OSError("serveur injoignable")
