@@ -156,10 +156,6 @@ class Order(models.Model):
         return f"Demande n° {self.pk} — {self.destination_name}"
 
     @property
-    def traveller_count(self) -> int:
-        return self.adults + self.children
-
-    @property
     def latest_price(self) -> Decimal:
         """Prix le plus récent : celui de la confirmation s'il existe, sinon l'estimation de départ."""
         return self.estimated_price if self.confirmed_price is None else self.confirmed_price

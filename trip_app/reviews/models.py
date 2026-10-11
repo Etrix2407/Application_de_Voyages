@@ -23,7 +23,7 @@ NEGATIVE_RATING = 2
 MAX_TITLE_LENGTH = 100
 MAX_COMMENT_LENGTH = 1000
 MAX_REFUSAL_DETAILS_LENGTH = 500
-# Le client peut modifier ou supprimer son avis pendant ce délai, compté depuis la création.
+# Le client peut modifier son avis pendant ce délai, compté depuis la création (le supprimer : à tout moment).
 EDIT_PERIOD = timedelta(days=30)
 ANONYMOUS_NAME = "Voyageur anonyme"
 

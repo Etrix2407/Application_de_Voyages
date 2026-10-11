@@ -27,11 +27,6 @@ def client_can_edit(review: Review) -> bool:
     return review.can_be_changed_by_client() and review.order.status == Status.CONFIRMED
 
 
-def client_can_delete(review: Review) -> bool:
-    # Le client retire ses propos quand il le souhaite (RGPD) ; voir delete_review.
-    return True
-
-
 def write_review(client, review: Review) -> Review:
     """Enregistre un nouvel avis (validé par le formulaire) sur une demande de ce client."""
     if not can_review(client, review.order):
