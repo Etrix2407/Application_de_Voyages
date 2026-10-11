@@ -18,6 +18,7 @@ from accounts.models import EmailKind
 from accounts.services.emails import send_email, site_url
 from catalog.services.time_zones import BELGIUM, format_offset, offset_from_belgium
 from orders.models import Order, Status
+from orders.services.labels import destination_label
 
 REMINDER_DAYS_BEFORE_DEPARTURE = 7
 
@@ -55,7 +56,7 @@ def departure_reminder_context(order: Order) -> dict:
         time_offset = f"- Décalage horaire le jour du départ : {_offset_on(country.time_zone, order.departure_date)}"
     return {
         "prénom": order.client.first_name,
-        "destination": f"{order.destination_name} ({order.country_name})",
+        "destination": destination_label(order),
         "date de départ": date_format(order.departure_date, "j F Y"),
         "date de retour": date_format(order.return_date, "j F Y"),
         "numéro": order.pk,

@@ -41,6 +41,22 @@ def pending_log(user, attempts, minutes_ago, **fields):
     )
 
 
+def account_for(kind, number):
+    """Compte qui peut recevoir ce type d'e-mail : agent invité, agent avec mot de passe, client
+    non confirmé (confirmation d'inscription) ou client confirmé."""
+    email = f"compte{number}@example.com"
+    if kind == EmailKind.AGENT_ACTIVATION:
+        agent = create_agent(email=email)
+        agent.set_unusable_password()
+        agent.save()
+        return agent
+    if kind == EmailKind.STAFF_PASSWORD_LINK:
+        return create_agent(email=email)
+    if kind == EmailKind.SIGN_UP_CONFIRMATION:
+        return create_client(email=email, email_confirmed_at=None)
+    return create_client(email=email)
+
+
 class RetryTests(TestCase):
     def setUp(self):
         self.marie = create_client(email="marie@example.com")
@@ -217,14 +233,45 @@ class AccountEmailsRetryTests(TestCase):
         self.assertEqual(mail.outbox[0].to, ["luc@example.com"])
         self.assertRegex(mail.outbox[0].body, r"/activation/[\w-]+/[\w-]+/")
 
-    def test_password_changed_notice_retried(self):
-        log = pending_log(create_client(), attempts=1, minutes_ago=6, kind=EmailKind.PASSWORD_CHANGED)
+    def test_account_emails_rebuilt_on_retry(self):
+        # Type → texte attendu dans le message reconstruit (lien neuf pour les liens de sécurité).
+        cases = {
+            EmailKind.PASSWORD_RESET: r"/reinitialisation/[\w-]+/[\w-]+/",
+            EmailKind.SIGN_UP_CONFIRMATION: r"/inscription/confirmer/[\w:-]+/",
+            EmailKind.SIGN_UP_EXISTING: "Un compte existe déjà",
+            EmailKind.EMAIL_CHANGE_NOTICE: "Une demande de changement de l'adresse e-mail",
+            EmailKind.PASSWORD_CHANGED: "vient d'être modifié",
+        }
+        for number, (kind, expected) in enumerate(cases.items()):
+            with self.subTest(kind=kind):
+                mail.outbox.clear()
+                log = pending_log(account_for(kind, number), attempts=1, minutes_ago=6, kind=kind)
 
-        retry_due_emails()
+                retry_due_emails()
 
-        log.refresh_from_db()
-        self.assertEqual(log.status, EmailStatus.SENT)
-        self.assertIn("vient d'être modifié", mail.outbox[0].body)
+                log.refresh_from_db()
+                self.assertEqual(log.status, EmailStatus.SENT)
+                self.assertRegex(mail.outbox[0].body, expected)
+
+    def test_not_rebuilt_for_a_disabled_account_or_a_former_address(self):
+        disabled = [EmailKind.PASSWORD_RESET, EmailKind.AGENT_ACTIVATION, EmailKind.STAFF_PASSWORD_LINK]
+        moved = [*disabled, EmailKind.SIGN_UP_CONFIRMATION, EmailKind.SIGN_UP_EXISTING]
+        cases = [("compte désactivé", kind) for kind in disabled] + [("adresse changée", kind) for kind in moved]
+        for number, (change, kind) in enumerate(cases):
+            with self.subTest(change=change, kind=kind):
+                user = account_for(kind, number)
+                log = pending_log(user, attempts=1, minutes_ago=6, kind=kind)
+                if change == "compte désactivé":
+                    user.is_active = False
+                else:
+                    user.email = f"nouvelle.{user.email}"
+                user.save()
+
+                retry_due_emails()
+
+                log.refresh_from_db()
+                self.assertEqual((log.status, log.last_error), (EmailStatus.FAILED, OBSOLETE))
+        self.assertEqual(mail.outbox, [])
 
     def test_deletion_emails_never_resent_nor_listed(self):
         kinds = [EmailKind.ACCOUNT_DELETED, EmailKind.UNCONFIRMED_ACCOUNT_DELETED, EmailKind.STAFF_ACCOUNT_DELETED]

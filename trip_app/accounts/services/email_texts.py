@@ -8,11 +8,20 @@ ne voit jamais de syntaxe de gabarit.
 
 DEFAULT_TEXTS est la seule source des textes d'origine : sans texte de l'administrateur, c'est lui
 qui est utilisé. Chaque appelant de send_email fournit la valeur de tous les champs de son type.
+
+Version HTML : tout est échappé et rien n'est rendu cliquable automatiquement (un prénom ou un avis
+qui contient une adresse web ne devient jamais un lien, pas plus qu'une adresse écrite par
+l'administrateur). Seuls les champs de type lien, déclarés dans DefaultText.links, deviennent un
+bouton au texte explicite ; la version texte garde l'adresse complète.
 """
 
 import re
-from collections.abc import Mapping
-from dataclasses import dataclass
+from collections.abc import Callable, Mapping
+from dataclasses import dataclass, field
+from typing import NamedTuple
+
+from django.utils.html import escape, linebreaks
+from django.utils.safestring import SafeString, mark_safe
 
 from accounts.models import EmailKind, EmailText
 
@@ -22,11 +31,24 @@ FIELD = re.compile(r"\{([^{}]*)\}")
 
 @dataclass(frozen=True)
 class DefaultText:
-    """Texte d'origine d'un type d'e-mail. `fields` : nom de chaque champ variable → description."""
+    """Texte d'origine d'un type d'e-mail. `fields` : nom de chaque champ variable → description.
+
+    `links` : champs de type lien → texte du bouton dans la version HTML. La valeur d'un tel champ
+    finit par l'adresse, seule sur sa dernière ligne (une phrase peut la précéder).
+    """
 
     subject: str
     body: str
     fields: dict[str, str]
+    links: dict[str, str] = field(default_factory=dict)
+
+
+class RenderedEmail(NamedTuple):
+    """Objet, version texte et corps de la version HTML (placé dans emails/base.html)."""
+
+    subject: str
+    text: str
+    html: SafeString
 
 
 def _paragraphs(*paragraphs: str) -> str:
@@ -40,7 +62,7 @@ DESTINATION = {"destination": "Destination et pays, par exemple « Kyoto (Japon)
 DATES = {"dates": "Dates du voyage, par exemple « du 3 mai 2026 au 13 mai 2026 »."}
 REVIEW = {
     "titre": "Titre de l'avis.",
-    "destination": "Destination et pays de l'avis, par exemple « Kyoto, Japon ».",
+    "destination": "Destination et pays de l'avis, par exemple « Kyoto (Japon) ».",
 }
 LAST_MESSAGE = "Ce message est le dernier que vous recevrez de notre part."
 
@@ -56,6 +78,7 @@ DEFAULT_TEXTS: dict[str, DefaultText] = {
             "confirmée et le compte sera effacé au bout de 30 jours.",
         ),
         {**FIRST_NAME, "lien": "Lien de confirmation de l'adresse e-mail (valable 48 heures)."},
+        links={"lien": "Confirmer mon adresse e-mail"},
     ),
     EmailKind.SIGN_UP_EXISTING: DefaultText(
         "Tentative d'inscription avec votre adresse",
@@ -72,6 +95,7 @@ DEFAULT_TEXTS: dict[str, DefaultText] = {
             "lien de connexion": "Lien vers la page de connexion.",
             "lien mot de passe oublié": "Lien vers la page « Mot de passe oublié ».",
         },
+        links={"lien de connexion": "Me connecter", "lien mot de passe oublié": "Choisir un nouveau mot de passe"},
     ),
     EmailKind.EMAIL_CHANGE_CONFIRMATION: DefaultText(
         "Confirmez votre nouvelle adresse e-mail",
@@ -83,6 +107,7 @@ DEFAULT_TEXTS: dict[str, DefaultText] = {
             "Si vous n'êtes pas à l'origine de cette demande, ignorez cet e-mail : rien ne sera modifié.",
         ),
         {**FIRST_NAME, "lien": "Lien de confirmation de la nouvelle adresse (valable 24 heures)."},
+        links={"lien": "Confirmer ma nouvelle adresse e-mail"},
     ),
     EmailKind.EMAIL_CHANGE_NOTICE: DefaultText(
         "Demande de changement de votre adresse e-mail",
@@ -106,6 +131,7 @@ DEFAULT_TEXTS: dict[str, DefaultText] = {
             "passe ne changera pas.",
         ),
         {**FIRST_NAME, "lien": "Lien pour choisir un nouveau mot de passe (valable 1 heure)."},
+        links={"lien": "Choisir un nouveau mot de passe"},
     ),
     EmailKind.CLIENT_PASSWORD_LINK: DefaultText(
         "Changement de votre mot de passe",
@@ -117,6 +143,7 @@ DEFAULT_TEXTS: dict[str, DefaultText] = {
             "Si vous n'avez rien demandé, ignorez simplement cet e-mail : votre mot de passe ne changera pas.",
         ),
         {**FIRST_NAME, "lien": "Lien pour choisir un nouveau mot de passe (valable 1 heure)."},
+        links={"lien": "Choisir un nouveau mot de passe"},
     ),
     EmailKind.AGENT_ACTIVATION: DefaultText(
         "Activation de votre compte",
@@ -128,12 +155,13 @@ DEFAULT_TEXTS: dict[str, DefaultText] = {
             "Si le lien a expiré, demandez à l'administrateur de vous en renvoyer un.",
         ),
         {**FIRST_NAME, **EMPLOYEE_NUMBER, "lien": "Lien pour choisir son mot de passe (valable 7 jours)."},
+        links={"lien": "Choisir mon mot de passe"},
     ),
     EmailKind.REVIEW_PUBLISHED: DefaultText(
         "Merci, votre avis est en ligne",
         _paragraphs(
             "Bonjour {prénom},",
-            "Merci, votre avis « {titre} » ({destination}) est en ligne.",
+            "Merci, votre avis « {titre} » sur {destination} est en ligne.",
             "{lien vers la destination}",
         ),
         {
@@ -142,12 +170,13 @@ DEFAULT_TEXTS: dict[str, DefaultText] = {
             "lien vers la destination": "Phrase « Vous pouvez le lire sur la page de la destination » suivie du "
             "lien ; absente si la destination n'est pas visible sur le site.",
         },
+        links={"lien vers la destination": "Voir la page de la destination"},
     ),
     EmailKind.REVIEW_REFUSED: DefaultText(
         "Votre avis n'est pas publié",
         _paragraphs(
             "Bonjour {prénom},",
-            "Votre avis « {titre} » ({destination}) n'est pas publié sur notre site.",
+            "Votre avis « {titre} » sur {destination} n'est pas publié sur notre site.",
             "Motif : {motif}",
             "{correction}",
         ),
@@ -159,12 +188,13 @@ DEFAULT_TEXTS: dict[str, DefaultText] = {
             "que le délai de 30 jours est dépassé ; absente si l'avis ne peut pas être corrigé "
             "(voyage annulé).",
         },
+        links={"correction": "Corriger mon avis"},
     ),
     EmailKind.REVIEW_RESPONSE: DefaultText(
         "Réponse de l'agence à votre avis",
         _paragraphs(
             "Bonjour {prénom},",
-            "{annonce} à votre avis « {titre} » ({destination}).",
+            "{annonce} à votre avis « {titre} » sur {destination}.",
             "Réponse de {auteur} :",
             "{réponse}",
             "Vous retrouvez votre avis et cette réponse sur la page « Mes avis » :",
@@ -178,6 +208,7 @@ DEFAULT_TEXTS: dict[str, DefaultText] = {
             "réponse": "Texte de la réponse de l'agence.",
             "lien": "Lien vers la page « Mes avis ».",
         },
+        links={"lien": "Voir mes avis"},
     ),
     EmailKind.ORDER_PLACED: DefaultText(
         "Nous avons bien reçu votre demande de voyage",
@@ -251,6 +282,7 @@ DEFAULT_TEXTS: dict[str, DefaultText] = {
             "client": "Prénom et nom du client.",
             "lien": "Lien vers la fiche de la demande dans l'espace du personnel.",
         },
+        links={"lien": "Ouvrir la fiche de la demande"},
     ),
     EmailKind.DEPARTURE_REMINDER: DefaultText(
         "Votre départ approche",
@@ -276,6 +308,7 @@ DEFAULT_TEXTS: dict[str, DefaultText] = {
             "monnaie": "Monnaie du pays.",
             "lien": "Lien vers le détail de la demande.",
         },
+        links={"lien": "Voir ma demande de voyage"},
     ),
     EmailKind.REVIEW_INVITATION: DefaultText(
         "Comment s'est passé votre voyage ?",
@@ -288,6 +321,7 @@ DEFAULT_TEXTS: dict[str, DefaultText] = {
             "Votre avis sera publié après validation par l'agence. Merci d'avance pour votre retour.",
         ),
         {**FIRST_NAME, **DESTINATION, **DATES, "lien": "Lien vers la page pour donner son avis."},
+        links={"lien": "Donner mon avis"},
     ),
     EmailKind.PASSWORD_CHANGED: DefaultText(
         "Votre mot de passe a été modifié",
@@ -344,6 +378,7 @@ DEFAULT_TEXTS: dict[str, DefaultText] = {
             "demandez à l'administrateur de vous en renvoyer un.",
         ),
         {**FIRST_NAME, **EMPLOYEE_NUMBER, "lien": "Lien pour choisir un nouveau mot de passe (valable 7 jours)."},
+        links={"lien": "Choisir un nouveau mot de passe"},
     ),
     EmailKind.PROMOTION: DefaultText(
         "Une offre pour votre prochain voyage",
@@ -363,6 +398,7 @@ DEFAULT_TEXTS: dict[str, DefaultText] = {
             "lien": "Lien vers les offres du moment ou vers la liste des pays.",
             "désinscription": "Phrase obligatoire qui explique l'envoi, suivie du lien de désinscription.",
         },
+        links={"lien": "Découvrir nos voyages", "désinscription": "Me désinscrire"},
     ),
 }
 
@@ -380,10 +416,19 @@ def current_subject(kind: str) -> str:
     return current_text(kind)[0]
 
 
-def render_email(kind: str, values: Mapping[str, object]) -> tuple[str, str]:
-    """Objet et texte prêts à envoyer : le texte utilisé (voir current_text), champs remplis."""
-    subject, body = current_text(kind)
-    return subject, fill_fields(body, values)
+def render_email(
+    kind: str, values: Mapping[str, object], text: tuple[str, str] | None = None
+) -> RenderedEmail:
+    """Objet, texte et corps HTML prêts à envoyer : le texte utilisé (voir current_text, ou `text`
+    déjà lu par l'appelant), champs remplis."""
+    subject, body = text if text is not None else current_text(kind)
+    links = DEFAULT_TEXTS[kind].links
+
+    def html_value(name: str, value: object) -> str:
+        return _link_html(str(value), links[name]) if name in links else escape(value)
+
+    html = linebreaks(_fill(body, values, escape, html_value), autoescape=False)
+    return RenderedEmail(subject, fill_fields(body, values), mark_safe(html))
 
 
 def fill_fields(text: str, values: Mapping[str, object]) -> str:
@@ -393,6 +438,47 @@ def fill_fields(text: str, values: Mapping[str, object]) -> str:
     Un champ vide seul sur sa ligne (ligne facultative) fait disparaître la ligne, sans laisser
     deux lignes vides de suite. Un champ inconnu reste tel quel.
     """
+    return _fill(text, values, str, lambda name, value: str(value))
+
+
+# Champ de type lien : une phrase facultative, puis l'adresse seule sur la dernière ligne.
+_TRAILING_URL = re.compile(r"(?:(.*)\n)?(https?://\S+)", re.DOTALL)
+
+# Bouton lisible : texte blanc sur bleu foncé (contraste élevé), souligné pour rester repérable.
+_BUTTON_STYLE = (
+    "display: inline-block; padding: 12px 20px; background-color: #0b4f8a; color: #ffffff; "
+    "font-weight: bold; text-decoration: underline; border-radius: 4px;"
+)
+
+
+def _link_html(value: str, label: str) -> str:
+    """Champ de type lien en HTML : la phrase éventuelle, puis un bouton au texte explicite."""
+    match = _TRAILING_URL.fullmatch(value.strip())
+    if match is None:  # pas d'adresse (ex. « délai dépassé ») : simple texte
+        return escape(value)
+    intro, url = match.groups()
+    button = f'<a href="{escape(url)}" style="{_BUTTON_STYLE}">{escape(label)}</a>'
+    return f"{escape(intro)}\n{button}" if intro else button
+
+
+def _fill(
+    text: str,
+    values: Mapping[str, object],
+    literal: Callable[[str], str],
+    value: Callable[[str, object], str],
+) -> str:
+    """Remplit les champs (voir fill_fields) ; `literal` transforme le texte fixe, `value` chaque valeur."""
+
+    def fill_line(line: str) -> str:
+        # FIELD.split alterne texte fixe (rangs pairs) et nom de champ (rangs impairs).
+        parts = FIELD.split(line)
+        return "".join(
+            literal(part) if index % 2 == 0
+            else value(part, values[part]) if part in values
+            else literal(f"{{{part}}}")
+            for index, part in enumerate(parts)
+        )
+
     kept: list[str] = []
     drop_blank_line = False
     for line in text.split("\n"):
@@ -404,7 +490,7 @@ def fill_fields(text: str, values: Mapping[str, object]) -> str:
             drop_blank_line = False
             continue
         drop_blank_line = False
-        kept.append(FIELD.sub(lambda match: str(values.get(match[1], match[0])), line))
+        kept.append(fill_line(line))
     return "\n".join(kept)
 
 

@@ -24,7 +24,7 @@ from django.db.models import Q
 from django.utils import timezone
 
 from accounts.models import EmailFailure, EmailKind, EmailLog, EmailStatus
-from accounts.services.email_texts import current_text, fill_fields
+from accounts.services.email_texts import current_text, render_email
 from accounts.services.emails import build_message, deliver
 
 logger = logging.getLogger(__name__)
@@ -170,12 +170,12 @@ def redeliver(
         log.last_error = OBSOLETE if rebuild else NOT_REBUILDABLE
         log.save(update_fields=["status", "failure", "last_error"])
         return False
-    subject, text = (texts if texts is not None else PassTexts())[log.kind]
-    body = fill_fields(text, rebuilt.fields)
+    current = (texts if texts is not None else PassTexts())[log.kind]
+    subject, body, html = render_email(log.kind, rebuilt.fields, current)
     if subject != log.subject:
         log.subject = subject
         log.save(update_fields=["subject"])
-    return deliver(log, build_message(log.recipient, subject, body, rebuilt.headers), connection)
+    return deliver(log, build_message(log.recipient, subject, body, html, rebuilt.headers), connection)
 
 
 def _claim(log: EmailLog) -> bool:

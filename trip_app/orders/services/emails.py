@@ -17,6 +17,7 @@ from accounts.models import EmailKind
 from accounts.services.emails import send_email, site_url
 from common.text import euros
 from orders.models import Order
+from orders.services.labels import destination_label
 
 QUOTE_NOTE = "Le prix de la destination sera donné sur devis par votre conseiller."
 
@@ -53,7 +54,7 @@ def client_context(order: Order) -> dict:
     return {
         "prénom": order.client.first_name,
         "numéro": order.pk,
-        "destination": f"{order.destination_name} ({order.country_name})",
+        "destination": destination_label(order),
         "dates": order_dates(order),
     }
 
@@ -78,7 +79,7 @@ def cancelled_by_agency_context(order: Order, explanation: str) -> dict:
 def new_order_alert_context(order: Order) -> dict:
     return {
         "numéro": order.pk,
-        "destination": f"{order.destination_name} ({order.country_name})",
+        "destination": destination_label(order),
         "dates": capfirst(order_dates(order)),
         "client": order.client.get_full_name(),
         "lien": site_url(reverse("manage_order_detail", args=[order.pk])),
@@ -110,7 +111,7 @@ def _summary(order: Order) -> list[tuple[str, str]]:
     activities = [line.activity_name for line in order.activities.all()]
     return [
         ("N° de demande", str(order.pk)),
-        ("Destination", f"{order.destination_name} ({order.country_name})"),
+        ("Destination", destination_label(order)),
         ("Dates", order_dates(order).capitalize()),
         ("Voyageurs", travellers),
         ("Activités", ", ".join(activities) or "Aucune"),

@@ -1,6 +1,6 @@
 """E-mails envoyés au client sur son avis (v5)."""
 
-from datetime import timedelta
+from datetime import UTC, timedelta
 from unittest import mock
 
 from django.core import mail
@@ -9,7 +9,7 @@ from django.test import TestCase
 from django.utils import timezone
 
 from accounts.models import EmailKind, EmailLog, EmailStatus
-from accounts.services.email_retry import retry_due_emails
+from accounts.services.email_retry import OBSOLETE, retry_due_emails
 from accounts.tests.email_delivery import SendEmailsImmediately
 from accounts.tests.factories import create_agent, create_client
 from catalog.tests.factories import create_country, create_destination
@@ -41,15 +41,22 @@ class ReviewEmailTests(SendEmailsImmediately, TestCase):
 
         body = self.assertSentToJulie(EmailKind.REVIEW_PUBLISHED)
         self.assertEqual(mail.outbox[0].subject, "Merci, votre avis est en ligne")
+        self.assertIn(f"« Séjour inoubliable » sur Kyoto ({self.trip.country_name})", body)
         self.assertIn(f"/catalogue/destinations/{self.trip.destination_id}/", body)
 
     def test_refused_with_reason_and_correction_deadline(self):
+        # Fin du délai à 23 h 30 UTC : déjà le lendemain à l'heure belge.
+        yesterday = timezone.now() - timedelta(days=1)
+        self.review.created_at = yesterday.astimezone(UTC).replace(hour=23, minute=30)
+        self.review.save()
+        deadline = timezone.localtime(self.review.editable_until)
+        self.assertNotEqual(deadline.date(), self.review.editable_until.astimezone(UTC).date())
+
         refuse(self.review, RefusalReason.OTHER, "Merci de retirer le nom du guide.")
 
         body = self.assertSentToJulie(EmailKind.REVIEW_REFUSED)
         self.assertIn("Motif : Autre — Merci de retirer le nom du guide.", body)
-        deadline = date(timezone.localtime(self.review.created_at + timedelta(days=30)), "j F Y")
-        self.assertIn(f"Vous pouvez corriger votre avis jusqu'au {deadline}", body)
+        self.assertIn(f"Vous pouvez corriger votre avis jusqu'au {date(deadline, 'j F Y')}", body)
 
     def test_deadline_passed_instead_of_correction_reminder(self):
         self.review.created_at = timezone.now() - timedelta(days=31)
@@ -108,6 +115,40 @@ class ReviewEmailTests(SendEmailsImmediately, TestCase):
 
         self.assertEqual(EmailLog.objects.get().status, EmailStatus.SENT)
         self.assertIn("Motif : Hors sujet", self.assertSentToJulie(EmailKind.REVIEW_REFUSED))
+
+    def test_published_and_response_rebuilt_on_retry(self):
+        publish(self.review)
+        save_response(self.review, self.agent, "Merci Julie !")
+        cases = {
+            EmailKind.REVIEW_PUBLISHED: f"/catalogue/destinations/{self.trip.destination_id}/",
+            EmailKind.REVIEW_RESPONSE: "Merci Julie !",
+        }
+        for kind, expected in cases.items():
+            with self.subTest(kind=kind):
+                EmailLog.objects.all().delete()
+                mail.outbox.clear()
+                EmailLog.objects.create(
+                    recipient=self.julie.email, kind=kind, subject="Objet", user=self.julie,
+                    order_number=self.trip.pk, attempts=1, last_attempt_at=timezone.now() - timedelta(minutes=6),
+                )
+
+                self.assertEqual(retry_due_emails(), 1)
+
+                self.assertIn(expected, self.assertSentToJulie(kind))
+
+    def test_never_rebuilt_for_a_former_address(self):
+        with mock.patch(
+            "accounts.services.emails.EmailMultiAlternatives.send", side_effect=OSError("serveur injoignable")
+        ):
+            refuse(self.review, RefusalReason.OFF_TOPIC)
+        EmailLog.objects.update(last_attempt_at=timezone.now() - timedelta(minutes=6))
+        self.julie.email = "julie.nouvelle@example.com"
+        self.julie.save()
+
+        retry_due_emails()
+
+        self.assertEqual(EmailLog.objects.get().last_error, OBSOLETE)
+        self.assertEqual(mail.outbox, [])
 
     def test_nothing_for_deleted_client(self):
         self.julie.delete()
