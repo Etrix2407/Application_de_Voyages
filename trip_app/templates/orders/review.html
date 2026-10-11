@@ -26,18 +26,7 @@
     {% endif %}
 
     <dl class="details">
-        <dt>Destination</dt>
-        <dd>{{ destination.name }} ({{ destination.country.name }})</dd>
-        <dt>Dates</dt>
-        <dd>Du {{ form.cleaned_data.departure_date|date:"j F Y" }} au {{ form.cleaned_data.return_date|date:"j F Y" }}</dd>
-        <dt>Voyageurs</dt>
-        <dd>{{ form.cleaned_data.adults }} adulte{{ form.cleaned_data.adults|pluralize }}, {{ form.cleaned_data.children }} enfant{{ form.cleaned_data.children|pluralize }}</dd>
-        <dt>Activités</dt>
-        <dd>
-            {% for activity in activities %}{{ activity.name }} ({{ activity.price_per_person }} € par personne){% if not forloop.last %}, {% endif %}{% empty %}Aucune{% endfor %}
-        </dd>
-        <dt>Remarques</dt>
-        <dd>{{ form.cleaned_data.remarks|default:"Aucune"|linebreaksbr }}</dd>
+        {% include "orders/_trip_details.html" %}
         {% if choice.offer %}
             <dt>Prix avant remise</dt>
             <dd>{{ quote.price_before_discount }} €</dd>
@@ -47,8 +36,8 @@
         <dt>{% if choice.offer %}Prix après remise{% else %}Prix estimé{% endif %}</dt>
         <dd>
             <strong>{{ quote.price }} €</strong> — estimation, non contractuel.
-            {% if destination.price_from is None %}
-                <br>Le prix de la destination est donné sur devis par votre conseiller : ce montant ne compte que les activités.
+            {% if order.is_quote_required %}
+                <br>{% include "orders/_quote_note.html" %} Ce montant ne compte que les activités.
             {% endif %}
         </dd>
     </dl>

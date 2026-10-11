@@ -7,7 +7,7 @@
 
     <h1>{% if review %}Modifier mon avis{% else %}Donner mon avis{% endif %}</h1>
     <p>
-        Voyage à <strong>{{ order.destination_name }} ({{ order.country_name }})</strong>,
+        Voyage à <strong>{{ order.destination_label }}</strong>,
         du {{ order.departure_date|date:"j F Y" }} au {{ order.return_date|date:"j F Y" }}.
     </p>
     <p>Votre avis sera publié après sa validation par l'agence. Vous pourrez le modifier pendant 30 jours et le supprimer à tout moment.</p>

@@ -10,7 +10,7 @@ from accounts.decorators import client_required
 from accounts.services.throttling import get_client_ip
 from catalog.models import Destination
 from orders.forms import ClientCancelForm, OrderForm
-from orders.models import Order, OrderStatus
+from orders.models import Order, OrderActivity, OrderStatus
 from orders.services.placing import (
     AlreadySubmitted,
     DailyLimitReached,
@@ -116,10 +116,25 @@ def _expected(quote, choice) -> str:
 
 def _review(request, form, destination, quote, choice, price_changed=False):
     data = form.cleaned_data
+    # Demande pas encore enregistrée : même récapitulatif qu'une demande envoyée (orders/_trip_details.html).
+    draft = Order(
+        destination_name=destination.name,
+        country_name=destination.country.name,
+        departure_date=data["departure_date"],
+        return_date=data["return_date"],
+        adults=data["adults"],
+        children=data["children"],
+        remarks=data["remarks"],
+        destination_price=destination.price_from,
+    )
     context = {
         "form": form,
         "destination": destination,
-        "activities": data["activities"],
+        "order": draft,
+        "activities": [
+            OrderActivity(activity_name=activity.name, unit_price=activity.price_per_person)
+            for activity in data["activities"]
+        ],
         "quote": quote,
         "choice": choice,
         "expected_price": _expected(quote, choice),

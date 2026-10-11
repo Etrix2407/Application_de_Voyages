@@ -25,6 +25,7 @@ MAX_TRAVELLERS = 10
 MAX_REMARKS_LENGTH = 2000
 CLIENT_FINGERPRINT_SALT = "orders.Order.client_fingerprint"
 AT_LEAST_ONE_ADULT = "Il faut au moins un adulte."
+DELETED_CLIENT_LABEL = "Client supprimé"
 
 
 def client_fingerprint(email: str) -> str:
@@ -160,6 +161,16 @@ class Order(models.Model):
 
     def __str__(self) -> str:
         return f"Demande n° {self.pk} — {self.destination_name}"
+
+    @property
+    def destination_label(self) -> str:
+        """« Kyoto (Japon) », avec les noms figés au moment de la demande."""
+        return f"{self.destination_name} ({self.country_name})"
+
+    @property
+    def client_label(self) -> str:
+        """Nom du client pour le personnel, ou « Client supprimé » (demande anonymisée)."""
+        return self.client.get_full_name() if self.client_id else DELETED_CLIENT_LABEL
 
     @property
     def latest_price(self) -> Decimal:

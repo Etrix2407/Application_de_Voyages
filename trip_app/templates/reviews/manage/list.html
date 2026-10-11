@@ -33,7 +33,7 @@
                     {% for review in page.object_list %}
                         <tr>
                             <td>{{ review.created_at|date:"j F Y" }}</td>
-                            <td>{{ review.order.destination_name }} ({{ review.order.country_name }})</td>
+                            <td>{{ review.order.destination_label }}</td>
                             <td>{{ review.order.departure_date|date:"F Y" }}</td>
                             <td>
                                 {% include "reviews/_rating.html" %}

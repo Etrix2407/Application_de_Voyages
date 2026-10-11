@@ -23,7 +23,7 @@
                     {% for review in reviews %}
                         <tr>
                             <td>{{ review.submitted_at|date:"j F Y à H:i" }}</td>
-                            <td>{{ review.order.destination_name }} ({{ review.order.country_name }})</td>
+                            <td>{{ review.order.destination_label }}</td>
                             <td>
                                 {% include "reviews/_rating.html" %}
                                 {% if review.is_negative %}<span class="badge-negative">Avis négatif</span>{% endif %}
