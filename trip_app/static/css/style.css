@@ -5,14 +5,14 @@
 
 :root {
     /* Les trois couleurs de l'agence. */
-    --color-primary: #1c3a57;       /* bleu altitude : en-tête, boutons, liens (11,5:1 sur le blanc) */
+    --color-primary: #1c3a57;       /* bleu altitude : en-tête, boutons, liens (11,7:1 sur le blanc) */
     --color-soft: #e7eef3;          /* brume : surfaces calmes */
-    --color-accent: #a35a12;        /* ambre du soir : horizon, soleil, focus (5,2:1 sur le blanc) */
+    --color-accent: #9a5410;        /* ambre du soir : horizon, soleil, focus (5,7:1 sur le blanc, 4,9:1 sur la brume) */
 
     /* Dérivés neutres (nuances du bleu, pas de nouvelle couleur). */
     --color-primary-dark: #12283e;
     --color-text: #16283a;
-    --color-text-muted: #47566a;    /* 7:1 sur le blanc */
+    --color-text-muted: #47566a;    /* 7,5:1 sur le blanc */
     --color-line: #b9c8d4;
     --color-background: #ffffff;
 
@@ -20,13 +20,9 @@
     --color-error: #a4161a;
     --color-error-dark: #7a1013;
 
-    /* Noms utilisés par l'audit d'accessibilité (même rôle, mêmes contrastes). */
+    /* Contour de focus : ambre sur fond clair, blanc sur l'en-tête bleu. */
     --color-focus: var(--color-accent);
     --color-focus-on-primary: #ffffff;
-    --color-warning-text: var(--color-accent);
-    --color-border: var(--color-line);
-    --color-background-soft: var(--color-soft);
-    --color-success: var(--color-primary);
 
     --font-heading: Candara, "Gill Sans", "Gill Sans MT", Optima, "Segoe UI", sans-serif;
     --font-body: "Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif;
@@ -45,6 +41,8 @@ html {
 
 body {
     margin: 0;
+    /* Un mot trop long pour la ligne passe à la ligne au lieu de déborder. */
+    overflow-wrap: break-word;
     font-family: var(--font-body);
     line-height: 1.6;
     color: var(--color-text);
@@ -101,7 +99,8 @@ textarea:focus-visible {
 }
 
 .site-header a:focus-visible,
-.site-header button:focus-visible {
+.site-header button:focus-visible,
+.skip-link:focus-visible {
     outline-color: var(--color-focus-on-primary);
 }
 
@@ -157,6 +156,8 @@ textarea:focus-visible {
 /* Logo : un petit soleil posé sur l'horizon, avant le nom. */
 .logo {
     display: inline-flex;
+    /* Texte très agrandi sur un petit écran : le nom se coupe plutôt que de déborder. */
+    overflow-wrap: anywhere;
     align-items: flex-end;
     gap: 0.6rem;
     font-family: var(--font-heading);
@@ -205,6 +206,9 @@ textarea:focus-visible {
     margin: 0;
     color: #ffffff;
     font-size: 1rem;
+    font-weight: normal;
+    border: none;
+    border-radius: 0;
     text-decoration: underline;
     text-underline-offset: 0.2em;
     background: none;
@@ -344,8 +348,8 @@ textarea:focus-visible {
     display: none;
 }
 
-/* Étapes empilées (moins de trois colonnes) : pas de route horizontale. */
-@media (max-width: 52rem) {
+/* Moins de trois colonnes (sous 900 px ; dans une media query, 1rem = 16 px) : pas de route horizontale. */
+@media (max-width: 56.25rem) {
     .steps li::after {
         display: none;
     }
@@ -386,6 +390,46 @@ textarea:focus-visible {
     border-color: var(--color-error);
 }
 
+/* Le type du message est aussi donné par un symbole, pas seulement par la couleur.
+   Symbole décoratif (texte de remplacement vide) : le texte du message suffit. */
+.message-success,
+.message-warning,
+.message-error {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.6rem;
+}
+
+.message-success::before,
+.message-warning::before,
+.message-error::before {
+    flex-shrink: 0;
+    display: grid;
+    place-items: center;
+    width: 1.6rem;
+    height: 1.6rem;
+    font-weight: bold;
+    line-height: 1;
+    color: #ffffff;
+    border-radius: 50%;
+}
+
+.message-success::before {
+    content: "✓" / "";
+    background: var(--color-primary);
+}
+
+.message-warning::before {
+    content: "!" / "";
+    color: #ffffff;
+    background: var(--color-accent);
+}
+
+.message-error::before {
+    content: "✕" / "";
+    background: var(--color-error);
+}
+
 /* Formulaires */
 
 label {
@@ -407,8 +451,9 @@ textarea {
     border-radius: 0.6rem;
 }
 
-/* Cases à cocher : grandes, placées devant leur libellé, sur la même ligne. */
-input[type="checkbox"] {
+/* Cases à cocher et boutons radio : grands, placés devant leur libellé, sur la même ligne. */
+input[type="checkbox"],
+input[type="radio"] {
     flex-shrink: 0;
     width: 1.5rem;
     height: 1.5rem;
@@ -430,6 +475,7 @@ form div:has(> input[type="checkbox"]) > input[type="checkbox"] {
 
 form div:has(> input[type="checkbox"]) > label {
     flex: 1;
+    min-width: 0;
     margin-top: 0;
     font-weight: normal;
 }
@@ -438,8 +484,11 @@ form div:has(> input[type="checkbox"]) > :not(label, input) {
     flex-basis: 100%;
 }
 
-label:has(> input[type="checkbox"]) {
+label:has(> input[type="checkbox"]),
+label:has(> input[type="radio"]) {
     display: flex;
+    /* Le texte à côté de la case peut se couper : sinon un mot très long sort de l'écran. */
+    overflow-wrap: anywhere;
     align-items: flex-start;
     gap: 0.75rem;
     margin-top: 0.5rem;
@@ -447,6 +496,8 @@ label:has(> input[type="checkbox"]) {
 }
 
 fieldset {
+    /* Sinon le cadre s'élargit au libellé le plus long et sort de l'écran. */
+    min-width: 0;
     margin-top: 1rem;
     padding: 0.5rem 1rem 1rem;
     border: 2px solid var(--color-line);
@@ -454,6 +505,7 @@ fieldset {
 }
 
 legend {
+    max-width: 100%;
     padding: 0 0.4rem;
     font-weight: 600;
 }
@@ -461,6 +513,7 @@ legend {
 .button,
 button {
     display: inline-block;
+    max-width: 100%;
     margin-top: 1rem;
     padding: 0.75rem 1.5rem;
     font: inherit;
@@ -480,30 +533,29 @@ button:hover {
     border-color: var(--color-primary-dark);
 }
 
-.button-secondary,
-button.button-secondary {
+.button-secondary {
     color: var(--color-primary);
     background: var(--color-background);
 }
 
-.button-secondary:hover,
-button.button-secondary:hover {
+.button-secondary:hover {
     color: #ffffff;
+    background: var(--color-primary-dark);
 }
 
-button + .button-secondary,
-.button + .button-secondary {
-    margin-left: 0.5rem;
+/* Espace porté par le premier bouton : si le bouton secondaire passe à la ligne,
+   il reste aligné à gauche. */
+button:has(+ .button-secondary),
+.button:has(+ .button-secondary) {
+    margin-right: 0.5rem;
 }
 
-.button-danger,
-button.button-danger {
+.button-danger {
     background: var(--color-error);
     border-color: var(--color-error);
 }
 
-.button-danger:hover,
-button.button-danger:hover {
+.button-danger:hover {
     background: var(--color-error-dark);
     border-color: var(--color-error-dark);
 }

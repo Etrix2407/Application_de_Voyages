@@ -6,26 +6,23 @@
     <section class="hero" aria-labelledby="hero-title">
         <h1 id="hero-title">Où partez-vous cette année ?</h1>
         <p class="hero-text">Parcourez nos pays, leurs destinations et les activités sur place.</p>
-        <ul class="actions">
-            <li><a class="button" href="{% url 'country_list' %}">Découvrir nos pays</a></li>
-            <li><a class="button button-secondary" href="{% url 'offers' %}">Nos offres du moment</a></li>
-        </ul>
+        <p><a class="button" href="{% url 'country_list' %}">Découvrir nos pays</a></p>
     </section>
 
     <section aria-labelledby="steps-title">
-        <h2 id="steps-title">Comment se passe une demande</h2>
+        <h2 id="steps-title">Comment se passe une demande de voyage</h2>
         <ol class="steps">
             <li>
-                <h3>Vous choisissez</h3>
-                <p>Une destination et, si vous le souhaitez, des activités sur place.</p>
+                <h3>Vous choisissez une destination</h3>
+                <p>Le catalogue se consulte librement, sans compte.</p>
             </li>
             <li>
-                <h3>Vous envoyez une demande</h3>
-                <p>Avec vos dates, le nombre de voyageurs et vos remarques.</p>
+                <h3>Vous envoyez votre demande</h3>
+                <p>Vos dates et le nombre de voyageurs ; si vous le souhaitez, des activités et vos remarques. Il faut pour cela un compte client, avec une adresse e-mail confirmée.</p>
             </li>
             <li>
                 <h3>Un conseiller vous rappelle</h3>
-                <p>Sous 48 heures, pour confirmer votre voyage et son prix.</p>
+                <p>Sous 48 heures, pour faire le point avec vous et confirmer votre voyage. Le prix affiché lors de la demande est une estimation : il est recalculé à la confirmation.</p>
             </li>
         </ol>
     </section>
