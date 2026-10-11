@@ -59,11 +59,8 @@ def order_detail(request, pk):
 @require_POST
 def confirm_order(request, pk):
     order = get_object_or_404(Order, pk=pk)
-    expected_price = _posted_price(request)
     try:
-        if expected_price is None:
-            raise PriceChanged  # page ouverte avant l'ajout du contrôle, ou champ modifié
-        confirm_by_staff(order, request.user, expected_price=expected_price)
+        confirm_by_staff(order, request.user, expected_price=_posted_price(request))
     except (TransitionNotAllowed, PriceChanged) as error:
         messages.error(request, str(error))
     else:
@@ -71,12 +68,21 @@ def confirm_order(request, pk):
     return redirect("manage_order_detail", pk=order.pk)
 
 
-def _posted_price(request) -> Decimal | None:
-    """Prix vu par l'agent (champ caché de la page), ou None s'il est absent ou illisible."""
+# Prix impossible (un prix n'est jamais négatif) : aucun recalcul ne lui correspond.
+UNREADABLE_PRICE = Decimal("-1")
+
+
+def _posted_price(request) -> Decimal:
+    """Prix vu par l'agent (champ caché de la page).
+
+    Absent, illisible ou non fini (« NaN ») : un prix impossible, la confirmation est donc refusée
+    comme si le prix avait changé, après les contrôles de l'état de la demande.
+    """
     try:
-        return Decimal(request.POST.get("expected_price", ""))
+        price = Decimal(request.POST.get("expected_price", ""))
     except InvalidOperation:
-        return None
+        return UNREADABLE_PRICE
+    return price if price.is_finite() else UNREADABLE_PRICE
 
 
 @staff_required

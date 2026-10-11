@@ -55,6 +55,14 @@ class StaffProcessingTests(TestCase):
         self.assertContains(response, "Le prix aux tarifs du jour a changé")
         self.assertEqual(self.refreshed_status(), OrderStatus.PENDING)
 
+    def test_confirm_refused_without_a_readable_price(self):
+        for posted in [{}, {"expected_price": "abc"}, {"expected_price": "sNaN"}, {"expected_price": "Infinity"}]:
+            with self.subTest(posted=posted):
+                response = self.client.post(self.confirm_url, posted, follow=True)
+
+                self.assertContains(response, "Le prix aux tarifs du jour a changé")
+                self.assertEqual(self.refreshed_status(), OrderStatus.PENDING)
+
     def test_confirmed_order_shows_cancel_only(self):
         confirm_by_staff(self.order, self.agent)
 
@@ -105,7 +113,8 @@ class StaffProcessingTests(TestCase):
     def test_invalid_transitions_refused_with_message(self):
         cancel_by_client(self.order)
 
-        confirm = self.client.post(self.confirm_url, {"expected_price": "0.00"}, follow=True)
+        # Onglet resté ouvert : sans prix lisible, c'est l'état de la demande qui est signalé.
+        confirm = self.client.post(self.confirm_url, follow=True)
         cancel = self.client.post(self.cancel_url, {"internal_reason": "Doublon."}, follow=True)
 
         self.assertContains(confirm, "Seule une demande en attente peut être confirmée.")
