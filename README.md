@@ -179,7 +179,7 @@ Formats à respecter :
 
 ### Mot de passe oublié
 
-Sur la page de connexion, **Mot de passe oublié ?** envoie un lien valable 1 heure (3 demandes par heure au plus pour une même adresse, contre les envois en masse). L'e-mail part immédiatement. Le lien d'un membre du personnel désactivé ne fonctionne plus.
+Sur la page de connexion, **Mot de passe oublié ?** envoie un lien valable 1 heure (3 demandes par heure au plus pour une même adresse, contre les envois en masse). L'e-mail part immédiatement : choix assumé, car un client ne doit pas attendre la tâche planifiée ; en contrepartie, la durée de la réponse peut trahir qu'une adresse a un compte (risque faible, que l'inscription présente aussi). Le lien d'un membre du personnel désactivé ne fonctionne plus.
 
 Après chaque changement de mot de passe (depuis le profil, par « Mot de passe oublié » ou par un lien envoyé par l'agence), un e-mail de sécurité prévient le titulaire du compte, client ou membre du personnel : « Si ce n'est pas vous, contactez-nous ». Il n'est pas envoyé quand un agent invité choisit son tout premier mot de passe.
 
@@ -273,7 +273,7 @@ send_email(to, kind, fields, *, user=None, order_number=None) -> bool
 - `fields` : valeur de chaque champ variable du type, par son nom français (ex. `{"prénom": ..., "lien": ...}`). Les liens sont absolus et construits par `site_url(reverse(...))` à partir de `DJANGO_SITE_URL`, pendant une requête comme dans une commande planifiée.
 - `user`, `order_number` : compte et demande de voyage concernés, notés dans le journal.
 
-Les dates et heures citées dans les e-mails sont à l'heure belge. Une demande de voyage y est désignée par sa destination et son pays, « Kyoto (Japon) » (`orders/services/labels.py`), et un avis par son titre : « votre avis « Séjour inoubliable » sur Kyoto (Japon) ».
+Les dates et heures citées dans les e-mails sont à l'heure belge. Une demande de voyage y est désignée par sa destination et son pays, « Kyoto (Japon) » (`Order.destination_label`), et un avis par son titre : « votre avis « Séjour inoubliable » sur Kyoto (Japon) ».
 
 Fonctionnement :
 
@@ -390,6 +390,7 @@ Avec `DJANGO_DEBUG=0`, les cookies de session et CSRF ne sont envoyés qu'en HTT
 
 ```bash
 pip install -r requirements.txt
+pip install waitress            # serveur WSGI (Windows) ; sous Linux : pip install gunicorn
 cd trip_app
 python manage.py migrate
 python manage.py collectstatic --noinput
@@ -402,7 +403,9 @@ python manage.py sendtestemail votre@adresse
 3. `collectstatic --noinput` : copie la feuille de style et les autres fichiers statiques dans `trip_app/staticfiles/` (`STATIC_ROOT`). **Sans cette étape, le site s'affiche sans mise en page.**
 4. `check --deploy` : vérifie les réglages de sécurité. Le seul avertissement attendu tant que HSTS n'est pas activé est `security.W004`.
 5. `sendtestemail` : envoie un e-mail de test, pour vérifier les réglages SMTP.
-6. **Redémarrez** le serveur WSGI pour charger le nouveau code.
+6. **Redémarrez** le serveur WSGI pour charger le nouveau code (par exemple `python -m waitress --listen=127.0.0.1:8000 config.wsgi:application` depuis `trip_app`).
+
+Le serveur WSGI n'est pas dans `requirements.txt` (il dépend de l'hébergement) : installez-le à part comme ci-dessus. Pour vérifier le site **avant** que le HTTPS soit en place, mettez temporairement `DJANGO_SECURE_SSL_REDIRECT=0` (sinon toutes les pages redirigent vers `https://`), puis remettez `1` dès que le HTTPS fonctionne. Pour créer la gérante sans questions (script de déploiement), `createsuperuser --noinput` lit `DJANGO_SUPERUSER_EMAIL`, `DJANGO_SUPERUSER_LAST_NAME`, `DJANGO_SUPERUSER_FIRST_NAME` et `DJANGO_SUPERUSER_PASSWORD`.
 
 ### Serveur
 
@@ -458,7 +461,7 @@ Les liens des e-mails envoyés par ces commandes utilisent `DJANGO_SITE_URL` : r
 
 - **Ne committez jamais** la clé secrète, le poivre ni les identifiants SMTP.
 - Les limites anti-abus (5 échecs de connexion, 3 liens « mot de passe oublié » par heure, 5 essais quand le mot de passe est redemandé, etc.) sont stockées dans la base, table `django_cache` : elles sont partagées par tous les processus du serveur et conservées au redémarrage. Les adresses IPv6 sont comptées par réseau /64.
-- SQLite suffit pour le volume prévu (environ 1 000 clients). La base est en mode **WAL** (attente de 20 secondes au plus quand elle est occupée) : les fichiers `db.sqlite3-wal` et `db.sqlite3-shm` font partie de la base. Gardez-la sur un disque local, jamais sur un partage réseau. **Sauvegarde** : serveur arrêté, copiez les trois fichiers ; ou, serveur en marche, `sqlite3 db.sqlite3 ".backup sauvegarde.sqlite3"`. Sauvegardez `trip_app/media/` en même temps.
+- SQLite suffit pour le volume prévu (environ 1 000 clients). La base est en mode **WAL** (attente de 20 secondes au plus quand elle est occupée) : les fichiers `db.sqlite3-wal` et `db.sqlite3-shm` font partie de la base. Gardez-la sur un disque local, jamais sur un partage réseau. **Sauvegarde** : serveur arrêté, copiez `db.sqlite3` et, s'ils existent, `db.sqlite3-wal` et `db.sqlite3-shm` (SQLite les supprime à la fermeture) ; ou, serveur en marche, `sqlite3 db.sqlite3 ".backup sauvegarde.sqlite3"`. Sauvegardez `trip_app/media/` en même temps.
 - L'application envoie elle-même l'en-tête `Content-Security-Policy` (`common/middleware.py`) : seuls les fichiers du site (et les images intégrées `data:`) sont acceptés, sans script ni style en ligne, et le site ne peut pas être affiché dans un cadre. Ajouter un script, un style en ligne ou une ressource externe (police, CDN) demande de modifier ce middleware.
 - Durée de connexion : **8 heures pour le personnel** (poste partagé à l'agence), 2 semaines pour les clients.
 
@@ -561,3 +564,4 @@ Ces points sont soulevés par l'audit d'octobre 2026. Ils ne sont **pas tranché
 6. Peut-on envoyer par e-mail une **promotion à code qui n'a pas encore commencé** ?
 7. Le **compteur** « Avis à modérer (N) » du menu suffit-il comme « tableau de bord » ?
 8. À confirmer : un client peut **supprimer son avis à tout moment**, et un agent **ne peut pas corriger l'adresse e-mail** d'un client.
+9. La **politique de confidentialité** (`templates/privacy.html`) ne mentionne pas encore : le journal des e-mails envoyés (destinataire, type, objet, état), conservé 1 an et anonymisé à la suppression du compte ; les e-mails de service (compte, demandes, avis) ; le fichier « Télécharger mes données » ; le lien de désinscription des e-mails promotionnels. Le texte juridique est à rédiger ou valider par la cliente.

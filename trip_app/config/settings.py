@@ -292,7 +292,7 @@ LOGGING = {
         "django.request": {"level": "ERROR"},
         # Lignes « GET / 200 » de runserver en développement (sinon réinitialisées par cette configuration).
         "django.server": {"handlers": ["console"], "level": "INFO", "propagate": False},
-        # Un robot qui appelle le serveur par son adresse IP : une ligne de journal, pas un e-mail.
+        # Un robot qui appelle le serveur par son adresse IP : une trace dans le journal, pas d'e-mail.
         "django.security.DisallowedHost": {"handlers": ["console"], "propagate": False},
     },
 }
