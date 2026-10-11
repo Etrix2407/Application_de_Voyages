@@ -8,15 +8,7 @@
     <h1>{{ country.name }}{% if not country.active %} (désactivé){% endif %}</h1>
 
     <dl class="details">
-        <dt>Continent</dt>
-        <dd>{{ country.get_continent_display }}</dd>
-        <dt>Langue principale</dt>
-        <dd>{{ country.main_language }}</dd>
-        <dt>Monnaie</dt>
-        <dd>{{ country.currency }}</dd>
-        <dt>Visa pour les Belges</dt>
-        <dd>{{ country.get_visa_display }}</dd>
-        {% include "catalog/_time_offsets.html" %}
+        {% include "catalog/_country_facts.html" %}
         <dt>Description</dt>
         <dd>{{ country.description|linebreaksbr }}</dd>
     </dl>

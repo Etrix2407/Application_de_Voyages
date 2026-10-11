@@ -8,10 +8,6 @@
     <p><strong>Attention : cette action est définitive.</strong></p>
     <p>Le compte de {{ member.get_full_name }} ({{ member.employee_number }}) sera effacé. Pour simplement bloquer l'accès, préférez « Désactiver ».</p>
 
-    <form method="post">
-        {% csrf_token %}
-        <button type="submit" class="button-danger">Supprimer définitivement</button>
-    </form>
-
-    <p><a href="{% url 'staff_list' %}">Annuler et revenir au personnel</a></p>
+    {% url 'staff_list' as cancel_url %}
+    {% include "_confirm_delete.html" with cancel_label="Annuler et revenir au personnel" %}
 {% endblock %}
