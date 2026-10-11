@@ -124,6 +124,33 @@ class Order(models.Model):
         verbose_name_plural = "demandes de voyage"
         # Le numéro départage les demandes créées au même instant (horloge peu précise).
         ordering = ["-created_at", "-pk"]
+        # Liste du personnel : filtre par état, tri par date de demande ; filtre par date de départ.
+        indexes = [
+            models.Index(fields=["status", "-created_at"], name="order_status_created_idx"),
+            models.Index(fields=["departure_date"], name="order_departure_idx"),
+        ]
+        # Dernier rempart en base, aligné sur clean() (enfants ≥ 0 : déjà garanti par le type du champ).
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(return_date__gt=models.F("departure_date")), name="order_return_after_departure"
+            ),
+            models.CheckConstraint(condition=models.Q(adults__gte=1), name="order_at_least_one_adult"),
+            models.CheckConstraint(
+                condition=models.Q(
+                    estimated_price__gte=0,
+                    discount__gte=0,
+                )
+                & (models.Q(destination_price__isnull=True) | models.Q(destination_price__gte=0))
+                & (models.Q(confirmed_price__isnull=True) | models.Q(confirmed_price__gte=0))
+                & (models.Q(confirmed_discount__isnull=True) | models.Q(confirmed_discount__gte=0))
+                & (
+                    models.Q(confirmed_destination_price__isnull=True)
+                    | models.Q(confirmed_destination_price__gte=0)
+                ),
+                name="order_prices_not_negative",
+            ),
+            models.CheckConstraint(condition=models.Q(status__in=Status.values), name="order_status_valid"),
+        ]
 
     def __str__(self) -> str:
         return f"Demande n° {self.pk} — {self.destination_name}"

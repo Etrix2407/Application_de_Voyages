@@ -107,6 +107,8 @@ class Review(models.Model):
         verbose_name_plural = "avis"
         # Le numéro départage les avis créés au même instant (horloge peu précise).
         ordering = ["-created_at", "-pk"]
+        # File de modération : avis en attente, du plus ancien envoi au plus récent.
+        indexes = [models.Index(fields=["status", "submitted_at"], name="review_status_submitted_idx")]
         constraints = [
             models.CheckConstraint(
                 condition=models.Q(rating__gte=MIN_RATING, rating__lte=MAX_RATING), name="review_rating_1_to_5"

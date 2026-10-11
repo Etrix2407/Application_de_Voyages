@@ -2,6 +2,7 @@ from datetime import timedelta
 from decimal import Decimal
 
 from django.core.exceptions import ValidationError
+from django.db import IntegrityError, transaction
 from django.test import SimpleTestCase, TestCase
 from django.urls import reverse
 
@@ -115,6 +116,19 @@ class OrderValidationTests(TestCase):
         order.return_date = order.departure_date + timedelta(days=3)
 
         order.full_clean()
+
+    def test_database_refuses_invalid_orders(self):
+        # Dernier rempart si un enregistrement contourne full_clean() (mise à jour directe, script).
+        order = create_order(self.client_user, self.destination)
+        for fields in [
+            {"return_date": order.departure_date},
+            {"adults": 0},
+            {"estimated_price": Decimal("-1")},
+            {"discount": Decimal("-1")},
+            {"status": "inconnu"},
+        ]:
+            with self.subTest(fields=fields), self.assertRaises(IntegrityError), transaction.atomic():
+                Order.objects.filter(pk=order.pk).update(**fields)
 
     def test_activity_must_be_in_destination_country(self):
         order = create_order(self.client_user, self.destination)
