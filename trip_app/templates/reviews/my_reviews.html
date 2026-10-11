@@ -43,7 +43,7 @@
                             <td>
                                 <span class="status status-{{ review.status }}">{{ review.get_status_display }}</span>
                                 {% if review.refusal_reason %}
-                                    <br>Motif : {{ review.get_refusal_reason_display }}{% if review.refusal_details %} — {{ review.refusal_details }}{% endif %}
+                                    <br>Motif : {{ review.refusal_label }}
                                 {% endif %}
                             </td>
                             <td>

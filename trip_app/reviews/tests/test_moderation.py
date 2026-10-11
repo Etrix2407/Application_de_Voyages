@@ -1,5 +1,6 @@
 from datetime import timedelta
 
+from django.core.exceptions import ValidationError
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
@@ -93,17 +94,17 @@ class ModerationActionsTests(TestCase):
         self.assertEqual(self.client.get(reverse("manage_publish_review", args=[self.review.pk])).status_code, 405)
 
     def test_refuse_requires_a_reason(self):
-        response = self.refused(reason="", details="")
+        response = self.refused(refusal_reason="", refusal_details="")
 
         self.assertContains(response, "Le motif est obligatoire.")
         self.review.refresh_from_db()
         self.assertEqual(self.review.status, ReviewStatus.PENDING)
 
     def test_other_reason_requires_details(self):
-        self.assertContains(self.refused(reason=RefusalReason.OTHER, details=" "), "Précisez le motif")
+        self.assertContains(self.refused(refusal_reason=RefusalReason.OTHER, refusal_details=" "), "Précisez le motif")
 
     def test_refuse_with_reason_visible_to_client(self):
-        self.refused(reason=RefusalReason.PERSONAL_DATA, details="Numéro de téléphone du guide.")
+        self.refused(refusal_reason=RefusalReason.PERSONAL_DATA, refusal_details="Numéro de téléphone du guide.")
 
         self.review.refresh_from_db()
         self.assertEqual(self.review.status, ReviewStatus.REFUSED)
@@ -120,7 +121,7 @@ class ModerationActionsTests(TestCase):
     def test_hide_published_review(self):
         publish(self.review)
 
-        response = self.refused(reason=RefusalReason.ABUSIVE)
+        response = self.refused(refusal_reason=RefusalReason.ABUSIVE)
 
         self.assertContains(response, "est masqué")
         self.review.refresh_from_db()
@@ -131,7 +132,7 @@ class ModerationActionsTests(TestCase):
     def test_text_never_changed_by_staff(self):
         self.client.post(
             reverse("manage_refuse_review", args=[self.review.pk]),
-            {"reason": RefusalReason.OFF_TOPIC, "title": "Modifié", "comment": "Modifié"},
+            {"refusal_reason": RefusalReason.OFF_TOPIC, "title": "Modifié", "comment": "Modifié"},
         )
 
         self.review.refresh_from_db()
@@ -169,7 +170,7 @@ class ModerationServiceTests(TestCase):
 
     def test_invalid_reasons_refused(self):
         for reason in ["", "inconnu", RefusalReason.TRIP_CANCELLED, RefusalReason.OTHER]:
-            with self.subTest(reason=reason), self.assertRaises(ValueError):
+            with self.subTest(reason=reason), self.assertRaises(ValidationError):
                 refuse(self.review, reason, details="")
 
     def test_edited_review_goes_to_the_end_of_the_queue(self):
@@ -212,7 +213,7 @@ class ReviewedVersionTests(TestCase):
 
         self.client.post(
             reverse("manage_refuse_review", args=[self.review.pk]),
-            {"version": self.seen, "reason": RefusalReason.OFF_TOPIC},
+            {"version": self.seen, "refusal_reason": RefusalReason.OFF_TOPIC},
         )
 
         self.review.refresh_from_db()

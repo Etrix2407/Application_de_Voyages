@@ -13,7 +13,6 @@ from reviews.models import (
     STAFF_REFUSAL_REASONS,
     Review,
     ReviewStatus,
-    refusal_problem,
 )
 from reviews.services.ratings import BEST_REVIEWS_FIRST, NEWEST_REVIEWS_FIRST
 
@@ -50,28 +49,23 @@ class ReviewForm(forms.ModelForm):
 
 
 class RefusalForm(forms.Form):
-    """Refus ou masquage d'un avis : motif obligatoire, visible par le client."""
+    """Refus ou masquage d'un avis : motif obligatoire, visible par le client.
 
-    reason = forms.ChoiceField(
+    Les champs portent le nom de ceux de l'avis : les erreurs du service de modération s'y rangent.
+    """
+
+    refusal_reason = forms.ChoiceField(
         label="Motif",
         choices=[("", "— Choisir un motif —")] + [(reason.value, reason.label) for reason in STAFF_REFUSAL_REASONS],
         error_messages={"required": "Le motif est obligatoire."},
     )
-    details = forms.CharField(
+    refusal_details = forms.CharField(
         label="Précision",
         required=False,
         max_length=MAX_REFUSAL_DETAILS_LENGTH,
         widget=forms.Textarea(attrs={"rows": 3}),
         help_text="Facultative, sauf pour le motif « Autre ». Elle sera visible par le client.",
     )
-
-    def clean(self):
-        data = super().clean()
-        if data.get("reason"):
-            problem = refusal_problem(data["reason"], data.get("details", ""))
-            if "refusal_details" in problem:
-                self.add_error("details", problem["refusal_details"])
-        return data
 
 
 class PublicReviewFilterForm(forms.Form):

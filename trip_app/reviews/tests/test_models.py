@@ -52,12 +52,6 @@ class ReviewRulesTests(TestCase):
                 self.assert_invalid("comment", rating=rating, comment="  ")
         Review(order=self.order, rating=3, title="Moyen").full_clean()
 
-    def test_refusal_needs_a_reason_and_details_for_other(self):
-        self.assert_invalid("refusal_reason", status=ReviewStatus.REFUSED)
-        self.assert_invalid(
-            "refusal_details", status=ReviewStatus.REFUSED, refusal_reason=RefusalReason.OTHER
-        )
-
     def test_one_review_per_order(self):
         create_review(self.order)
 

@@ -1,6 +1,7 @@
 """Avis côté personnel : file de modération, détail, publication, refus ou masquage."""
 
 from django.contrib import messages
+from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
@@ -76,18 +77,26 @@ def refuse_review(request, pk):
     form = RefusalForm(request.POST or None)
     if request.method == "POST" and form.is_valid():
         action = hide if is_hiding else refuse
+        data = form.cleaned_data
         try:
-            action(
-                review, form.cleaned_data["reason"], form.cleaned_data["details"], seen_version=_seen_version(request)
-            )
+            action(review, data["refusal_reason"], data["refusal_details"], seen_version=_seen_version(request))
+        except ValidationError as error:
+            form.add_error(None, error)  # motif refusé par le service : message sous le champ concerné
         except ModerationNotAllowed as error:
             messages.error(request, str(error))
             return redirect("manage_review_detail", pk=review.pk)
-        messages.success(request, f"L'avis « {review.title} » est {'masqué' if is_hiding else 'refusé'}.")
-        return redirect("manage_pending_reviews")
+        else:
+            messages.success(request, f"L'avis « {review.title} » est {'masqué' if is_hiding else 'refusé'}.")
+            return redirect("manage_pending_reviews")
     # Version lue sur la fiche de l'avis, transmise jusqu'à l'envoi du refus.
     version = request.POST.get("version") or request.GET.get("version") or review.version
-    context = {"review": review, "form": form, "is_hiding": is_hiding, "version": version}
+    context = {
+        "review": review,
+        "form": form,
+        "is_hiding": is_hiding,
+        "action_verb": "Masquer" if is_hiding else "Refuser",
+        "version": version,
+    }
     return render(request, "reviews/manage/refuse.html", context)
 
 
