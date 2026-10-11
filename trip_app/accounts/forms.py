@@ -9,6 +9,8 @@ from django.contrib.auth.forms import (
 )
 from django.core.exceptions import ValidationError
 
+from common.forms import DateInput
+
 from .models import STAFF_ROLES, EmailKind, EmailText, Role, User, normalize_email_address
 from .services.email_texts import DEFAULT_TEXTS, fields_in, has_lone_brace
 from .services.password_links import send_password_link
@@ -34,7 +36,7 @@ EMAIL_ERROR_MESSAGES = {"invalid": "Saisissez une adresse e-mail valide."}
 CLIENT_WIDGETS = {
     "first_name": forms.TextInput(attrs={"autocomplete": "given-name"}),
     "last_name": forms.TextInput(attrs={"autocomplete": "family-name"}),
-    "birth_date": forms.DateInput(attrs={"type": "date", "autocomplete": "bday"}, format="%Y-%m-%d"),
+    "birth_date": DateInput(attrs={"autocomplete": "bday"}),
     "email": forms.EmailInput(attrs={"autocomplete": "email"}),
     "phone": forms.TextInput(attrs={"autocomplete": "tel", "inputmode": "tel"}),
 }

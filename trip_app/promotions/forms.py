@@ -4,10 +4,9 @@ from django import forms
 from django.utils import timezone
 
 from catalog.models import Country, Destination
+from common.forms import DateInput
 from promotions.models import Promotion, Scope, targets_problem
 from promotions.services.mailing import mailable_promotions
-
-_DATE = forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d")
 
 
 class DestinationChoiceField(forms.ModelMultipleChoiceField):
@@ -38,10 +37,10 @@ class PromotionForm(forms.ModelForm):
             "starts_on", "ends_on", "departure_from", "departure_until", "code", "max_uses", "max_uses_per_client",
         ]
         widgets = {
-            "starts_on": _DATE,
-            "ends_on": _DATE,
-            "departure_from": _DATE,
-            "departure_until": _DATE,
+            "starts_on": DateInput,
+            "ends_on": DateInput,
+            "departure_from": DateInput,
+            "departure_until": DateInput,
             "description": forms.Textarea(attrs={"rows": 3}),
         }
         help_texts = {

@@ -4,8 +4,9 @@ from datetime import timedelta
 
 from django import forms
 
+from catalog.forms import StaffFilterForm
 from catalog.models import Activity, Destination
-from common.forms import DateInput, StaffFilterForm, optional_date_field
+from common.forms import DateInput, optional_date_field
 from common.text import euros
 from orders.models import (
     AT_LEAST_ONE_ADULT,

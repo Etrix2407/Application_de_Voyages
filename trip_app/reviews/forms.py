@@ -2,7 +2,8 @@
 
 from django import forms
 
-from common.forms import StaffFilterForm, optional_date_field
+from catalog.forms import StaffFilterForm
+from common.forms import optional_date_field
 from reviews.models import (
     MAX_COMMENT_LENGTH,
     MAX_RATING,
