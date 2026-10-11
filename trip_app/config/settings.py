@@ -173,13 +173,16 @@ if PASSWORD_PEPPER:
 if TESTING:
     PASSWORD_HASHERS = ["django.contrib.auth.hashers.MD5PasswordHasher"]
 
-# Cache des limites anti-abus : fichiers sur disque, partagés par tous les processus du
-# serveur et conservés au redémarrage. Grande capacité : impossible de faire « oublier »
-# un compteur en remplissant le cache. Les tests gardent un cache en mémoire, isolé.
+# Cache des limites anti-abus : table « django_cache » de la base SQLite, partagée par tous les processus
+# du serveur et conservée au redémarrage. À créer une fois par « python manage.py createcachetable ».
+# Choisie plutôt que des fichiers sur disque : ceux-ci étaient tous parcourus à chaque écriture
+# (lent avec beaucoup de compteurs) et pouvaient se bloquer entre processus sous Windows.
+# Grande capacité : impossible de faire « oublier » un compteur en remplissant le cache.
+# Les tests gardent un cache en mémoire, isolé.
 CACHES = {
     "default": {
-        "BACKEND": "django.core.cache.backends.filebased.FileBasedCache",
-        "LOCATION": BASE_DIR / "cache",
+        "BACKEND": "django.core.cache.backends.db.DatabaseCache",
+        "LOCATION": "django_cache",
         "OPTIONS": {"MAX_ENTRIES": 100_000},
     }
 }
