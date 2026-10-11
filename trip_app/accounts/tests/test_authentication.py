@@ -14,6 +14,7 @@ from django.test import TestCase, TransactionTestCase
 from django.urls import reverse
 from django.utils import timezone
 
+from accounts.services.email_retry import retry_due_emails
 from accounts.services.sign_up import purge_unconfirmed
 from accounts.services.password_links import password_link_path
 from accounts.services.throttling import (
@@ -420,6 +421,7 @@ class PasswordResetTests(SendEmailsImmediately, TestCase):
             response = self.client.post(self.url, {"email": "victime@example.com"})
             # La page reste identique : rien ne révèle que la limite est atteinte.
             self.assertRedirects(response, reverse("password_reset_done"))
+        retry_due_emails()
 
         self.assertEqual(len(mail.outbox), limit)
 
@@ -430,6 +432,7 @@ class PasswordResetTests(SendEmailsImmediately, TestCase):
             self.client.post(self.url, {"email": "victime@example.com"})
 
         self.client.post(self.url, {"email": "AUTRE@example.com"})
+        retry_due_emails()
 
         self.assertEqual(mail.outbox[-1].to, ["autre@example.com"])
 
@@ -442,6 +445,9 @@ class PasswordResetTests(SendEmailsImmediately, TestCase):
         response = self.client.post(self.url, {"email": "CLIENT@example.com"})
 
         self.assertRedirects(response, reverse("password_reset_done"))
+        # Mis en file pendant la requête : la durée de la réponse ne révèle pas que le compte existe.
+        self.assertEqual(len(mail.outbox), 0)
+        retry_due_emails()
         self.assertEqual(len(mail.outbox), 1)
         link = re.search(r"https?://[^/]+(/\S+)", mail.outbox[0].body).group(1)
 
@@ -465,6 +471,7 @@ class PasswordResetTests(SendEmailsImmediately, TestCase):
 
     def test_unknown_email_neutral_message(self):
         response = self.client.post(self.url, {"email": "inconnu@example.com"})
+        retry_due_emails()
 
         self.assertRedirects(response, reverse("password_reset_done"))
         self.assertEqual(len(mail.outbox), 0)

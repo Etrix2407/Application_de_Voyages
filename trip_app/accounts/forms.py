@@ -8,11 +8,10 @@ from django.contrib.auth.forms import (
     PasswordResetForm,
 )
 from django.core.exceptions import ValidationError
-from django.urls import reverse
 
 from .models import STAFF_ROLES, EmailKind, EmailText, Role, User, normalize_email_address
 from .services.email_texts import DEFAULT_TEXTS, fields_in, has_lone_brace
-from .services.emails import send_email, site_url
+from .services.emails import queue_emails
 from .services.throttling import (
     get_client_ip,
     login_failures,
@@ -123,10 +122,12 @@ class LoginForm(AuthenticationForm):
 
 
 class PasswordResetRequestForm(PasswordResetForm):
-    """« Mot de passe oublié » limité par adresse, pour empêcher d'inonder une boîte e-mail.
+    """« Mot de passe oublié » limité par adresse et par IP, pour empêcher d'inonder une boîte e-mail.
 
-    Au-delà de la limite, aucun e-mail ne part mais la page affichée reste la même :
-    rien ne révèle si l'adresse existe ni si la limite est atteinte.
+    Rien ne révèle si l'adresse existe ni si la limite est atteinte : la page affichée reste la même,
+    et l'e-mail est mis en file d'attente au lieu d'être envoyé pendant la requête (la durée de la
+    réponse trahirait sinon l'existence du compte). La commande process_emails l'envoie à son
+    passage suivant, avec un lien neuf valable 1 heure (voir email_rebuilders.py).
     """
 
     def save(self, *args, request=None, **kwargs) -> None:
@@ -136,16 +137,8 @@ class PasswordResetRequestForm(PasswordResetForm):
             return
         password_reset_requests.record(email)
         password_reset_requests_by_ip.record(ip)
-        super().save(*args, request=request, **kwargs)
-
-    def send_mail(
-        self, subject_template_name, email_template_name, context, from_email, to_email, html_email_template_name=None
-    ) -> None:
-        # Envoi par le service commun (journal, HTML, mode test) : l'objet et le texte viennent du
-        # type d'e-mail, les gabarits de Django ne servent pas. Lien construit avec le jeton de Django.
-        path = reverse("password_reset_confirm", kwargs={"uidb64": context["uid"], "token": context["token"]})
-        fields = {"prénom": context["user"].first_name, "lien": site_url(path)}
-        send_email(to_email, EmailKind.PASSWORD_RESET, fields, user=context["user"])
+        # get_users : comptes actifs avec un mot de passe, à cette adresse (sans tenir compte des majuscules).
+        queue_emails(self.get_users(email), EmailKind.PASSWORD_RESET)
 
 
 class ClientDataForm(forms.ModelForm):

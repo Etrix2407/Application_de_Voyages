@@ -14,6 +14,7 @@ la propriétaire de l'adresse ne confirme pas sans le savoir un compte créé pa
 
 from datetime import timedelta
 
+from django.contrib.auth.hashers import make_password
 from django.core import signing
 from django.db import IntegrityError, transaction
 from django.urls import reverse
@@ -55,6 +56,8 @@ def request_sign_up(data: dict) -> None:
     email = normalize_email_address(data["email"])
     existing = User.objects.filter(email=email).first()
     if existing and not existing.is_awaiting_confirmation:
+        # Hachage sans usage : la réponse prend le même temps que pour une inscription nouvelle.
+        make_password(data["password1"])
         _notify(existing, EmailKind.SIGN_UP_EXISTING, account_fields(existing))
         return
 

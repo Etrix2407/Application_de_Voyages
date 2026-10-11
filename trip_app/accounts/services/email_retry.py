@@ -32,7 +32,7 @@ RETRY_DELAYS = {1: timedelta(minutes=5), 2: timedelta(minutes=15)}
 # Envoi jamais tenté (serveur arrêté juste après l'action) : repris au bout de 5 minutes.
 NEVER_ATTEMPTED_DELAY = timedelta(minutes=5)
 # Types mis en attente sans envoi immédiat (queue_emails) : envoyés dès le passage suivant.
-QUEUED_KINDS = (EmailKind.PROMOTION,)
+QUEUED_KINDS = (EmailKind.PROMOTION, EmailKind.PASSWORD_RESET)
 
 NOT_REBUILDABLE = "Ce type d'e-mail ne peut pas être renvoyé."
 OBSOLETE = "Message devenu sans objet (compte supprimé ou modifié depuis) : il n'a pas été renvoyé."
