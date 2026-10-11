@@ -2,6 +2,7 @@
 
 from django.contrib import messages
 from django.core.exceptions import ValidationError
+from django.db import IntegrityError
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
@@ -33,13 +34,18 @@ def staff_list(request):
 def create_agent(request):
     form = AgentCreationForm(request.POST or None)
     if request.method == "POST" and form.is_valid():
-        agent = form.save()
-        created = f"Le compte de {agent.get_full_name()} ({agent.employee_number}) a été créé."
-        if send_activation_link(request, agent):
-            messages.success(request, f"{created} Un e-mail lui a été envoyé pour choisir son mot de passe.")
+        try:
+            agent = form.save()
+        except IntegrityError:
+            # Adresse prise au même instant par un autre compte : la base garantit l'unicité.
+            form.add_error("email", "Un compte existe déjà avec cette adresse e-mail.")
         else:
-            messages.warning(request, f"{created} {LINK_NOT_SENT}")
-        return redirect("staff_list")
+            created = f"Le compte de {agent.get_full_name()} ({agent.employee_number}) a été créé."
+            if send_activation_link(agent):
+                messages.success(request, f"{created} Un e-mail lui a été envoyé pour choisir son mot de passe.")
+            else:
+                messages.warning(request, f"{created} {LINK_NOT_SENT}")
+            return redirect("staff_list")
     return render(request, "accounts/staff/create.html", {"form": form})
 
 
@@ -76,7 +82,7 @@ def resend_link(request, pk):
     member = _get_staff_member(pk)
     if not member.is_active:
         messages.error(request, "Ce compte est désactivé : réactivez-le avant d'envoyer un lien.")
-    elif send_activation_link(request, member):
+    elif send_activation_link(member):
         messages.success(request, f"Un nouveau lien a été envoyé à {member.email}.")
     else:
         messages.error(request, LINK_NOT_SENT)

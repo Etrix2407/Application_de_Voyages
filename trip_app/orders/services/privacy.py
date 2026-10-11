@@ -1,6 +1,6 @@
 """RGPD : demandes de voyage d'un client qui supprime son compte."""
 
-from orders.models import Order, Status, StatusChange
+from orders.models import Order, OrderStatus, StatusChange
 from orders.services.status import cancel_after_account_deletion
 
 
@@ -19,6 +19,6 @@ def anonymize_orders_of(client) -> int:
     orders = Order.objects.filter(client=client)
     StatusChange.objects.filter(order__in=orders).update(reason="", internal_reason="")
     anonymized = orders.update(remarks="")
-    for order in orders.filter(status=Status.PENDING):
+    for order in orders.filter(status=OrderStatus.PENDING):
         cancel_after_account_deletion(order)
     return anonymized

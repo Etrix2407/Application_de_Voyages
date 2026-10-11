@@ -109,6 +109,20 @@ class RetryTests(TestCase):
         next_one.refresh_from_db()
         self.assertEqual(next_one.status, EmailStatus.SENT)
 
+    def test_promotions_sent_after_other_emails(self):
+        promotion = EmailLog.objects.create(
+            recipient=self.marie.email, kind=EmailKind.PROMOTION, subject="Objet", user=self.marie
+        )
+        password_reset = pending_log(self.marie, attempts=1, minutes_ago=6, kind=EmailKind.PASSWORD_RESET)
+
+        with mock.patch("accounts.services.email_retry.EMAILS_PER_PASS", 1):
+            retry_due_emails()
+
+        password_reset.refresh_from_db()
+        promotion.refresh_from_db()
+        self.assertEqual(password_reset.status, EmailStatus.SENT)
+        self.assertEqual((promotion.status, promotion.attempts), (EmailStatus.PENDING, 0))
+
     def test_no_security_link_to_a_former_address(self):
         log = pending_log(self.marie, attempts=1, minutes_ago=6)
         self.marie.email = "marie.nouvelle@example.com"

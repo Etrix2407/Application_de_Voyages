@@ -12,7 +12,6 @@ from reviews.services.eligibility import can_review, reviewable_orders
 from reviews.services.writing import (
     ReviewLocked,
     ReviewNotAllowed,
-    client_can_delete,
     client_can_edit,
     delete_review,
     update_review,
@@ -80,10 +79,8 @@ def edit_review(request, pk):
 @client_required
 @require_http_methods(["GET", "POST"])
 def remove_review(request, pk):
+    # Le client retire ses propos quand il le souhaite (RGPD) : aucune condition de délai.
     review = _own_review(request, pk)
-    if not client_can_delete(review):
-        messages.error(request, LOCKED_MESSAGE)
-        return redirect("my_reviews")
     if request.method == "POST":
         delete_review(review)
         messages.success(request, "Votre avis a été supprimé.")

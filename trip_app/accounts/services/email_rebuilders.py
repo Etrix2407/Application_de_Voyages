@@ -7,13 +7,11 @@ du compte : jamais à une ancienne adresse.
 
 from collections.abc import Callable
 
-from django.urls import reverse
-
 from accounts.models import EmailKind, EmailLog, User
 from accounts.services.email_retry import RebuiltEmail, rebuilder
 from accounts.services.emails import site_url
 from accounts.services.password_links import password_link_path, staff_link_fields, staff_link_path
-from accounts.services.sign_up import make_confirmation_token, notification_context
+from accounts.services.sign_up import account_fields, confirmation_fields
 
 
 def account_at_recipient(log: EmailLog) -> User | None:
@@ -27,8 +25,7 @@ def _sign_up_confirmation(log: EmailLog) -> RebuiltEmail | None:
     user = account_at_recipient(log)
     if user is None or not user.is_awaiting_confirmation:
         return None
-    link = site_url(reverse("confirm_sign_up", args=[make_confirmation_token(user)]))
-    return RebuiltEmail({**notification_context(user, site_url), "lien": link})
+    return RebuiltEmail(confirmation_fields(user))
 
 
 @rebuilder(EmailKind.SIGN_UP_EXISTING)
@@ -36,7 +33,7 @@ def _sign_up_existing(log: EmailLog) -> RebuiltEmail | None:
     user = account_at_recipient(log)
     if user is None:
         return None
-    return RebuiltEmail(notification_context(user, site_url))
+    return RebuiltEmail(account_fields(user))
 
 
 # EMAIL_CHANGE_CONFIRMATION n'est volontairement pas reconstruit : l'ancienne adresse, qui fait

@@ -24,6 +24,8 @@ MAX_STAY_DAYS = 90
 MAX_TRAVELLERS = 10
 MAX_REMARKS_LENGTH = 2000
 CLIENT_FINGERPRINT_SALT = "orders.Order.client_fingerprint"
+AT_LEAST_ONE_ADULT = "Il faut au moins un adulte."
+DELETED_CLIENT_LABEL = "Client supprimé"
 
 
 def client_fingerprint(email: str) -> str:
@@ -38,7 +40,7 @@ def client_fingerprint(email: str) -> str:
     return salted_hmac(CLIENT_FINGERPRINT_SALT, f"{local}{at}{domain}", algorithm="sha256").hexdigest()
 
 
-class Status(models.TextChoices):
+class OrderStatus(models.TextChoices):
     PENDING = "pending", "En attente"
     CONFIRMED = "confirmed", "Confirmée"
     CANCELLED = "cancelled", "Annulée"
@@ -78,7 +80,7 @@ class Order(models.Model):
     country_name = models.CharField("nom du pays au moment de la demande", max_length=100)
     departure_date = models.DateField("date de départ")
     return_date = models.DateField("date de retour")
-    adults = models.PositiveSmallIntegerField("adultes", validators=[MinValueValidator(1)])
+    adults = models.PositiveSmallIntegerField("adultes", validators=[MinValueValidator(1, AT_LEAST_ONE_ADULT)])
     children = models.PositiveSmallIntegerField("enfants", default=0)
     # max_length limite le formulaire ; le validateur limite aussi full_clean() (TextField ne le fait pas).
     remarks = models.TextField(
@@ -107,7 +109,7 @@ class Order(models.Model):
     promotion_name = models.CharField("nom de la promotion au moment de la demande", max_length=100, blank=True)
     discount = _price_field("remise à la demande", default=Decimal("0.00"))
     confirmed_discount = _price_field("remise à la confirmation", null=True, blank=True)
-    status = models.CharField("état", max_length=20, choices=Status.choices, default=Status.PENDING)
+    status = models.CharField("état", max_length=20, choices=OrderStatus.choices, default=OrderStatus.PENDING)
     created_at = models.DateTimeField("date de la demande", default=timezone.now)
     # Jeton de la page de vérification : unique, il empêche qu'un double clic crée deux demandes.
     submission_token = models.UUIDField(null=True, blank=True, unique=True, editable=False)
@@ -124,13 +126,46 @@ class Order(models.Model):
         verbose_name_plural = "demandes de voyage"
         # Le numéro départage les demandes créées au même instant (horloge peu précise).
         ordering = ["-created_at", "-pk"]
+        # Liste du personnel : filtre par état, tri par date de demande ; filtre par date de départ.
+        indexes = [
+            models.Index(fields=["status", "-created_at"], name="order_status_created_idx"),
+            models.Index(fields=["departure_date"], name="order_departure_idx"),
+        ]
+        # Dernier rempart en base, aligné sur la validation du modèle (enfants ≥ 0 : déjà garanti par le type du champ).
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(return_date__gt=models.F("departure_date")), name="order_return_after_departure"
+            ),
+            models.CheckConstraint(condition=models.Q(adults__gte=1), name="order_at_least_one_adult"),
+            models.CheckConstraint(
+                condition=models.Q(
+                    estimated_price__gte=0,
+                    discount__gte=0,
+                )
+                & (models.Q(destination_price__isnull=True) | models.Q(destination_price__gte=0))
+                & (models.Q(confirmed_price__isnull=True) | models.Q(confirmed_price__gte=0))
+                & (models.Q(confirmed_discount__isnull=True) | models.Q(confirmed_discount__gte=0))
+                & (
+                    models.Q(confirmed_destination_price__isnull=True)
+                    | models.Q(confirmed_destination_price__gte=0)
+                ),
+                name="order_prices_not_negative",
+            ),
+            models.CheckConstraint(condition=models.Q(status__in=OrderStatus.values), name="order_status_valid"),
+        ]
 
     def __str__(self) -> str:
         return f"Demande n° {self.pk} — {self.destination_name}"
 
     @property
-    def traveller_count(self) -> int:
-        return self.adults + self.children
+    def destination_label(self) -> str:
+        """« Kyoto (Japon) », avec les noms figés au moment de la demande."""
+        return f"{self.destination_name} ({self.country_name})"
+
+    @property
+    def client_label(self) -> str:
+        """Nom du client pour le personnel, ou « Client supprimé » (demande anonymisée)."""
+        return self.client.get_full_name() if self.client_id else DELETED_CLIENT_LABEL
 
     @property
     def latest_price(self) -> Decimal:
@@ -188,8 +223,6 @@ class Order(models.Model):
             errors["return_date"] = "La date de retour doit être après la date de départ."
         elif self.departure_date and self.return_date and (self.return_date - self.departure_date).days > MAX_STAY_DAYS:
             errors["return_date"] = f"Un séjour dure au maximum {MAX_STAY_DAYS} jours."
-        if self.adults is not None and self.adults < 1:
-            errors["adults"] = "Il faut au moins un adulte."
         if (self.adults or 0) + (self.children or 0) > MAX_TRAVELLERS:
             errors["children"] = f"Une demande compte au maximum {MAX_TRAVELLERS} voyageurs."
         # Règles de création : une demande existante reste valable si le temps passe
@@ -241,7 +274,7 @@ class StatusChange(models.Model):
     AGENCY_AUTHOR = "Agence"
 
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name="history")
-    status = models.CharField("état", max_length=20, choices=Status.choices)
+    status = models.CharField("état", max_length=20, choices=OrderStatus.choices)
     changed_at = models.DateTimeField("date", default=timezone.now)
     # Nom figé au moment de l'action : reste lisible si le compte de l'agent est supprimé.
     author_name = models.CharField("auteur", max_length=210)
@@ -251,7 +284,8 @@ class StatusChange(models.Model):
     # Texte montré au client dans l'historique : son propre motif, la note de prix recalculé,
     # ou l'explication de l'agence quand elle annule.
     reason = models.TextField("motif visible par le client", blank=True)
-    # Annulation par l'agence : motif réservé au personnel, jamais montré au client.
+    # Annulation par l'agence : n'apparaît ni sur le site ni dans les e-mails du client,
+    # mais figure dans les données qu'il peut télécharger (droit d'accès, services/data_export.py).
     internal_reason = models.TextField("motif interne", blank=True)
     # Action du client lui-même (sinon : le personnel). Ne dépend pas du libellé affiché.
     by_client = models.BooleanField("par le client", default=False)

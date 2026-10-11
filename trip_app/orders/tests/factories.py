@@ -4,6 +4,7 @@ import re
 from datetime import timedelta
 from decimal import Decimal
 
+from django.urls import reverse
 from django.utils import timezone
 
 from orders.models import MIN_DAYS_BEFORE_DEPARTURE, Order, OrderActivity, client_fingerprint
@@ -44,3 +45,11 @@ def submit_order(test_client, url: str, data: dict, follow: bool = False):
     """Parcours réel : page de vérification, puis « Envoyer ma demande » avec ses champs cachés."""
     review = test_client.post(url, data)
     return test_client.post(url, {**data, **review_tokens(review), "confirm": ""}, follow=follow)
+
+
+def confirm_on_page(test_client, order: Order, follow: bool = False):
+    """Parcours réel de l'agent : fiche de la demande, puis « Confirmer » avec le prix affiché."""
+    page = test_client.get(reverse("manage_order_detail", args=[order.pk]))
+    price = re.search(r'name="expected_price" value="([^"]*)"', page.content.decode())
+    data = {"expected_price": price.group(1)} if price else {}
+    return test_client.post(reverse("manage_confirm_order", args=[order.pk]), data, follow=follow)

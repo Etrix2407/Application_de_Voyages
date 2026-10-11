@@ -9,14 +9,14 @@ Conditions, toutes vérifiées sur la demande de voyage :
 
 from django.utils import timezone
 
-from orders.models import Order, Status
+from orders.models import Order, OrderStatus
 
 
 def all_reviewable_orders():
     """Demandes qui peuvent recevoir un avis aujourd'hui, tous clients confondus (client supprimé exclu)."""
     return Order.objects.filter(
         client__isnull=False,
-        status=Status.CONFIRMED,
+        status=OrderStatus.CONFIRMED,
         return_date__lt=timezone.localdate(),
         review__isnull=True,
         review_withdrawal__isnull=True,

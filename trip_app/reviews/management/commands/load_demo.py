@@ -21,7 +21,7 @@ from django.utils import timezone
 
 from accounts.models import Role
 from catalog.models import Activity, Category, Continent, Destination, Difficulty, Month, Country, Visa
-from orders.models import Order, Status, StatusChange
+from orders.models import Order, OrderStatus, StatusChange
 from orders.services.placing import parts_for, place_order
 from orders.services.promotions import choose_promotion
 from orders.services.status import cancel_by_client, confirm_by_staff
@@ -113,28 +113,28 @@ DEMO_ORDERS = [
         "destination": "Exemple — Ville des Ponts",
         "activities": ["Exemple — Visite du musée"],
         "code": "",
-        "status": Status.PENDING,
+        "status": OrderStatus.PENDING,
     },
     {
         "remarks": f"Exemple — demande confirmée avec le code promo {PROMO_CODE}.",
         "destination": "Exemple — Cité du Marché",
         "activities": ["Exemple — Cours de cuisine"],
         "code": PROMO_CODE,
-        "status": Status.CONFIRMED,
+        "status": OrderStatus.CONFIRMED,
     },
     {
         "remarks": "Exemple — demande annulée par le client.",
         "destination": "Exemple — Vallée Verte",
         "activities": ["Exemple — Croisière sur le lac"],
         "code": "",
-        "status": Status.CANCELLED,
+        "status": OrderStatus.CANCELLED,
     },
     {
         "remarks": TRIP_DONE_REMARKS,
         "destination": "Exemple — Cité du Marché",
         "activities": [],
         "code": "",
-        "status": Status.CONFIRMED,
+        "status": OrderStatus.CONFIRMED,
     },
 ]
 CANCEL_REASON = "Exemple — projet reporté."
@@ -258,9 +258,9 @@ class Command(BaseCommand):
             self.stdout.write(f"Déjà présent : {data['remarks']}")
             return
         order = _place_order(client, data)
-        if data["status"] == Status.CONFIRMED:
+        if data["status"] == OrderStatus.CONFIRMED:
             confirm_by_staff(order, agent)
-        elif data["status"] == Status.CANCELLED:
+        elif data["status"] == OrderStatus.CANCELLED:
             cancel_by_client(order, CANCEL_REASON)
         if data["remarks"] == TRIP_DONE_REMARKS:
             _move_to_past(order)

@@ -10,7 +10,7 @@
         <ul class="actions">
             {% for order in to_review %}
                 <li>
-                    {{ order.destination_name }} ({{ order.country_name }}), retour le {{ order.return_date|date:"j F Y" }} :
+                    {{ order.destination_label }}, retour le {{ order.return_date|date:"j F Y" }} :
                     <a class="button" href="{% url 'create_review' order.pk %}">Donner mon avis</a>
                 </li>
             {% endfor %}
@@ -34,7 +34,7 @@
                 <tbody>
                     {% for review, can_edit in reviews %}
                         <tr>
-                            <td data-label="Destination">{{ review.order.destination_name }} ({{ review.order.country_name }})</td>
+                            <td data-label="Destination">{{ review.order.destination_label }}</td>
                             <td data-label="Séjour">{{ review.order.departure_date|date:"F Y" }}</td>
                             <td data-label="Note et titre">
                                 {% include "reviews/_rating.html" %}<br>« {{ review.title }} »
@@ -43,7 +43,7 @@
                             <td data-label="État">
                                 <span class="status status-{{ review.status }}">{{ review.get_status_display }}</span>
                                 {% if review.refusal_reason %}
-                                    <br>Motif : {{ review.get_refusal_reason_display }}{% if review.refusal_details %} — {{ review.refusal_details }}{% endif %}
+                                    <br>Motif : {{ review.refusal_label }}
                                 {% endif %}
                             </td>
                             <td data-label="Actions">

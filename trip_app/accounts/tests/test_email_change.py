@@ -1,13 +1,15 @@
 import re
 from unittest import mock
 
-from django.core import mail, signing
+from django.core import mail
 from django.core.cache import cache
 from django.test import TestCase
 from django.urls import reverse
+from django.utils import timezone
 
 from accounts.models import User
-from accounts.services.email_change import apply_email_change
+from accounts.services.email_change import apply_email_change, make_email_change_token
+from accounts.services.throttling import email_change_requests
 
 from .email_delivery import SendEmailsImmediately
 from .factories import PASSWORD, create_agent, create_client
@@ -120,6 +122,38 @@ class EmailChangeTests(SendEmailsImmediately, TestCase):
         self.user.refresh_from_db()
         self.assertEqual(self.user.email, "seconde@example.com")
 
+    def test_link_valid_24_hours(self):
+        self.request_change()
+        link = self.link_sent_to("nouvelle@example.com")
+        now = timezone.now().timestamp()
+
+        with mock.patch("django.core.signing.time") as clock:
+            clock.time.return_value = now + 23 * 3600
+            self.assertContains(self.client.get(link), "nouvelle@example.com")
+            clock.time.return_value = now + 25 * 3600
+            self.assertContains(self.client.get(link), "plus valable")
+
+    def test_link_unusable_after_password_change(self):
+        # Le titulaire reprend son compte en changeant le mot de passe : le lien d'un tiers ne sert plus.
+        self.request_change("pirate@example.com")
+        link = self.link_sent_to("pirate@example.com")
+        self.user.set_password("nouveau-secret-2026")
+        self.user.save()
+
+        self.assertContains(self.client.post(link), "plus valable")
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.email, "client@example.com")
+
+    def test_requests_limited_per_account(self):
+        for number in range(email_change_requests.max_attempts):
+            self.request_change(f"adresse{number}@example.com")
+        sent = len(mail.outbox)
+
+        response = self.request_change("encore@example.com")
+
+        self.assertContains(response, "Trop de demandes de changement d&#x27;adresse")
+        self.assertEqual(len(mail.outbox), sent)
+
     def test_tampered_link_refused(self):
         self.request_change()
 
@@ -138,9 +172,7 @@ class EmailChangeTests(SendEmailsImmediately, TestCase):
     def test_link_for_a_staff_account_refused(self):
         # Même un lien correctement signé ne change jamais l'adresse d'un membre du personnel.
         agent = create_agent()
-        token = signing.dumps(
-            {"id": agent.pk, "old": agent.email, "new": "pirate@example.com"}, salt="accounts.email-change"
-        )
+        token = make_email_change_token(agent, "pirate@example.com")
         url = reverse("confirm_email_change", args=[token])
 
         self.assertContains(self.client.post(url), "plus valable")

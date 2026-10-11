@@ -12,7 +12,7 @@ from accounts.tests.email_delivery import SendEmailsImmediately
 from accounts.tests.factories import PASSWORD, create_agent, create_client
 from catalog.tests.factories import create_country, create_destination
 from common.text import euros
-from orders.models import Order, Status
+from orders.models import Order, OrderStatus
 from orders.services.status import cancel_by_client, cancel_by_staff, confirm_by_staff
 from promotions.tests.factories import create_promotion
 
@@ -102,7 +102,7 @@ class OrderEmailsTests(SendEmailsImmediately, TestCase):
         self.client.post(reverse("delete_account"), {"password": PASSWORD})
 
         order.refresh_from_db()
-        self.assertEqual(order.status, Status.CANCELLED)
+        self.assertEqual(order.status, OrderStatus.CANCELLED)
         self.assertFalse(EmailLog.objects.filter(kind__startswith="order_").exists())
 
 def failed_once(user, kind, order):

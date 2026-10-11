@@ -23,7 +23,7 @@ NEGATIVE_RATING = 2
 MAX_TITLE_LENGTH = 100
 MAX_COMMENT_LENGTH = 1000
 MAX_REFUSAL_DETAILS_LENGTH = 500
-# Le client peut modifier ou supprimer son avis pendant ce délai, compté depuis la création.
+# Le client peut modifier son avis pendant ce délai, compté depuis la création (le supprimer : à tout moment).
 EDIT_PERIOD = timedelta(days=30)
 ANONYMOUS_NAME = "Voyageur anonyme"
 
@@ -43,17 +43,8 @@ class RefusalReason(models.TextChoices):
 
 
 # Motifs que le personnel peut choisir (« Voyage annulé » est posé automatiquement).
+# Le motif est validé par le service de modération (services/moderation.py), seul à l'enregistrer.
 STAFF_REFUSAL_REASONS = [reason for reason in RefusalReason if reason != RefusalReason.TRIP_CANCELLED]
-REASONS_REQUIRING_DETAILS = {RefusalReason.OTHER}
-
-
-def refusal_problem(reason: str, details: str) -> dict[str, str]:
-    """Erreurs d'un motif de refus, par champ ; vide si le motif est valable."""
-    if reason not in RefusalReason.values:
-        return {"refusal_reason": "Choisissez un motif dans la liste."}
-    if reason in REASONS_REQUIRING_DETAILS and not details.strip():
-        return {"refusal_details": "Précisez le motif quand vous choisissez « Autre »."}
-    return {}
 
 
 class ReviewQuerySet(models.QuerySet):
@@ -107,6 +98,8 @@ class Review(models.Model):
         verbose_name_plural = "avis"
         # Le numéro départage les avis créés au même instant (horloge peu précise).
         ordering = ["-created_at", "-pk"]
+        # File de modération : avis en attente, du plus ancien envoi au plus récent.
+        indexes = [models.Index(fields=["status", "submitted_at"], name="review_status_submitted_idx")]
         constraints = [
             models.CheckConstraint(
                 condition=models.Q(rating__gte=MIN_RATING, rating__lte=MAX_RATING), name="review_rating_1_to_5"
@@ -124,6 +117,14 @@ class Review(models.Model):
     @property
     def is_negative(self) -> bool:
         return self.rating <= NEGATIVE_RATING
+
+    @property
+    def refusal_label(self) -> str:
+        """« Hors sujet — précision » : motif du refus montré au client et au personnel ; vide sans motif."""
+        if not self.refusal_reason:
+            return ""
+        label = self.get_refusal_reason_display()
+        return f"{label} — {self.refusal_details}" if self.refusal_details else label
 
     @property
     def editable_until(self):
@@ -156,15 +157,8 @@ class Review(models.Model):
 
     def clean(self) -> None:
         super().clean()
-        errors = {}
         if self.rating is not None and self.rating <= NEGATIVE_RATING and not (self.comment or "").strip():
-            errors["comment"] = "Un commentaire est obligatoire pour une note de 1 ou 2 étoiles."
-        if self.status == ReviewStatus.REFUSED and not self.refusal_reason:
-            errors["refusal_reason"] = "Le motif est obligatoire pour refuser ou masquer un avis."
-        elif self.refusal_reason:
-            errors.update(refusal_problem(self.refusal_reason, self.refusal_details))
-        if errors:
-            raise ValidationError(errors)
+            raise ValidationError({"comment": "Un commentaire est obligatoire pour une note de 1 ou 2 étoiles."})
 
 
 class ReviewWithdrawal(models.Model):
