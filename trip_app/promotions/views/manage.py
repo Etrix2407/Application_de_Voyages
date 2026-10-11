@@ -16,6 +16,7 @@ from promotions.forms import PromotionForm, PromotionMailingForm
 from promotions.models import Action, Promotion, State
 from promotions.services.management import (
     PromotionInUse,
+    PromotionMailed,
     create_promotion,
     delete_promotion,
     disable_promotion,
@@ -59,6 +60,7 @@ def promotion_detail(request, pk):
     state = promotion.state()
     used = _is_used(promotion)
     history = list(promotion.history.all())
+    mailings = list(promotion.mailings.all())
     # Auteur lu dans l'historique déjà chargé : évite la requête de Promotion.created_by_name.
     creation = next((change for change in history if change.action == Action.CREATED), None)
     context = {
@@ -69,7 +71,9 @@ def promotion_detail(request, pk):
         "can_manage": request.user.is_administrator,
         "can_disable": state != State.DISABLED,
         "can_mail": promotion in mailable_promotions(exclude=exhausted_promotions()),
-        "mailings": promotion.mailings.all(),
+        # Une promotion utilisée ou déjà envoyée par e-mail se désactive, elle ne se supprime pas.
+        "can_delete": not used and not mailings,
+        "mailings": mailings,
         "used": used,
     }
     return render(request, "promotions/manage/detail.html", context)
@@ -179,6 +183,13 @@ def delete(request, pk):
                 request,
                 f"« {promotion} » a déjà été utilisée dans des demandes de voyage : elle ne peut pas être "
                 "supprimée. Vous pouvez la désactiver.",
+            )
+            return redirect("manage_promotion_detail", pk=promotion.pk)
+        except PromotionMailed:
+            messages.error(
+                request,
+                f"« {promotion} » a déjà été envoyée par e-mail aux clients : elle ne peut pas être supprimée, "
+                "pour garder l'historique des envois. Vous pouvez la désactiver.",
             )
             return redirect("manage_promotion_detail", pk=promotion.pk)
         messages.success(request, f"La promotion « {promotion} » a été supprimée.")

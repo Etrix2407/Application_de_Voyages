@@ -239,7 +239,9 @@ class PromotionMailing(models.Model):
     (prénom, lien de désinscription), et le journal des e-mails ne garde aucun contenu.
     """
 
-    promotion = models.ForeignKey(Promotion, on_delete=models.CASCADE, related_name="mailings")
+    # PROTECT : une promotion déjà envoyée ne se supprime pas (historique des envois et journal
+    # des e-mails) ; elle se désactive.
+    promotion = models.ForeignKey(Promotion, on_delete=models.PROTECT, related_name="mailings")
     message = models.TextField("message")
     created_at = models.DateTimeField("date", default=timezone.now)
     # Nom figé au moment de l'envoi : reste lisible si le compte de l'administrateur est supprimé.
