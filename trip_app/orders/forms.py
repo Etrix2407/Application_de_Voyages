@@ -5,6 +5,7 @@ from datetime import timedelta
 from django import forms
 
 from catalog.models import Activity, Country, Destination
+from common.text import euros
 from orders.models import (
     AT_LEAST_ONE_ADULT,
     MAX_REMARKS_LENGTH,
@@ -22,7 +23,7 @@ class ActivityChoiceField(forms.ModelMultipleChoiceField):
     def label_from_instance(self, activity: Activity) -> str:
         # L'âge minimum est affiché pour information, il n'est pas vérifié.
         age = f", à partir de {activity.minimum_age} ans" if activity.minimum_age else ""
-        return f"{activity.name} — {activity.price_per_person} € par personne ({activity.duration_display()}{age})"
+        return f"{activity.name} — {euros(activity.price_per_person)} par personne ({activity.duration_display()}{age})"
 
 
 class OrderForm(forms.ModelForm):

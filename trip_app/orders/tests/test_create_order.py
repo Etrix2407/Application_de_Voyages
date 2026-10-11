@@ -66,7 +66,7 @@ class CreateOrderTests(TestCase):
 
         response = self.client.get(self.url)
 
-        self.assertContains(response, "Cérémonie du thé")
+        self.assertContains(response, "Cérémonie du thé — 50,00 € par personne")
         self.assertContains(response, "à partir de 12 ans")
         self.assertNotContains(response, "Karaoké fermé")
         self.assertNotContains(response, "Trek")
