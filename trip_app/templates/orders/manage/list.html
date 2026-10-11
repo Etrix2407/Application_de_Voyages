@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load money %}
 
 {% block title %}Demandes de voyage — Gestion{% endblock %}
 
@@ -38,7 +39,7 @@
                             <td>{{ order.destination_label }}</td>
                             <td>{{ order.departure_date|date:"j F Y" }}</td>
                             <td><span class="status status-{{ order.status }}">{{ order.get_status_display }}</span></td>
-                            <td>{{ order.latest_price }} €{% if order.is_latest_price_quote_required %} + sur devis{% endif %}</td>
+                            <td>{{ order.latest_price|euros }}{% if order.is_latest_price_quote_required %} + sur devis{% endif %}</td>
                         </tr>
                     {% endfor %}
                 </tbody>

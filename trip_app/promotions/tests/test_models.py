@@ -98,7 +98,7 @@ class ValidationTests(TestCase):
 class DiscountLabelTests(TestCase):
     def test_label_in_french_format(self):
         for kind, value, label in [(Kind.PERCENT, "15.00", "-15 %"), (Kind.PERCENT, "12.50", "-12,5 %"),
-                                   (Kind.FIXED, "100.00", "-100,00 €"), (Kind.FIXED, "99.50", "-99,50 €")]:
+                                   (Kind.FIXED, "100.00", "-100,00\u00a0€"), (Kind.FIXED, "99.50", "-99,50\u00a0€")]:
             with self.subTest(label=label):
                 self.assertEqual(Promotion(kind=kind, value=Decimal(value)).discount_label, label)
 

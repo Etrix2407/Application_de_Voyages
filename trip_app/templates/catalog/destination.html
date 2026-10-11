@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load money %}
 
 {% block title %}{{ destination.name }}{% endblock %}
 
@@ -38,7 +39,7 @@
         <dt>Période idéale</dt>
         <dd>{{ destination.ideal_period|default:"Non précisée" }}</dd>
         <dt>Prix indicatif</dt>
-        <dd>{% if destination.price_from is not None %}À partir de {{ destination.price_from }} €{% else %}Non précisé{% endif %}</dd>
+        <dd>{% if destination.price_from is not None %}À partir de {{ destination.price_from|euros }}{% else %}Non précisé{% endif %}</dd>
     </dl>
 
     <h2>Activités sur place</h2>

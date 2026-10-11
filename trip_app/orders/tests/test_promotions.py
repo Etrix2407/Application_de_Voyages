@@ -116,7 +116,7 @@ class ChoosePromotionTests(TestCase):
         choice = self.choose("PETIT")
 
         self.assertEqual(choice.offer.promotion.name, "Automatique")
-        self.assertEqual(choice.code_note, "Une offre plus avantageuse s'applique déjà : -160,00 €")
+        self.assertEqual(choice.code_note, "Une offre plus avantageuse s'applique déjà : -160,00\u00a0€")
 
     def test_wrong_codes_limited(self):
         create_promotion(code="BIENVENUE15")
@@ -166,11 +166,11 @@ class OrderWithPromotionTests(TestCase):
         promotion.save()
 
         order = Order.objects.get()
-        self.assertContains(review, "Code appliqué : -100,00 €")
+        self.assertContains(review, "Code appliqué : -100,00\u00a0€")
         self.assertEqual((order.estimated_price, order.discount), (Decimal("1900.00"), Decimal("100.00")))
         page = self.client.get(reverse("my_order_detail", args=[order.pk]))
-        self.assertContains(page, "2000,00 €")  # prix avant remise
-        self.assertContains(page, "-100,00 € — Bienvenue")
+        self.assertContains(page, "2\u00a0000,00\u00a0€")  # prix avant remise
+        self.assertContains(page, "-100,00\u00a0€ — Bienvenue")
 
     def test_refused_code_shown_on_the_form_and_nothing_sent(self):
         response = self.client.post(self.url, {**self.data, "promo_code": "INCONNU"})
@@ -187,7 +187,7 @@ class OrderWithPromotionTests(TestCase):
         response = self.client.post(self.url, {**self.data, **review_tokens(review), "confirm": ""})
 
         self.assertContains(response, "a changé depuis votre vérification")
-        self.assertContains(response, "2000,00 €")
+        self.assertContains(response, "2\u00a0000,00\u00a0€")
         self.assertFalse(Order.objects.exists())
 
     def used_just_before_saving(self, promotion, client):
@@ -204,7 +204,7 @@ class OrderWithPromotionTests(TestCase):
             response = submit_order(self.client, self.url, self.data)
 
         self.assertContains(response, "a changé depuis votre vérification")
-        self.assertContains(response, "2000,00 €")
+        self.assertContains(response, "2\u00a0000,00\u00a0€")
         self.assertFalse(Order.objects.filter(client=self.marie).exists())
 
     def test_last_code_use_taken_meanwhile_shown_on_the_form(self):

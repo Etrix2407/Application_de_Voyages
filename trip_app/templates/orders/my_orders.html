@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load money %}
 
 {% block title %}Mes demandes de voyage{% endblock %}
 
@@ -24,7 +25,7 @@
                             <td data-label="Destination">{{ order.destination_label }}</td>
                             <td data-label="Dates">Du {{ order.departure_date|date:"j F Y" }} au {{ order.return_date|date:"j F Y" }}</td>
                             <td data-label="État"><span class="status status-{{ order.status }}">{{ order.get_status_display }}</span></td>
-                            <td data-label="Prix estimé">{{ order.latest_price }} €{% if order.is_latest_price_quote_required %} + destination sur devis{% endif %}</td>
+                            <td data-label="Prix estimé">{{ order.latest_price|euros }}{% if order.is_latest_price_quote_required %} + destination sur devis{% endif %}</td>
                             <td data-label="Détail"><a href="{% url 'my_order_detail' order.pk %}">Voir la demande<span class="sr-only"> n° {{ order.pk }} : {{ order.destination_label }}</span></a></td>
                         </tr>
                     {% endfor %}

@@ -248,7 +248,7 @@ class PriceAtConfirmationTests(TestCase):
         self.assertEqual(self.order.estimated_price, Decimal("2100.00"))
         self.assertEqual(self.order.latest_price, Decimal("2320.00"))
         self.assertEqual(
-            self.order.history.get().reason, "Prix recalculé aux tarifs du jour : 2100,00 € → 2320,00 €."
+            self.order.history.get().reason, "Prix recalculé aux tarifs du jour : 2\u00a0100,00\u00a0€ → 2\u00a0320,00\u00a0€."
         )
 
     def test_unchanged_price_leaves_no_note(self):
@@ -264,7 +264,7 @@ class PriceAtConfirmationTests(TestCase):
 
         response = self.client.get(reverse("manage_order_detail", args=[self.order.pk]))
 
-        self.assertContains(response, "Prix aux tarifs actuels : <strong>2320,00 €</strong>", html=False)
+        self.assertContains(response, "Prix aux tarifs actuels : <strong>2\u00a0320,00\u00a0€</strong>", html=False)
 
     def test_client_sees_both_prices(self):
         self.raise_prices()
@@ -274,11 +274,11 @@ class PriceAtConfirmationTests(TestCase):
         detail = self.client.get(reverse("my_order_detail", args=[self.order.pk]))
         listing = self.client.get(reverse("my_orders"))
 
-        self.assertContains(detail, "2100,00 €")
+        self.assertContains(detail, "2\u00a0100,00\u00a0€")
         self.assertContains(detail, "Prix à la confirmation")
-        self.assertContains(detail, "2320,00 €")
-        self.assertContains(listing, "2320,00 €")
-        self.assertNotContains(listing, "2100,00 €")
+        self.assertContains(detail, "2\u00a0320,00\u00a0€")
+        self.assertContains(listing, "2\u00a0320,00\u00a0€")
+        self.assertNotContains(listing, "2\u00a0100,00\u00a0€")
 
     def test_price_set_after_quote_request_no_longer_shown_on_quote(self):
         lisbon = create_destination(create_country("Portugal"), "Lisbonne")
@@ -291,9 +291,9 @@ class PriceAtConfirmationTests(TestCase):
         detail = self.client.get(reverse("my_order_detail", args=[order.pk]))
         listing = self.client.get(reverse("my_orders"))
 
-        self.assertContains(detail, "800,00 €")
+        self.assertContains(detail, "800,00\u00a0€")
         self.assertNotContains(detail, "sur devis")
-        self.assertContains(listing, "800,00 €")
+        self.assertContains(listing, "800,00\u00a0€")
         self.assertNotContains(listing, "sur devis")
 
 

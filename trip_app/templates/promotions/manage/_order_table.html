@@ -1,3 +1,4 @@
+{% load money %}
 <div class="table-scroll" tabindex="0" role="region" aria-label="Tableau : {{ caption }}">
     <table>
         <caption>{{ caption }}</caption>
@@ -19,7 +20,7 @@
                     <td>{{ order.client_label }}</td>
                     <td>{{ order.destination_label }}</td>
                     <td><span class="status status-{{ order.status }}">{{ order.get_status_display }}</span></td>
-                    <td>{{ order.latest_discount|floatformat:2 }} €</td>
+                    <td>{{ order.latest_discount|euros }}</td>
                 </tr>
             {% endfor %}
         </tbody>

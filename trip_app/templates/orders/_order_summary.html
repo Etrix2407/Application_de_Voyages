@@ -1,22 +1,23 @@
+{% load money %}
     <dl class="details">
         {% include "orders/_trip_details.html" %}
         {% if order.promotion_name %}
             <dt>Prix avant remise</dt>
-            <dd>{{ order.price_before_discount }} €</dd>
+            <dd>{{ order.price_before_discount|euros }}</dd>
             <dt>Remise</dt>
-            <dd>-{{ order.discount }} € — {{ order.promotion_name }}</dd>
+            <dd>-{{ order.discount|euros }} — {{ order.promotion_name }}</dd>
         {% endif %}
         <dt>Prix estimé à la demande{% if order.promotion_name %}, après remise{% endif %}</dt>
         <dd>
-            <strong>{{ order.estimated_price }} €</strong> — estimation, non contractuel, calculée le {{ order.created_at|date:"j F Y" }}.
+            <strong>{{ order.estimated_price|euros }}</strong> — estimation, non contractuel, calculée le {{ order.created_at|date:"j F Y" }}.
             {% if order.shows_quote_note_on_estimate %}<br>{% include "orders/_quote_note.html" %}{% endif %}
         </dd>
         {% if order.confirmed_price is not None %}
             <dt>Prix à la confirmation</dt>
             <dd>
-                <strong>{{ order.confirmed_price }} €</strong> — recalculé aux tarifs du jour de la confirmation, non contractuel.
+                <strong>{{ order.confirmed_price|euros }}</strong> — recalculé aux tarifs du jour de la confirmation, non contractuel.
                 {% if order.promotion_name %}
-                    {% if order.confirmed_discount_applies %}<br>Remise « {{ order.promotion_name }} » ré-appliquée : -{{ order.confirmed_discount }} € sur {{ order.confirmed_price_before_discount }} €.
+                    {% if order.confirmed_discount_applies %}<br>Remise « {{ order.promotion_name }} » ré-appliquée : -{{ order.confirmed_discount|euros }} sur {{ order.confirmed_price_before_discount|euros }}.
                     {% else %}<br>Remise « {{ order.promotion_name }} » non applicable au prix recalculé{% endif %}
                 {% endif %}
                 {% if order.is_confirmed_quote_required %}<br>{% include "orders/_quote_note.html" %}{% endif %}

@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load money %}
 
 {% block title %}Statistiques — {{ promotion.name }}{% endblock %}
 
@@ -15,7 +16,7 @@
                 dont {{ statistics.anonymized_count }} demande{{ statistics.anonymized_count|pluralize }} de clients ayant supprimé leur compte{% endif %}
         </dd>
         <dt>Total des remises accordées</dt>
-        <dd>{{ statistics.total_discount|floatformat:2 }} € (remise recalculée à la confirmation pour les demandes confirmées)</dd>
+        <dd>{{ statistics.total_discount|euros }} (remise recalculée à la confirmation pour les demandes confirmées)</dd>
         <dt>Clients différents</dt>
         <dd>{{ statistics.client_count }}{% if statistics.anonymized_count %} (sans compter les clients ayant supprimé leur compte){% endif %}</dd>
     </dl>

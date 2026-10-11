@@ -61,6 +61,6 @@ class PromotionStatisticsTests(TestCase):
 
         response = self.client.get(reverse("manage_promotion_statistics", args=[self.promotion.pk]))
 
-        self.assertContains(response, "50,00 €")
+        self.assertContains(response, "50,00\u00a0€")
         self.assertContains(response, reverse("manage_order_detail", args=[order.pk]))
         self.assertContains(response, "Aucune demande annulée.")

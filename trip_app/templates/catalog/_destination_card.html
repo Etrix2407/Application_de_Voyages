@@ -1,3 +1,4 @@
+{% load money %}
 <li class="card">
     {% if destination.photo %}
         <img class="card-photo" src="{{ destination.photo.url }}" alt="" loading="lazy">
@@ -10,6 +11,6 @@
         <p>Période idéale : {{ destination.ideal_period }}</p>
     {% endif %}
     {% if destination.price_from is not None %}
-        <p>À partir de {{ destination.price_from }} €</p>
+        <p>À partir de {{ destination.price_from|euros }}</p>
     {% endif %}
 </li>

@@ -66,7 +66,7 @@ class CreateOrderTests(TestCase):
 
         response = self.client.get(self.url)
 
-        self.assertContains(response, "Cérémonie du thé — 50,00 € par personne")
+        self.assertContains(response, "Cérémonie du thé — 50,00\u00a0€ par personne")
         self.assertContains(response, "à partir de 12 ans")
         self.assertNotContains(response, "Karaoké fermé")
         self.assertNotContains(response, "Trek")
@@ -75,7 +75,7 @@ class CreateOrderTests(TestCase):
         response = self.client.post(self.url, self.data())
 
         # (1000 + 50) × 2 adultes + (1000 + 50) × 50 % × 2 enfants
-        self.assertContains(response, "3150,00 €")
+        self.assertContains(response, "3\u00a0150,00\u00a0€")
         self.assertContains(response, "estimation, non contractuel")
         self.assertFalse(Order.objects.exists())
 
@@ -106,7 +106,7 @@ class CreateOrderTests(TestCase):
         response = self.client.post(reverse("create_order", args=[on_quote.pk]), self.data())
 
         self.assertContains(response, "sur devis")
-        self.assertContains(response, "150,00 €")  # activité seule : 50 × 2 + 50 × 50 % × 2
+        self.assertContains(response, "150,00\u00a0€")  # activité seule : 50 × 2 + 50 × 50 % × 2
 
     def test_invalid_request_rejected_with_one_message(self):
         # Les règles elles-mêmes sont testées sur le modèle (test_models.py) : ici, le retour au formulaire.
@@ -215,7 +215,7 @@ class SubmissionSafetyTests(TestCase):
         response = self.confirm()
 
         self.assertContains(response, "a changé depuis votre vérification")
-        self.assertContains(response, "15000,00 €")  # (6000 × 2) + (6000 × 50 % × 1)
+        self.assertContains(response, "15\u00a0000,00\u00a0€")  # (6000 × 2) + (6000 × 50 % × 1)
         self.assertFalse(Order.objects.exists())
 
         # Le client renvoie la nouvelle page de vérification : la demande est enregistrée au prix affiché.

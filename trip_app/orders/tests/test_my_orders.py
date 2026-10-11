@@ -31,7 +31,7 @@ class MyOrdersTests(TestCase):
 
         self.assertContains(response, "Kyoto")
         self.assertContains(response, "En attente")
-        self.assertContains(response, "2100,00 €")
+        self.assertContains(response, "2\u00a0100,00\u00a0€")
         self.assertContains(response, reverse("my_order_detail", args=[self.order.pk]))
 
     def test_list_most_recent_first(self):
@@ -59,7 +59,7 @@ class MyOrdersTests(TestCase):
 
         response = self.client.get(reverse("my_order_detail", args=[order.pk]))
 
-        self.assertContains(response, "Cérémonie du thé (50,00 € par personne)")
+        self.assertContains(response, "Cérémonie du thé (50,00\u00a0€ par personne)")
         self.assertContains(response, "Chambre calme")
         self.assertContains(response, "estimation, non contractuel")
         self.assertContains(self.client.get(reverse("my_order_detail", args=[self.order.pk])), "Client")

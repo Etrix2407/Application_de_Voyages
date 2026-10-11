@@ -4,9 +4,14 @@ import unicodedata
 from datetime import timedelta
 
 
+# Espace insécable : un montant n'est jamais coupé en fin de ligne.
+NBSP = " "
+
+
 def euros(amount) -> str:
-    """Montant en euros à la française : « 1234,50 € »."""
-    return f"{amount:.2f}".replace(".", ",") + " €"
+    """Montant en euros à la française, milliers séparés : « 1 234,50 € »."""
+    grouped = f"{amount:,.2f}".replace(",", NBSP).replace(".", ",")
+    return f"{grouped}{NBSP}€"
 
 
 def normalize(text: str) -> str:

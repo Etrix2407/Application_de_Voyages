@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load money %}
 
 {% block title %}Demande n° {{ order.pk }} — Gestion{% endblock %}
 
@@ -31,9 +32,9 @@
             {% if can_confirm %}
                 <li>
                     <p>
-                        Prix aux tarifs actuels : <strong>{{ price_if_confirmed.price }} €</strong>
-                        {% if order.promotion_name %}(remise « {{ order.promotion_name }} » de {{ price_if_confirmed.discount }} € déduite){% endif %}
-                        (estimation à la demande : {{ order.estimated_price }} €). C'est ce prix qui sera enregistré.
+                        Prix aux tarifs actuels : <strong>{{ price_if_confirmed.price|euros }}</strong>
+                        {% if order.promotion_name %}(remise « {{ order.promotion_name }} » de {{ price_if_confirmed.discount|euros }} déduite){% endif %}
+                        (estimation à la demande : {{ order.estimated_price|euros }}). C'est ce prix qui sera enregistré.
                         {% if destination_on_quote_now %}<br>{% include "orders/_quote_note.html" with for_staff=True %}{% endif %}
                     </p>
                     <form method="post" action="{% url 'manage_confirm_order' order.pk %}">
