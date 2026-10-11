@@ -103,9 +103,10 @@ def _create_mailing(promotion: Promotion, message: str, author: User, submission
 def mailing_preview(promotion: Promotion, message: str) -> tuple[str, str]:
     """Objet et texte de l'e-mail, avant l'envoi. Prénom et lien de désinscription : des exemples."""
     prefetch_related_objects([promotion], *visible_targets(promotion.scope))
-    return render_email(
+    rendered = render_email(
         EmailKind.PROMOTION, _email_fields(promotion, message, PREVIEW_FIRST_NAME, PREVIEW_UNSUBSCRIBE_LINK)
     )
+    return rendered.subject, rendered.text
 
 
 def promotion_email_context(mailing: PromotionMailing, user: User) -> dict:
