@@ -38,6 +38,9 @@ def create_agent(request):
             agent = form.save()
         except IntegrityError:
             # Adresse prise au même instant par un autre compte : la base garantit l'unicité.
+            # Toute autre erreur d'intégrité est un vrai problème : elle n'est pas maquillée.
+            if not User.objects.filter(email__iexact=form.cleaned_data["email"]).exists():
+                raise
             form.add_error("email", "Un compte existe déjà avec cette adresse e-mail.")
         else:
             created = f"Le compte de {agent.get_full_name()} ({agent.employee_number}) a été créé."

@@ -346,13 +346,18 @@ class LoginTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertNotIn("_auth_user_id", self.client.session)
 
+    def assert_account_locked(self, response):
+        # Blocage du compte (message « locked »), et non de la connexion (« locked_ip »).
+        self.assertContains(response, "Pour votre sécurité, réessayez dans")
+        self.assertNotContains(response, "depuis cette connexion")
+
     def test_locked_after_too_many_failures(self):
         for _ in range(login_failures.max_attempts):
             self.log_in(password="mauvais-mot-2026")
 
         response = self.log_in()
 
-        self.assertContains(response, "Trop de tentatives échouées")
+        self.assert_account_locked(response)
         self.assertNotIn("_auth_user_id", self.client.session)
 
     def test_lockout_is_per_email(self):
@@ -374,7 +379,7 @@ class LoginTests(TestCase):
             for _ in range(per_ip):
                 self.log_in(password="mauvais-mot-2026", ip=f"203.0.113.{number}")
 
-        self.assertContains(self.log_in(), "Trop de tentatives échouées")
+        self.assert_account_locked(self.log_in())
 
     def test_password_reset_unlocks_login(self):
         for _ in range(login_failures.max_attempts):
