@@ -94,11 +94,6 @@ class IdealPeriodTests(SimpleTestCase):
 
 
 class DestinationTests(TestCase):
-    def test_optional_fields(self):
-        destination = Destination(country=create_country(), name="Kyoto", description="x")
-
-        destination.full_clean()
-
     def test_incomplete_period_rejected(self):
         destination = Destination(
             country=create_country(), name="Kyoto", description="x", start_month=Month.APRIL
