@@ -8,6 +8,7 @@ Application web (Python 3, Django 5.2) pour une agence de voyage. Elle gère les
 - [Guide d'utilisation](#guide-dutilisation)
 - [Fonctionnalités par rôle](#fonctionnalités-par-rôle)
 - [Règles de gestion appliquées](#règles-de-gestion-appliquées)
+- [Accessibilité](#accessibilité)
 - [Promotions (v4) : décisions validées](#promotions-v4--décisions-validées)
 - [E-mails (v5) : socle d'envoi](#e-mails-v5--socle-denvoi)
 - [Tests](#tests)
@@ -17,7 +18,7 @@ Application web (Python 3, Django 5.2) pour une agence de voyage. Elle gère les
 
 ## Démarrage rapide
 
-Prérequis : Python 3.10 ou plus récent.
+Prérequis : Python 3.10 ou plus récent. Les dépendances (Django 5.2.18 ou plus récent, Pillow 12.3 ou plus récent) sont installées par `requirements.txt`.
 
 ```bash
 pip install -r requirements.txt
@@ -33,7 +34,7 @@ Ouvrez ensuite http://127.0.0.1:8000/ et connectez-vous avec le compte administr
 
 ### Le fichier `.env` (réglages et secrets)
 
-Les réglages se trouvent dans le fichier **`.env`**, à la racine du dépôt, créé à partir du modèle [.env.example](.env.example) où chaque réglage est expliqué. Il contient des secrets : il **n'est jamais commité** (protégé par `.gitignore`) et ne doit pas être partagé. Le site refuse de démarrer sans `DJANGO_SECRET_KEY`, même en développement, et sans `DJANGO_PASSWORD_PEPPER` en production : renseignez-les (commande de génération indiquée dans le modèle). Le modèle est réglé pour la production (`DJANGO_DEBUG=0`) : sur votre ordinateur, passez `DJANGO_DEBUG=1`. Les variables d'environnement définies dans Windows ou sur le serveur restent prioritaires sur ce fichier.
+Les réglages se trouvent dans le fichier **`.env`**, à la racine du dépôt, créé à partir du modèle [.env.example](.env.example) où chaque réglage est expliqué. Il contient des secrets : il **n'est jamais commité** (protégé par `.gitignore`) et ne doit pas être partagé. Le site refuse de démarrer sans `DJANGO_SECRET_KEY`, même en développement, et sans `DJANGO_PASSWORD_PEPPER` ni `DJANGO_SITE_URL` en production : renseignez-les (commande de génération indiquée dans le modèle). Le modèle est réglé pour la production (`DJANGO_DEBUG=0`) : sur votre ordinateur, passez `DJANGO_DEBUG=1`. Les variables d'environnement définies dans Windows ou sur le serveur restent prioritaires sur ce fichier.
 
 Pour **recevoir vraiment les e-mails** (Outlook / Hotmail) : dans `.env`, renseignez `DJANGO_EMAIL_HOST_USER`, `DJANGO_EMAIL_HOST_PASSWORD` (mot de passe d'application si la validation en deux étapes est activée) et `DJANGO_DEFAULT_FROM_EMAIL` (même adresse), puis passez `DJANGO_EMAIL_BACKEND` sur `django.core.mail.backends.smtp.EmailBackend`. Vérifiez avec `python manage.py sendtestemail votre@adresse`. L'expéditeur prévu, `Horizons Lointains <noreply@horizons-lointains.be>` (utilisé si `DJANGO_DEFAULT_FROM_EMAIL` est vide), ne fonctionnera qu'avec le serveur d'envoi du domaine, qui n'existe pas encore : avec Outlook, l'expéditeur doit rester l'adresse Outlook. En développement (`DJANGO_DEBUG=1`), le **mode test** est actif : renseignez aussi `DJANGO_EMAIL_TEST_RECIPIENT` (votre adresse) pour recevoir tous les e-mails, sinon ils restent affichés dans le terminal (voir [E-mails en développement](#e-mails-en-développement)).
 
@@ -57,11 +58,11 @@ La commande crée :
   - « Confirmée », au voyage **terminé** (départ il y a environ un mois) : ses dates et son historique sont reculés de 60 jours, car le site n'accepte que des départs à venir.
 - 1 avis à 5 étoiles du client démo sur ce voyage terminé, **publié**.
 
-La commande refuse de s'exécuter en production (`DJANGO_DEBUG=0`). Elle peut être relancée sans créer de doublons.
+La commande refuse de s'exécuter en production (`DJANGO_DEBUG=0`), ainsi que sur une base qui contient un compte client ou agent dont l'adresse ne se termine pas par `@example.com` (les administrateurs ne comptent pas : le compte créé par `createsuperuser` ne la bloque pas). Elle peut être relancée sans créer de doublons.
 
 ### E-mails en développement
 
-En développement, aucun e-mail n'est réellement envoyé : il s'affiche dans le terminal où tourne `runserver`. C'est le cas des liens « mot de passe oublié » et des liens d'activation des agents. Copiez le lien affiché dans le navigateur.
+En développement, aucun e-mail n'est réellement envoyé : il s'affiche dans le terminal où tourne `runserver`. C'est le cas des liens d'activation des agents : copiez le lien affiché dans le navigateur. Les e-mails **mis en file** (« mot de passe oublié » et e-mails promotionnels) ne partent qu'au passage de `process_emails` : lancez `python manage.py process_emails`, ils s'affichent alors dans son terminal.
 
 C'est le **mode test**, actif par défaut dès que `DJANGO_DEBUG=1` (jamais en production) :
 
@@ -100,21 +101,21 @@ Formats à respecter :
 |---|---|
 | Fuseau horaire principal | Tapez la ville de référence du pays (ex. « tokyo ») et choisissez-la dans les suggestions (« Asie — Tokyo » ; pour un pays à plusieurs fuseaux, celle de la destination principale). Le décalage avec la Belgique (été, hiver et aujourd'hui) est **calculé automatiquement**, changements d'heure compris |
 | Période idéale | Mois de début et mois de fin ; peut chevaucher l'année (novembre → mars). Facultative |
-| Durée d'une activité | En minutes : `90` pour 1 h 30 |
-| Photo | Fichier JPEG, PNG ou WebP de 5 Mo maximum, envoyé depuis l'ordinateur. Facultative ; une nouvelle photo remplace l'ancienne. Les données cachées de la photo (position GPS, appareil, date de prise de vue) sont retirées avant publication |
+| Durée d'une activité | En minutes : `90` pour 1 h 30. De 1 minute à 30 jours |
+| Photo | Fichier JPEG, PNG ou WebP de 5 Mo maximum et de 40 millions de pixels au plus, envoyé depuis l'ordinateur. Facultative ; une nouvelle photo remplace l'ancienne. Les données cachées de la photo (position GPS, appareil, date de prise de vue) sont retirées avant publication, et la photo est réduite à 1 600 pixels sur son plus grand côté |
 | Prix | En euros. Le prix « à partir de » d'une destination est facultatif |
 
 ### Gérer les clients (agent ou administrateur)
 
-1. Menu **Clients** : liste par pages de 25, avec recherche par nom, prénom ou e-mail (sans tenir compte des accents).
+1. Menu **Clients** : liste par pages de 25, avec recherche par nom, prénom ou e-mail (sans tenir compte des accents ni des majuscules). Après la correction d'un client, vous revenez à la liste avec votre recherche et votre page.
 2. **Corriger** permet de modifier le prénom, le nom, le téléphone et la date de naissance. L'e-mail et le mot de passe restent gérés par le client.
 3. **Envoyer un lien de mot de passe** (sur la page **Corriger** du client) : le client reçoit un lien valable 1 heure pour choisir un nouveau mot de passe. L'agent ne voit jamais le mot de passe.
-4. Le badge **Adresse à vérifier** sous l'e-mail d'un client signale que 3 messages différents n'ont pas pu lui être envoyés : vérifiez l'adresse avec lui (par téléphone). Le badge disparaît au prochain e-mail bien parti vers lui, ou quand il change d'adresse.
+4. Le badge **Adresse à vérifier** sous l'e-mail d'un client signale que 3 messages différents ont été refusés définitivement pour son adresse (adresse inconnue ou invalide) : vérifiez l'adresse avec lui (par téléphone). Une panne du serveur d'envoi ne déclenche pas ce badge. Le badge disparaît au prochain e-mail bien parti vers lui, ou quand il change d'adresse.
 
 ### E-mails en échec (agent ou administrateur)
 
-1. Menu **E-mails en échec** : les e-mails qui n'ont pas pu partir et peuvent encore être renvoyés, les plus récents d'abord, par pages de 25, avec le destinataire, le compte et la demande de voyage liés, le type, l'objet, le nombre de tentatives et la raison de l'échec.
-2. **Renvoyer** : le message est refait à neuf (avec un nouveau lien s'il en contient un) et envoyé tout de suite. S'il échoue encore, de nouvelles tentatives automatiques ont lieu 5 puis 15 minutes plus tard. Un message devenu sans objet (par exemple un lien de confirmation pour une adresse déjà confirmée, ou un lien de mot de passe pour une adresse qui a changé) n'est pas renvoyé : la raison est affichée et il disparaît de la liste. L'invitation d'un agent et le lien « Choisissez un nouveau mot de passe » envoyé à un membre du personnel ne peuvent être renvoyés que par l'administrateur (avec un nouveau lien de 7 jours). Les e-mails « Votre compte a été supprimé » ne sont jamais renvoyés : l'adresse est effacée à la suppression du compte.
+1. Menu **E-mails en échec** : les e-mails qui n'ont pas pu partir et peuvent encore être renvoyés, les plus récents d'abord, par pages de 25, avec le destinataire, le compte et la demande de voyage liés, le type, l'objet, le nombre de tentatives et la raison de l'échec (« Destinataire refusé (adresse inconnue ou invalide) », « Serveur d'envoi injoignable », « Délai dépassé » ou « Autre erreur », avec le détail technique en petit).
+2. **Renvoyer** : le message est refait à neuf (avec un nouveau lien s'il en contient un) et envoyé tout de suite. Un double clic, ou deux agents en même temps, ne l'envoient qu'une fois (« Cet e-mail vient déjà d'être renvoyé : il n'a pas été envoyé une deuxième fois. »). S'il échoue encore, de nouvelles tentatives automatiques ont lieu 5 puis 15 minutes plus tard. Un message devenu sans objet (par exemple un lien de confirmation pour une adresse déjà confirmée, ou un lien de mot de passe pour une adresse qui a changé) n'est pas renvoyé : la raison est affichée et il disparaît de la liste. L'invitation d'un agent et le lien « Choisissez un nouveau mot de passe » envoyé à un membre du personnel ne peuvent être renvoyés que par l'administrateur (avec un nouveau lien de 7 jours). Les e-mails « Votre compte a été supprimé » ne sont jamais renvoyés : l'adresse est effacée à la suppression du compte.
 
 ### Modèles des e-mails (administrateur)
 
@@ -148,13 +149,13 @@ Formats à respecter :
    - une assiette : séjour, activités ou total ;
    - des dates de validité, qui portent sur la date de la demande (dernier jour inclus) ;
    - une période de départ, facultative ;
-   - un code, facultatif : sans code, la promotion est automatique. Il compte de 4 à 20 lettres sans accents ou chiffres, et une saisie en minuscules est acceptée ;
+   - un code, facultatif : sans code, la promotion est automatique. Il compte de 4 à 20 caractères : lettres sans accent et chiffres ; une saisie en minuscules est acceptée ;
    - des limites d'utilisation, facultatives.
 3. **Modifier** : la date de fin peut être avancée, mais pas placée dans le passé. Chaque modification est notée dans l'**historique** de la fiche, avec la date, l'auteur et les champs modifiés.
-4. **Désactiver** : la promotion n'est plus proposée mais reste dans l'historique. **Supprimer** n'est possible que pour une promotion jamais utilisée.
+4. **Désactiver** (après une page de confirmation) : la promotion n'est plus proposée mais reste dans l'historique. C'est **définitif** : elle ne peut pas être réactivée. **Supprimer** n'est possible que pour une promotion jamais utilisée ni envoyée par e-mail.
 5. Un pays ou une destination visé par une promotion ne peut pas être supprimé : désactivez-le.
 6. **Statistiques** (lien depuis la fiche, agents et administrateur) : nombre de demandes qui ont utilisé la promotion, total des remises accordées (pour une demande confirmée, la remise recalculée à la confirmation), nombre de clients différents, et liste des demandes avec un lien vers chacune. Les demandes annulées ne comptent dans aucun chiffre et sont listées à part. Les demandes de clients ayant supprimé leur compte sont comptées dans les demandes (« dont 2 demandes de clients ayant supprimé leur compte ») mais pas dans les clients différents : on ne peut plus savoir de qui il s'agit.
-7. **Envoyer une promotion par e-mail** (administrateur, lien depuis la liste ou la fiche d'une promotion en cours ou à venir) : choisissez la promotion, rédigez votre message ; la page indique le nombre de clients qui le recevront. Les e-mails partent dans les minutes qui suivent (voir [E-mails promotionnels](#e-mails-promotionnels)). Les envois passés (date, auteur, nombre de destinataires) sont listés sur la fiche de la promotion.
+7. **Envoyer une promotion par e-mail** (administrateur, lien depuis la liste ou la fiche d'une promotion en cours ou à venir) : choisissez la promotion, rédigez votre message ; une page de confirmation affiche l'aperçu de l'e-mail et demande « Envoyer la promotion « … » à N clients ? » (sans destinataire, aucun bouton d'envoi n'est proposé). Seules les promotions en cours ou à venir, pas épuisées et qui visent encore un pays ou une destination proposé peuvent être envoyées. Un double clic n'envoie la promotion qu'une fois. Les e-mails partent dans les minutes qui suivent (voir [E-mails promotionnels](#e-mails-promotionnels)). Les envois passés (date, auteur, nombre de destinataires) sont listés sur la fiche de la promotion.
 
 ### Utiliser l'application (client)
 
@@ -178,11 +179,11 @@ Formats à respecter :
 
 ### Mot de passe oublié
 
-Sur la page de connexion, **Mot de passe oublié ?** envoie un lien valable 1 heure (3 demandes par heure au plus pour une même adresse, contre les envois en masse).
+Sur la page de connexion, **Mot de passe oublié ?** envoie un lien valable 1 heure (3 demandes par heure au plus pour une même adresse, contre les envois en masse). L'e-mail est mis en file et part au passage suivant de `process_emails` (5 minutes au plus, avant les e-mails promotionnels) : la page répond donc aussi vite, que l'adresse ait un compte ou non. En développement, lancez `python manage.py process_emails` pour le recevoir. Le lien d'un membre du personnel désactivé ne fonctionne plus.
 
 Après chaque changement de mot de passe (depuis le profil, par « Mot de passe oublié » ou par un lien envoyé par l'agence), un e-mail de sécurité prévient le titulaire du compte, client ou membre du personnel : « Si ce n'est pas vous, contactez-nous ». Il n'est pas envoyé quand un agent invité choisit son tout premier mot de passe.
 
-Limites par adresse IP, contre les robots : 20 échecs de connexion par 15 minutes, 5 inscriptions, 10 demandes « Mot de passe oublié », 10 renvois de l'e-mail de confirmation et 30 codes promo invalides par heure ; et, dans l'heure qui suit une inscription depuis cette IP, 3 échecs de connexion suffisent à la bloquer 15 minutes. Elles sont volontairement larges, car un bureau ou un wifi partage souvent une même IP. Après 5 tentatives de connexion échouées, la connexion est bloquée 15 minutes pour cette adresse e-mail.
+Limites par adresse IP, contre les robots : 20 échecs de connexion par 15 minutes, 5 inscriptions, 10 demandes « Mot de passe oublié », 10 renvois de l'e-mail de confirmation et 30 codes promo invalides par heure ; et, dans l'heure qui suit une inscription depuis cette IP, 3 échecs de connexion suffisent à la bloquer 15 minutes. Elles sont volontairement larges, car un bureau ou un wifi partage souvent une même IP. Après 5 tentatives de connexion échouées pour une même adresse depuis une même IP, la connexion à cette adresse est bloquée 15 minutes depuis cette IP seulement : le titulaire peut se connecter ailleurs. À partir de 50 échecs en 15 minutes pour une même adresse, toutes IP confondues, le compte est bloqué partout pendant 15 minutes. Une réinitialisation réussie du mot de passe lève le blocage du compte et celui de l'IP utilisée pour la réinitialisation (pas la limite générale par IP). Le changement d'adresse e-mail est limité à 3 demandes par heure par compte et 10 par IP ; son lien (24 heures) ne fonctionne plus si le mot de passe a changé entre-temps. Toutes les limites sont dans `accounts/services/throttling.py` et respectent la durée annoncée depuis le premier essai.
 
 ## Fonctionnalités par rôle
 
@@ -191,7 +192,7 @@ Limites par adresse IP, contre les robots : 20 échecs de connexion par 15 minut
 | Visiteur | Catalogue complet (pays, destinations, activités) ; page « Destinations » avec les notes ; lecture des avis vérifiés ; recherche et filtres ; inscription ; connexion |
 | Client | Détail des pays, destinations et activités ; recherche et filtres ; favoris ; demandes de voyage (faire une demande une fois l'adresse e-mail confirmée, suivre et annuler ses demandes en attente) ; avis sur ses voyages terminés (donner, modifier 30 jours, supprimer) ; profil (modifier, changer le mot de passe ou l'adresse e-mail, télécharger ses données, supprimer le compte) |
 | Agent | Consultation et recherche ; gestion du catalogue ; liste des clients (avec le badge « Adresse à vérifier »), correction de leurs informations (sauf e-mail et mot de passe), envoi d'un lien de mot de passe ; liste des e-mails en échec et renvoi ; traitement des demandes de voyage (filtrer, confirmer, annuler avec motif) ; modération des avis (publier, refuser ou masquer avec motif), réponse de l'agence, liste filtrée de tous les avis ; consultation des promotions ; profil (consultation, changement du mot de passe, téléchargement de ses informations de compte et de la liste des e-mails reçus au format JSON) |
-| Administrateur | Droits de l'agent + gestion du personnel + gestion des promotions (créer, modifier, désactiver, supprimer si jamais utilisée) + modification du texte des e-mails |
+| Administrateur | Droits de l'agent + gestion du personnel + gestion des promotions (créer, modifier, désactiver, supprimer si jamais utilisée ni envoyée par e-mail, envoyer par e-mail) + modification du texte des e-mails |
 
 ## Règles de gestion appliquées
 
@@ -210,6 +211,19 @@ Limites par adresse IP, contre les robots : 20 échecs de connexion par 15 minut
 - Inscription avec une adresse déjà confirmée : aucun compte n'est créé, la page affichée est identique et la propriétaire de l'adresse est prévenue par e-mail. Limite atténuée : le compte étant utilisable avant confirmation, essayer de se connecter avec le mot de passe choisi permet de savoir si l'adresse avait déjà un compte confirmé ; pour freiner ce test en série, une adresse IP qui s'est inscrite dans l'heure est bloquée 15 minutes après 3 échecs de connexion.
 - Inscription avec l'adresse de quelqu'un d'autre (« pré-détournement ») : un tiers peut créer un compte non confirmé avec une adresse qui n'est pas la sienne et un mot de passe qu'il connaît. La page de confirmation affiche donc les informations du compte (nom, téléphone, date de naissance) et demande un clic sur un bouton : la vraie propriétaire de l'adresse voit que ce compte n'est pas le sien et, au lieu de le confirmer, recommence l'inscription, ce qui le remplace par le sien. Ouvrir le lien ne confirme rien.
 - Clients non confirmés : la demande de voyage est refusée à la fois par la vue et par le service (`orders/services/placing.py`). Le personnel n'est pas concerné.
+- Deux inscriptions simultanées avec la même adresse affichent la même page que toute inscription, sans erreur.
+- Les règles de validité d'une promotion (valeur, dates, période de départ, limites positives) et la durée d'une activité sont aussi garanties par des contraintes de la base.
+
+## Accessibilité
+
+Le site vise le niveau **WCAG 2.1 AA**, pour un public plutôt âgé :
+
+- contour de focus visible partout (blanc sur l'en-tête bleu) ; entrées du menu d'au moins 44 pixels de haut ; grandes cases à cocher, placées devant leur libellé ;
+- en haut de chaque formulaire de saisie, un **récapitulatif des erreurs** (`templates/_form_errors.html`, annoncé aux lecteurs d'écran), avec un lien vers chaque champ en erreur ;
+- autocomplétion des champs d'identité (prénom, nom, date de naissance, e-mail, téléphone), désactivée quand un agent corrige un client ;
+- tableaux défilables au clavier ; ceux des clients s'affichent en cartes sur téléphone ;
+- les liens répétés (« Modifier », « Supprimer »…) précisent leur objet aux lecteurs d'écran, et les symboles décoratifs ne sont pas lus ;
+- aucun style ni script dans les pages (compatible avec la `Content-Security-Policy`) : tout est dans `static/css/style.css`.
 
 ## Promotions (v4) : décisions validées
 
@@ -227,8 +241,8 @@ Version terminée. Le [Recap_4.md](Recap_4.md) décrit les promotions ; voici le
   - « Ce code ne s'applique pas à ces dates de départ » (départ hors de la période autorisée) ;
   - « Ce code ne s'applique pas à cette demande » (la remise serait nulle, ex. « sur les activités » sans activité) ;
   - « Trop de codes incorrects ont été essayés. Réessayez dans une heure, ou appelez l'agence. » (limite de sécurité atteinte) ;
-  - un code dont la promotion n'a pas encore commencé donne « Code invalide », pour ne pas révéler les offres à venir.
-- **Sécurité** : au plus 10 codes invalides (code inconnu ou promotion pas encore commencée) par heure pour un client, et 30 par adresse IP (tous comptes confondus), contre les essais au hasard. Un code expiré, déjà utilisé ou hors destination n'est pas compté.
+  - un code dont la promotion n'a pas encore commencé ou a été désactivée donne « Code invalide » (compté comme un essai faux), pour ne rien révéler ; une promotion terminée donne « Ce code a expiré », et « Ce code n'est plus disponible » est réservé au maximum total d'utilisations atteint.
+- **Sécurité** : au plus 10 codes invalides (code inconnu, promotion désactivée ou pas encore commencée) par heure pour un client, et 30 par adresse IP (tous comptes confondus), contre les essais au hasard. Un code expiré, déjà utilisé ou hors destination n'est pas compté.
 - **Envoi de la demande** : si la remise change entre la page de vérification et l'envoi (promotion expirée, dernière utilisation prise), la demande n'est pas envoyée et le client revoit le récapitulatif avec le nouveau prix. Pour un code promo, il revoit le formulaire avec le message sous le champ « Code promo ». Les limites sont revérifiées au moment de l'enregistrement : si deux clients envoient leur demande au même instant pour la dernière utilisation, un seul l'obtient.
 - **Limite par client** : le client est reconnu à une empreinte de son adresse e-mail (sans majuscules ni partie « +… » : moi+1@exemple.com = moi@exemple.com), enregistrée dans la demande et conservée après la suppression du compte : une réinscription avec la même adresse ne remet pas le compteur à zéro. Si le client change d'adresse, l'empreinte de toutes ses demandes est recalculée : la limite le suit. Changer `DJANGO_SECRET_KEY` remet en revanche tous ces compteurs à zéro.
 - **Promotion déjà utilisée** : seuls le **nom**, la **description** et la **date de fin** restent modifiables ; pour changer le reste, on crée une nouvelle promotion.
@@ -252,29 +266,31 @@ Tous les e-mails du site passent par un seul service, `accounts/services/emails.
 send_email(to, kind, fields, *, user=None, order_number=None) -> bool
 ```
 
-- `kind` : type de l'e-mail (`EmailKind`, dans `accounts/models.py`), clé stable qui fixe l'objet et le **texte** : celui de l'administrateur s'il l'a modifié, sinon le texte d'origine (voir [Modèles des e-mails](#modèles-des-e-mails)). La version **HTML** est construite à partir de ce texte, dans la mise en page commune `templates/emails/base.html` (liens cliquables, gros caractères) : un seul texte par e-mail. Chaque nouvel e-mail ajoute son type, son objet, son texte d'origine et ses champs variables dans `DEFAULT_TEXTS` (`accounts/services/email_texts.py`).
-- `fields` : valeur de chaque champ variable du type, par son nom français (ex. `{"prénom": ..., "lien": ...}`). Les liens sont absolus : `request.build_absolute_uri(...)` pendant une requête, `site_url(reverse(...))` dans une commande planifiée (réglage `DJANGO_SITE_URL`).
+- `kind` : type de l'e-mail (`EmailKind`, dans `accounts/models.py`), clé stable qui fixe l'objet et le **texte** : celui de l'administrateur s'il l'a modifié, sinon le texte d'origine (voir [Modèles des e-mails](#modèles-des-e-mails)). La version **HTML** est construite à partir de ce texte, dans la mise en page commune `templates/emails/base.html` (tableau centré de 600 pixels avec styles en ligne, pour Outlook ; gros caractères) : un seul texte par e-mail. Seuls les liens prévus (confirmation, mot de passe, désinscription, fiche de la demande…) sont cliquables, sous forme de bouton au texte explicite ; tout le reste s'affiche sans lien, même une adresse web saisie dans un prénom, un avis ou un texte de l'administrateur. La version texte garde l'adresse complète des liens. Chaque nouvel e-mail ajoute son type, son objet, son texte d'origine et ses champs variables dans `DEFAULT_TEXTS` (`accounts/services/email_texts.py`).
+- `fields` : valeur de chaque champ variable du type, par son nom français (ex. `{"prénom": ..., "lien": ...}`). Les liens sont absolus et construits par `site_url(reverse(...))` à partir de `DJANGO_SITE_URL`, pendant une requête comme dans une commande planifiée.
 - `user`, `order_number` : compte et demande de voyage concernés, notés dans le journal.
+
+Les dates et heures citées dans les e-mails sont à l'heure belge. Une demande de voyage y est désignée par sa destination et son pays, « Kyoto (Japon) » (`orders/services/labels.py`), et un avis par son titre : « votre avis « Séjour inoubliable » sur Kyoto (Japon) ».
 
 Fonctionnement :
 
-- L'e-mail part **après la validation de la transaction** en cours (immédiatement hors transaction). Un échec d'envoi ne bloque **jamais** l'action : il est noté dans le journal et dans les logs. La fonction renvoie `False` seulement si l'envoi immédiat a échoué (le personnel voit alors « Le lien n'a pas pu être envoyé »).
+- L'e-mail part **après la validation de la transaction** en cours (immédiatement hors transaction). Un échec d'envoi ne bloque **jamais** l'action : il est noté dans le journal et dans les logs du serveur (avec le numéro de la ligne du journal, jamais l'adresse). La fonction renvoie `False` seulement si l'envoi immédiat a échoué (le personnel voit alors « Le lien n'a pas pu être envoyé »).
 - Expéditeur `DJANGO_DEFAULT_FROM_EMAIL`, réponses vers `DJANGO_EMAIL_REPLY_TO` (défaut : info@horizons-lointains.be), délai SMTP `DJANGO_EMAIL_TIMEOUT` (10 secondes).
 - Chaque e-mail (texte et HTML) se termine par la signature « L'équipe Horizons Lointains ». Logo et coordonnées de l'agence (ajoutées sous la signature) : réglages `EMAIL_LOGO_STATIC_PATH` et `EMAIL_SIGNATURE_LINES` de `config/settings.py`, **vides** tant qu'ils ne sont pas fournis (la mise en page ne les affiche pas). Le logo est un fichier de `static/`, affiché par son adresse complète (`DJANGO_SITE_URL` + chemin) : rien n'est joint au message, et si la messagerie bloque les images, le nom de l'agence s'affiche à la place.
 - **Journal** (`EmailLog`) : une ligne par e-mail avec la date, le destinataire, le type, l'objet, l'état (en attente / envoyé / échec), le nombre de tentatives, la raison du dernier échec, le compte et la demande de voyage liés. Le **contenu** des messages et leurs **liens de sécurité** ne sont **jamais** conservés. Un envoi qui échoue reste « en attente » jusqu'à la 3e tentative, puis passe en « échec ». La demande est liée par son numéro, sans clé étrangère : `accounts` ne dépend pas de `orders`.
 - **Télécharger mes données** : le fichier JSON contient aussi la liste des e-mails reçus (`emails` : date, type, objet, état), pour les clients comme pour le personnel.
 - **Consentement aux e-mails promotionnels** (clients) : case facultative, **non cochée par défaut**, à l'inscription et dans « Modifier mes informations » (un agent ne peut pas la changer). Enregistré dans `accepts_promotional_emails` avec la date du dernier changement du choix (`promotional_emails_choice_date`, posée à l'accord comme au retrait : date de l'accord si le choix est accepté, du retrait sinon ; vide si le client n'a jamais accepté), à ne pas confondre avec `consent_date` (politique de confidentialité). Les comptes existants n'ont pas consenti. Les destinataires d'un envoi promotionnel sont donnés par `User.objects.promotion_recipients()` : clients actifs, consentants, à l'adresse confirmée. Le client peut aussi retirer son accord par le lien de désinscription de chaque e-mail promotionnel (date du retrait notée de la même façon). Le fichier « Télécharger mes données » contient ce choix et sa date.
-- **Compte supprimé** : les lignes du journal restent (statistiques anonymes), sans adresse ni lien vers le compte (`accounts/signals.py`, quel que soit le chemin de suppression).
+- **Compte supprimé** : les lignes du journal restent (statistiques anonymes), sans adresse, sans détail technique de l'échec ni lien vers le compte (`accounts/signals.py`, quel que soit le chemin de suppression).
 
 ### Fiabilité et journal
 
-- **Nouvelles tentatives** : la commande planifiée `process_emails` (toutes les 5 minutes, voir [Tâches planifiées](#tâches-planifiées)) reprend les envois en attente. La 1re tentative a lieu tout de suite ; la 2e au moins 5 minutes après, la 3e au moins 15 minutes après la 2e. Après la 3e en échec, l'e-mail passe à l'état « échec » avec la raison. Un envoi jamais tenté (serveur arrêté juste après l'action) est repris au bout de 5 minutes.
+- **Nouvelles tentatives** : la commande planifiée `process_emails` (toutes les 5 minutes, voir [Tâches planifiées](#tâches-planifiées)) reprend les envois en attente. La 1re tentative a lieu tout de suite ; la 2e au moins 5 minutes après, la 3e au moins 15 minutes après la 2e. Après la 3e en échec, l'e-mail passe à l'état « échec » avec la raison. Un envoi jamais tenté (serveur arrêté juste après l'action) est repris au bout de 5 minutes. Chaque passage envoie **au plus 200 e-mails**, sur une seule connexion au serveur d'envoi, et ne prend plus de nouveau message après 20 minutes ; les e-mails promotionnels passent après tous les autres. Un envoi promotionnel à 1 000 clients part donc en 5 passages, soit environ 25 minutes. Un verrou en base (`TaskLock`, `accounts/services/task_lock.py`) empêche deux `process_emails` de tourner en même temps : le second affiche « Un autre passage est en cours : rien n'a été fait. ». Le verrou expire seul au bout de 30 minutes.
 - **Message reconstruit** : le journal ne garde ni le contenu ni les liens. Pour une nouvelle tentative ou un renvoi, le message est refait à partir de son type, de son destinataire et du compte ou de la demande liés, avec un **lien de sécurité neuf** (`accounts/services/email_retry.py`). Chaque type d'e-mail déclare sa reconstruction avec `@rebuilder(EmailKind.…)`, dans un module importé par le `ready()` de son application (`accounts/services/email_rebuilders.py` pour les comptes, `orders/services/email_rebuilders.py` pour les demandes de voyage, `reviews/services/email_rebuilders.py` pour les avis, qui ne renvoie rien si l'avis a été supprimé, a changé d'état ou si le client a été supprimé, et `promotions/services/email_rebuilders.py` pour les e-mails promotionnels). Un type sans reconstruction passe en « échec » dès sa première tentative ratée.
-  - Un message avec un lien de sécurité ne part qu'à l'**adresse actuelle** du compte, jamais à une ancienne adresse.
+  - Un message avec un lien de sécurité ne part qu'à l'**adresse actuelle** du compte, jamais à une ancienne adresse. Il en va de même pour les e-mails des demandes de voyage et des avis : pas de nouvelle tentative si le client a changé d'adresse.
   - Un message devenu sans objet n'est pas renvoyé et passe en « échec » avec la raison : compte supprimé, adresse déjà confirmée, adresse changée depuis, compte désactivé…
   - Confirmation d'une nouvelle adresse e-mail : jamais reconstruite (l'ancienne adresse, qui fait partie du lien, n'est pas conservée). En cas d'échec, elle passe en « échec » et le client refait sa demande.
-- **Renvoi manuel** (menu **E-mails en échec**, personnel ; l'invitation d'un agent et les liens envoyés au personnel ne peuvent être renvoyés que par l'administrateur) : la liste ne montre que les e-mails qui peuvent encore être renvoyés (les messages sans objet ou impossibles à refaire restent au journal avec leur raison). La **même ligne** du journal est remise en attente, son nombre de tentatives repart de zéro, et l'envoi est tenté tout de suite. Une ligne par message : un message renvoyé plusieurs fois ne compte qu'une fois pour « adresse à vérifier ».
-- **Adresse à vérifier** : calculée à partir du journal (`accounts/services/address_check.py`), sans champ à tenir à jour. Un client est marqué quand 3 messages différents envoyés à son adresse actuelle sont arrivés à l'état « échec » après leurs 3 tentatives, sans envoi réussi vers cette adresse depuis.
+- **Renvoi manuel** (menu **E-mails en échec**, personnel ; l'invitation d'un agent et les liens envoyés au personnel ne peuvent être renvoyés que par l'administrateur) : la liste ne montre que les e-mails qui peuvent encore être renvoyés (les messages sans objet ou impossibles à refaire restent au journal avec leur raison). La **même ligne** du journal est remise en attente (seulement si elle est encore en échec : un double renvoi est impossible), son nombre de tentatives repart de zéro, et l'envoi est tenté tout de suite. Le type d'échec est noté dans `EmailLog.failure`. Une ligne par message : un message renvoyé plusieurs fois ne compte qu'une fois pour « adresse à vérifier ».
+- **Adresse à vérifier** : calculée à partir du journal (`accounts/services/address_check.py`), sans champ à tenir à jour. Un client est marqué quand 3 messages différents envoyés à son adresse actuelle sont arrivés à l'état « échec » après leurs 3 tentatives **parce que le destinataire a été refusé définitivement** (codes SMTP 5xx), sans envoi réussi vers cette adresse depuis. Une panne du serveur d'envoi ou un délai dépassé ne compte pas. Les échecs antérieurs à cette règle ne comptent pas non plus (leur cause est inconnue).
 - **Conservation** : les lignes du journal de plus d'**un an** sont effacées par la même commande `process_emails`.
 
 ### E-mails des demandes de voyage
@@ -294,18 +310,18 @@ Envoyés par les services de `orders` (`orders/services/emails.py`, appelé par 
 Deux e-mails liés aux dates du voyage, envoyés **une seule fois par demande** (la date d'envoi est notée sur la demande), jamais pour une demande annulée ni pour un client qui a supprimé son compte :
 
 - **Rappel avant le départ** (`orders/services/reminders.py`), pour une demande **confirmée** dont le départ est dans 7 jours ou moins : passeport (case « Passeport obligatoire » du pays), visa, décalage horaire avec la Belgique le jour du départ (ligne omise si le fuseau du pays n'est pas renseigné) et monnaie, lus sur la fiche pays au moment de l'envoi. Si la demande est confirmée alors que le départ est dans 7 jours ou moins, le rappel part dès la confirmation, juste après l'e-mail « demande confirmée ».
-- **Invitation à donner un avis** (`reviews/services/invitations.py`), à partir du lendemain du retour, avec un lien direct vers « Donner mon avis », seulement si le voyage peut encore recevoir un avis (règles de `reviews/services/eligibility.py` : demande confirmée, retour passé, pas encore d'avis).
+- **Invitation à donner un avis** (`reviews/services/invitations.py`), à partir du lendemain du retour et seulement si le retour date de 7 jours au plus (`INVITATION_WINDOW`), avec un lien direct vers « Donner mon avis », seulement si le voyage peut encore recevoir un avis (règles de `reviews/services/eligibility.py` : demande confirmée, retour passé, pas encore d'avis). Passé ce délai, le client peut toujours donner son avis depuis le détail de sa demande.
 
 Ils partent par la commande `python manage.py send_trip_reminders`, à **planifier une fois par jour** (voir [Tâches planifiées](#tâches-planifiées)). Elle rattrape les jours manqués : le rappel part tant que le départ n'est pas passé, l'invitation tant que l'avis reste possible.
 - **Nouvelles tentatives** : reconstruction dans `orders/services/email_rebuilders.py` (rappel) et `reviews/services/email_rebuilders.py` (invitation). Rien n'est renvoyé si la demande a été annulée ou le client supprimé, si le départ est passé (rappel) ou si un avis a été laissé ou n'est plus possible (invitation).
 
 ### E-mails promotionnels
 
-L'administrateur envoie une promotion existante, **en cours ou à venir**, avec un texte qu'il rédige (menu **Promotions** → **Envoyer une promotion par e-mail**). Pas de programmation, de ciblage ni de statistiques d'ouverture.
+L'administrateur envoie une promotion existante, **en cours ou à venir**, pas épuisée et qui vise encore un pays ou une destination proposé, avec un texte qu'il rédige, après une page de confirmation avec l'aperçu de l'e-mail (menu **Promotions** → **Envoyer une promotion par e-mail**). Pas de programmation, de ciblage ni de statistiques d'ouverture.
 
 - **Destinataires** : seulement les clients de `User.objects.promotion_recipients()` (consentement, adresse confirmée, compte actif). Sans aucun destinataire, l'envoi est refusé.
-- **Envoi programmé** (`promotions/services/mailing.py`) : l'envoi (`PromotionMailing` : promotion, texte, date, auteur au nom figé, nombre de destinataires) et un e-mail en attente par client sont enregistrés d'un coup (`queue_emails`, prévu pour un envoi de l'ordre de 1 000 e-mails, sans plafond), sans rien envoyer pendant la requête. La commande `process_emails` les envoie à son passage suivant (5 minutes au plus), puis applique les nouvelles tentatives habituelles. L'envoi est lié au journal par son numéro (`promotion_mailing_number`, sans clé étrangère).
-- **Message construit au moment de l'envoi** (`promotions/services/email_rebuilders.py`), comme pour une nouvelle tentative : « Bonjour » et le prénom, le texte de l'administrateur, l'offre (nom, remise, validité, code s'il y en a un) et un lien vers « Nos offres du moment » (promotion automatique en cours) ou vers le catalogue. Rien ne part si, entre-temps, le client s'est désinscrit, a changé d'adresse, a été désactivé ou supprimé, ou si la promotion a été supprimée, désactivée ou est terminée.
+- **Envoi programmé** (`promotions/services/mailing.py`) : l'envoi (`PromotionMailing` : promotion, texte, date, auteur au nom figé, nombre de destinataires) et un e-mail en attente par client sont enregistrés d'un coup (`queue_emails`, prévu pour un envoi de l'ordre de 1 000 e-mails, sans plafond), sans rien envoyer pendant la requête. Un jeton unique par formulaire (`submission_token`) empêche qu'un double clic crée deux envois. La commande `process_emails` les envoie par lots de 200 à ses passages suivants, puis applique les nouvelles tentatives habituelles. Un pays ou une destination désactivé n'est jamais cité dans l'e-mail. L'envoi est lié au journal par son numéro (`promotion_mailing_number`, sans clé étrangère).
+- **Message construit au moment de l'envoi** (`promotions/services/email_rebuilders.py`), comme pour une nouvelle tentative : « Bonjour » et le prénom, le texte de l'administrateur, l'offre (nom, remise, validité, code s'il y en a un) et un lien vers « Nos offres du moment » (promotion automatique en cours) ou vers le catalogue. Rien ne part si, entre-temps, le client s'est désinscrit, a changé d'adresse, a été désactivé ou supprimé, ou si la promotion a été désactivée, est terminée ou ne vise plus aucun pays ni destination proposé. Une promotion déjà envoyée par e-mail ne peut pas être supprimée.
 - **Désinscription en un clic** (`accounts/services/unsubscribe.py`) : chaque e-mail contient un lien personnel signé, sans date d'expiration, dans le texte et dans les en-têtes `List-Unsubscribe` et `List-Unsubscribe-Post` (désinscription directe depuis la messagerie). Ouvrir le lien affiche un bouton « Me désinscrire » (les logiciels qui inspectent les liens ne désinscrivent personne) ; le clic retire le consentement, sans connexion. Un lien faux affiche une page d'explication.
 
 ### Modèles des e-mails
@@ -325,7 +341,7 @@ cd trip_app
 python manage.py test
 ```
 
-Les tests utilisent un hachage de mot de passe rapide pour aller plus vite. L'application, elle, garde un hachage sécurisé (PBKDF2).
+Les tests (`python manage.py test`, et seulement cette commande) ignorent le fichier `.env` et les variables d'environnement : ils donnent le même résultat sur toutes les machines. Ils utilisent un hachage de mot de passe rapide pour aller plus vite. L'application, elle, garde un hachage sécurisé (PBKDF2).
 
 Un `TestCase` ne valide jamais sa transaction : les e-mails, envoyés après validation, n'y partent pas d'eux-mêmes. Une classe de tests qui vérifie des e-mails hérite de `SendEmailsImmediately` (`accounts/tests/email_delivery.py`), ou entoure l'action de `self.captureOnCommitCallbacks(execute=True)`.
 
@@ -335,7 +351,10 @@ Cette section décrit l'installation sur le serveur, dans l'ordre : les réglage
 
 ### Variables d'environnement
 
-Réglez ces variables dans le fichier `.env` du serveur (à la racine du dépôt), ou directement comme variables d'environnement chez l'hébergeur. Les variables d'environnement restent prioritaires sur le fichier.
+Réglez ces variables dans le fichier `.env` du serveur (à la racine du dépôt), ou directement comme variables d'environnement chez l'hébergeur. Les variables d'environnement restent prioritaires sur le fichier. Le modèle [.env.example](.env.example) contient exactement ces variables.
+
+- Une valeur **vide** garde la valeur par défaut.
+- Les réglages oui/non valent uniquement `0` ou `1`, et les nombres doivent être entiers : sinon le site **refuse de démarrer** en nommant la variable fautive.
 
 | Variable | Rôle | Défaut |
 |---|---|---|
@@ -343,7 +362,7 @@ Réglez ces variables dans le fichier `.env` du serveur (à la racine du dépôt
 | `DJANGO_SECRET_KEY` | Clé secrète longue et aléatoire. **Obligatoire**, même en développement : le site refuse de démarrer sans elle | aucun |
 | `DJANGO_PASSWORD_PEPPER` | « Poivre » des mots de passe, long et aléatoire. **Obligatoire** si `DJANGO_DEBUG=0`. **Ne jamais le perdre ni le changer** : tous les mots de passe deviendraient inutilisables | vide |
 | `DJANGO_ALLOWED_HOSTS` | Noms de domaine du site, séparés par des virgules (ex. `horizons-lointains.be,www.horizons-lointains.be`) | vide |
-| `DJANGO_SITE_URL` | Adresse du site, sans « / » final (ex. `https://horizons-lointains.be`) : liens et logo des e-mails envoyés par les commandes planifiées. **Obligatoire en production** | `http://127.0.0.1:8000` en développement, vide en production |
+| `DJANGO_SITE_URL` | Adresse du site (ex. `https://horizons-lointains.be`) : **tous** les liens et le logo des e-mails. **Obligatoire en production** : sans elle, ou si elle ne commence pas par `http://` ou `https://`, le site refuse de démarrer | `http://127.0.0.1:8000` en développement |
 | `DJANGO_NUM_PROXIES` | Nombre de serveurs intermédiaires (proxy) de confiance devant le site, pour retrouver l'IP réelle des visiteurs (voir [Serveur](#serveur)) | `0` |
 | `DJANGO_SECURE_SSL_REDIRECT` | `1` pour rediriger HTTP vers HTTPS | `1` |
 | `DJANGO_HSTS_SECONDS` | Durée HSTS en secondes (ex. `31536000`), à activer une fois le HTTPS validé (voir [Activer HSTS](#activer-hsts)) | `0` |
@@ -358,6 +377,7 @@ Réglez ces variables dans le fichier `.env` du serveur (à la racine du dépôt
 | `DJANGO_RESERVATIONS_EMAIL` | Adresse commune du personnel qui reçoit l'alerte « Nouvelle demande de voyage » | `reservations@horizons-lointains.be` |
 | `DJANGO_EMAIL_TEST_MODE` | `0` pour désactiver le mode test en développement (toujours désactivé si `DJANGO_DEBUG=0`) | `1` |
 | `DJANGO_EMAIL_TEST_RECIPIENT` | Mode test : adresse qui reçoit tous les e-mails ; vide = affichage dans le terminal | vide |
+| `DJANGO_ADMINS` | Facultatif : adresses séparées par des virgules, qui reçoivent par e-mail les erreurs 500 en production | vide |
 
 Avec `DJANGO_DEBUG=0`, les cookies de session et CSRF ne sont envoyés qu'en HTTPS.
 
@@ -369,19 +389,17 @@ Avec `DJANGO_DEBUG=0`, les cookies de session et CSRF ne sont envoyés qu'en HTT
 pip install -r requirements.txt
 cd trip_app
 python manage.py migrate
-python manage.py createcachetable
 python manage.py collectstatic --noinput
 python manage.py check --deploy
 python manage.py sendtestemail votre@adresse
 ```
 
-1. `pip install -r requirements.txt` : installe ou met à jour les dépendances.
-2. `migrate` : met la base de données à jour.
-3. `createcachetable` : crée la table du cache si le cache est stocké dans la base ; sans effet sinon.
-4. `collectstatic --noinput` : copie la feuille de style et les autres fichiers statiques dans `trip_app/staticfiles/` (`STATIC_ROOT`). **Sans cette étape, le site s'affiche sans mise en page.**
-5. `check --deploy` : vérifie les réglages de sécurité. Le seul avertissement attendu tant que HSTS n'est pas activé est `security.W004`.
-6. `sendtestemail` : envoie un e-mail de test, pour vérifier les réglages SMTP.
-7. **Redémarrez** le serveur WSGI pour charger le nouveau code.
+1. `pip install -r requirements.txt` : installe ou met à jour les dépendances (Django 5.2.18 ou plus récent, Pillow 12.3 ou plus récent). À relancer aussi sur une installation existante.
+2. `migrate` : met la base de données à jour. Il crée aussi la table `django_cache` des limites anti-abus (migration `accounts/0018_cache_table`).
+3. `collectstatic --noinput` : copie la feuille de style et les autres fichiers statiques dans `trip_app/staticfiles/` (`STATIC_ROOT`). **Sans cette étape, le site s'affiche sans mise en page.**
+4. `check --deploy` : vérifie les réglages de sécurité. Le seul avertissement attendu tant que HSTS n'est pas activé est `security.W004`.
+5. `sendtestemail` : envoie un e-mail de test, pour vérifier les réglages SMTP.
+6. **Redémarrez** le serveur WSGI pour charger le nouveau code.
 
 ### Serveur
 
@@ -391,7 +409,8 @@ Django ne sert pas lui-même le site en production : `python manage.py runserver
 - **Fichiers statiques** : le serveur web doit servir le dossier `trip_app/staticfiles/` (rempli par `collectstatic`) à l'adresse `/static/`. Si ce n'est pas fait, les pages s'affichent **sans CSS**.
 - **Photos envoyées** : le serveur web doit servir le dossier `trip_app/media/` à l'adresse `/media/`, avec l'en-tête `X-Content-Type-Options: nosniff` et sans jamais exécuter de script dans ce dossier. Sauvegardez-le avec la base.
 - **Proxy et `DJANGO_NUM_PROXIES`** : derrière un ou plusieurs proxys de confiance, indiquez leur nombre. Le proxy doit ajouter l'IP du visiteur à l'en-tête `X-Forwarded-For` et transmettre `X-Forwarded-Proto` (origine HTTPS), en remplaçant toujours ce dernier s'il est envoyé par le visiteur. **Attention** : avec `DJANGO_NUM_PROXIES` supérieur à `0`, le site ne doit être joignable **qu'en passant par le proxy**. Sinon, un visiteur qui contacte directement le serveur peut écrire lui-même l'en-tête et choisir l'IP vue par le site, ce qui contourne les limites anti-abus par IP. En accès direct, laissez `0`.
-- Les dossiers `trip_app/cache/` (limites anti-abus) et `trip_app/media/`, ainsi que la base `trip_app/db.sqlite3`, doivent être accessibles en écriture par le serveur.
+- Le dossier `trip_app/media/` et le dossier de la base (`trip_app/`, qui contient `db.sqlite3` et ses fichiers `db.sqlite3-wal` et `db.sqlite3-shm`) doivent être accessibles en écriture par le serveur. L'ancien dossier `trip_app/cache/` ne sert plus et peut être supprimé.
+- **Journal du serveur** : les avertissements, les erreurs et les erreurs 500 avec leur trace sont écrits sur la sortie du serveur ; redirigez-la vers un fichier. Les adresses e-mail n'y figurent jamais. Avec `DJANGO_ADMINS`, les erreurs 500 sont aussi envoyées par e-mail à ces adresses.
 
 ### Activer HSTS
 
@@ -409,7 +428,7 @@ Quatre commandes doivent tourner seules sur le serveur (tâche planifiée Window
 
 | Commande | Fréquence | Rôle |
 |---|---|---|
-| `python manage.py process_emails` | Toutes les 5 minutes | Envoie les e-mails promotionnels programmés, retente les e-mails en attente (5 puis 15 minutes après l'échec précédent ; un e-mail jamais tenté, par exemple après un arrêt du serveur, est repris au bout de 5 minutes) et efface les lignes du journal des e-mails de plus d'un an |
+| `python manage.py process_emails` | Toutes les 5 minutes | Envoie les e-mails mis en file (« mot de passe oublié » d'abord, puis les e-mails promotionnels ; 200 au plus par passage), retente les e-mails en attente (5 puis 15 minutes après l'échec précédent ; un e-mail jamais tenté, par exemple après un arrêt du serveur, est repris au bout de 5 minutes) et efface les lignes du journal des e-mails de plus d'un an |
 | `python manage.py purge_unconfirmed` | Une fois par jour | Efface les comptes clients dont l'adresse n'a pas été confirmée dans les 30 jours (RGPD) ; chacun reçoit un dernier e-mail qui l'annonce |
 | `python manage.py send_trip_reminders` | Une fois par jour | Envoie le rappel des départs dans 7 jours ou moins et l'invitation à donner un avis après le retour, une seule fois par demande, avec rattrapage des jours manqués (voir [Rappels de voyage](#rappels-de-voyage)) |
 | `python manage.py clearsessions` | Une fois par jour | Commande de Django : efface de la base les sessions de connexion expirées, qui sinon s'accumulent |
@@ -430,14 +449,14 @@ schtasks /Create /TN "Horizons Lointains - sessions expirees" /SC DAILY /ST 04:0
 0 4 * * *   cd /chemin/trip_app && /chemin/venv/bin/python manage.py clearsessions
 ```
 
-Les liens des e-mails envoyés par ces commandes utilisent `DJANGO_SITE_URL` : réglez-le. Si deux reprises des e-mails tournent en même temps, chaque message n'est pris que par une seule.
+Les liens des e-mails envoyés par ces commandes utilisent `DJANGO_SITE_URL` : réglez-le. Un verrou en base empêche deux `process_emails` de tourner en même temps : le second s'arrête sans rien faire.
 
 ### Points d'attention
 
 - **Ne committez jamais** la clé secrète, le poivre ni les identifiants SMTP.
-- Les limites anti-abus (5 échecs de connexion, 3 liens « mot de passe oublié » par heure, 5 essais quand le mot de passe est redemandé, etc.) sont stockées dans le dossier `trip_app/cache/` (créé automatiquement, jamais commité) : elles sont partagées par tous les processus du serveur et conservées au redémarrage. Les adresses IPv6 sont comptées par réseau /64.
-- SQLite suffit pour le volume prévu (environ 1 000 clients). Sauvegardez régulièrement `trip_app/db.sqlite3` et `trip_app/media/` ensemble.
-- Recommandé : faire envoyer par le serveur web l'en-tête `Content-Security-Policy: default-src 'self'` (le site n'utilise ni script ni style externe).
+- Les limites anti-abus (5 échecs de connexion, 3 liens « mot de passe oublié » par heure, 5 essais quand le mot de passe est redemandé, etc.) sont stockées dans la base, table `django_cache` : elles sont partagées par tous les processus du serveur et conservées au redémarrage. Les adresses IPv6 sont comptées par réseau /64.
+- SQLite suffit pour le volume prévu (environ 1 000 clients). La base est en mode **WAL** (attente de 20 secondes au plus quand elle est occupée) : les fichiers `db.sqlite3-wal` et `db.sqlite3-shm` font partie de la base. Gardez-la sur un disque local, jamais sur un partage réseau. **Sauvegarde** : serveur arrêté, copiez les trois fichiers ; ou, serveur en marche, `sqlite3 db.sqlite3 ".backup sauvegarde.sqlite3"`. Sauvegardez `trip_app/media/` en même temps.
+- L'application envoie elle-même l'en-tête `Content-Security-Policy` (`common/middleware.py`) : seuls les fichiers du site (et les images intégrées `data:`) sont acceptés, sans script ni style en ligne, et le site ne peut pas être affiché dans un cadre. Ajouter un script, un style en ligne ou une ressource externe (police, CDN) demande de modifier ce middleware.
 - Durée de connexion : **8 heures pour le personnel** (poste partagé à l'agence), 2 semaines pour les clients.
 
 ## Structure du code
@@ -449,8 +468,10 @@ trip_app/
 ├── config/                 # paramètres (settings.py), routes, page d'accueil (views.py), serveur WSGI (wsgi.py),
 │                           # context_processors.py (nom du site dans tous les gabarits) ; tests transversaux :
 │                           # droits d'accès, nombre de requêtes, export RGPD
-├── common/                 # outils partagés entre applications : text.py (comparaison sans accents, montants
-│                           # en euros), db.py (Normalize : comparaison sans accents dans les requêtes SQLite)
+├── common/                 # application partagée (dans INSTALLED_APPS) : text.py (comparaison sans accents,
+│                           # montants en euros), db.py (Normalize : comparaison sans accents ni majuscules dans
+│                           # les requêtes SQLite), apps.py (enregistre Normalize à chaque connexion),
+│                           # middleware.py (en-tête Content-Security-Policy)
 ├── accounts/               # comptes : utilisateurs, rôles, RGPD ; journal des e-mails (v5)
 │   ├── views/              # auth, profile, data_export, staff, clients, email_failures, email_texts, unsubscribe
 │   │                       # (une responsabilité par module)
@@ -463,7 +484,8 @@ trip_app/
 │   │                       # dernier e-mail), staff_rules (règles du personnel), client_search (recherche de
 │   │                       # client), throttling (limites anti-abus), privacy (effacement RGPD et conservation
 │   │                       # du journal), data_export (informations du compte pour l'export RGPD),
-│   │                       # unsubscribe (désinscription des e-mails promotionnels)
+│   │                       # unsubscribe (désinscription des e-mails promotionnels), task_lock (verrou :
+│   │                       # un seul passage d'une tâche planifiée à la fois)
 │   ├── management/commands/ # process_emails (toutes les 5 minutes), purge_unconfirmed (chaque jour)
 │   ├── models.py · forms.py · validators.py · decorators.py · urls.py
 │   ├── hashers.py          # hachage des mots de passe avec le « poivre »
@@ -489,7 +511,8 @@ trip_app/
 │   │                       # d'état), filtering (liste du personnel), privacy (anonymisation RGPD),
 │   │                       # promotion_statistics (statistiques d'une promotion), reminders (rappel avant le
 │   │                       # départ), emails (e-mails des demandes au client et alerte au personnel),
-│   │                       # email_rebuilders (reconstruction de ces e-mails), data_export (demandes du client)
+│   │                       # email_rebuilders (reconstruction de ces e-mails), data_export (demandes du client),
+│   │                       # labels (libellé « Kyoto (Japon) » commun aux e-mails)
 │   ├── models.py · forms.py · signals.py · urls.py
 │   └── tests/
 ├── reviews/                # avis clients (v3) : modèle, avis vérifiés, lien avec les demandes
@@ -504,14 +527,15 @@ trip_app/
 │   ├── models.py · forms.py · signals.py · urls.py · context_processors.py (compteur du menu)
 │   └── tests/
 ├── templates/
-│   ├── base.html · home.html · privacy.html · _pagination.html (pagination commune) · 403/404/500.html
+│   ├── base.html · home.html · privacy.html · 403/404/500.html
+│   ├── _pagination.html · _form_errors.html (récapitulatif des erreurs) · _confirm_delete.html
 │   ├── emails/             # base.html : mise en page HTML commune à tous les e-mails
 │   ├── accounts/           # auth/ · profile/ · staff/ · clients/ · email_failures/ · email_texts/ (modèles
 │   │                       # des e-mails) · unsubscribe/ (désinscription des e-mails promotionnels)
-│   ├── catalog/            # pages publiques, fragments _*.html, manage/
+│   ├── catalog/            # pages publiques, fragments _*.html (dont _country_facts.html : fiche pratique), manage/
 │   ├── orders/             # demandes côté client, fragments _*.html, manage/
 │   ├── promotions/         # offers.html (offres du moment), fragment _offer_terms.html, manage/ (gestion,
-│   │                       # envoi par e-mail, statistiques)
+│   │                       # désactivation, envoi par e-mail et sa confirmation, statistiques)
 │   └── reviews/            # avis côté client, fragments publics _*.html, manage/ (modération)
 └── static/css/             # feuille de style (texte lisible, adaptée au mobile)
 ```
