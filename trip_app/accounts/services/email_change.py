@@ -30,13 +30,7 @@ def request_email_change(request, user: User, new_email: str) -> None:
     confirmation_emails.record(new_email)
     token = signing.dumps({"id": user.pk, "old": user.email, "new": new_email}, salt=_TOKEN_SALT)
     link = request.build_absolute_uri(reverse("confirm_email_change", args=[token]))
-    send_email(
-        new_email,
-        EmailKind.EMAIL_CHANGE_CONFIRMATION,
-        "accounts/emails/email_change_confirmation.txt",
-        {"user": user, "link": link},
-        user=user,
-    )
+    send_email(new_email, EmailKind.EMAIL_CHANGE_CONFIRMATION, {"prénom": user.first_name, "lien": link}, user=user)
 
 
 def pending_email_change(token: str) -> tuple[User, str] | None:
@@ -77,10 +71,4 @@ def apply_email_change(user: User, new_email: str) -> bool:
 
 
 def _notify_current_address(user: User) -> None:
-    send_email(
-        user.email,
-        EmailKind.EMAIL_CHANGE_NOTICE,
-        "accounts/emails/email_change_notice.txt",
-        {"user": user},
-        user=user,
-    )
+    send_email(user.email, EmailKind.EMAIL_CHANGE_NOTICE, {"prénom": user.first_name}, user=user)

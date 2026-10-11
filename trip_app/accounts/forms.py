@@ -8,8 +8,10 @@ from django.contrib.auth.forms import (
     PasswordResetForm,
 )
 from django.core.exceptions import ValidationError
+from django.urls import reverse
 
-from .models import STAFF_ROLES, EmailKind, Role, User, normalize_email_address
+from .models import STAFF_ROLES, EmailKind, EmailText, Role, User, normalize_email_address
+from .services.email_texts import DEFAULT_TEXTS, fields_in, has_lone_brace
 from .services.emails import send_email
 from .services.throttling import (
     get_client_ip,
@@ -133,8 +135,11 @@ class PasswordResetRequestForm(PasswordResetForm):
     def send_mail(
         self, subject_template_name, email_template_name, context, from_email, to_email, html_email_template_name=None
     ) -> None:
-        # Envoi par le service commun (journal, HTML, mode test) ; l'objet vient du type d'e-mail.
-        send_email(to_email, EmailKind.PASSWORD_RESET, email_template_name, context, user=context["user"])
+        # Envoi par le service commun (journal, HTML, mode test) : l'objet et le texte viennent du
+        # type d'e-mail, les gabarits de Django ne servent pas. Lien construit avec le jeton de Django.
+        path = reverse("password_reset_confirm", kwargs={"uidb64": context["uid"], "token": context["token"]})
+        fields = {"prénom": context["user"].first_name, "lien": f"{context['protocol']}://{context['domain']}{path}"}
+        send_email(to_email, EmailKind.PASSWORD_RESET, fields, user=context["user"])
 
 
 class ClientDataForm(forms.ModelForm):
@@ -273,3 +278,74 @@ class StaffMemberForm(forms.ModelForm):
         if role != self.instance.role:
             check_not_self(self.instance, self.actor)
         return role
+
+
+class EmailTextForm(forms.ModelForm):
+    """Objet et texte d'un type d'e-mail, modifiés par l'administrateur.
+
+    Tous les champs variables du type doivent rester dans le texte (au moins une fois) ;
+    aucun autre champ ni aucune accolade seule n'est accepté. L'objet ne contient pas de champ.
+    """
+
+    class Meta:
+        model = EmailText
+        fields = ("subject", "body")
+        widgets = {"body": forms.Textarea(attrs={"rows": 18})}
+        help_texts = {
+            "body": "Les champs variables s'écrivent entre accolades, par exemple {prénom} : "
+            "ils sont remplis à l'envoi. La liste des champs de cet e-mail est donnée plus bas.",
+        }
+
+    def clean_subject(self) -> str:
+        subject = self.cleaned_data["subject"]
+        if "{" in subject or "}" in subject:
+            raise ValidationError(
+                "L'objet ne peut pas contenir de champ variable ni d'accolade.", code="field_in_subject"
+            )
+        return subject
+
+    def clean_body(self) -> str:
+        # Les navigateurs envoient des fins de ligne Windows : on garde celles des e-mails.
+        body = self.cleaned_data["body"].replace("\r\n", "\n")
+        expected = DEFAULT_TEXTS[self.instance.kind].fields
+        used = fields_in(body)
+        errors = []
+        unknown = [name for name in dict.fromkeys(used) if name not in expected]
+        if unknown:
+            errors.append(
+                ValidationError(
+                    f"{_plural(unknown, 'Champ variable inconnu', 'Champs variables inconnus')} : "
+                    f"{_braced(unknown)}. Utilisez seulement les champs de la liste, "
+                    "écrits exactement comme indiqué.",
+                    code="unknown_field",
+                )
+            )
+        if has_lone_brace(body):
+            errors.append(
+                ValidationError(
+                    "Accolade seule : les accolades { et } servent uniquement à écrire les champs variables, "
+                    "par exemple {prénom}.",
+                    code="lone_brace",
+                )
+            )
+        missing = [name for name in expected if name not in used]
+        if missing:
+            errors.append(
+                ValidationError(
+                    f"{_plural(missing, 'Champ variable manquant', 'Champs variables manquants')} : "
+                    f"{_braced(missing)}. Chaque champ de la liste doit rester dans "
+                    "le texte : vous pouvez le déplacer, mais pas le supprimer.",
+                    code="missing_field",
+                )
+            )
+        if errors:
+            raise ValidationError(errors)
+        return body
+
+
+def _braced(names: list[str]) -> str:
+    return ", ".join(f"{{{name}}}" for name in names)
+
+
+def _plural(names: list[str], singular: str, plural: str) -> str:
+    return plural if len(names) > 1 else singular

@@ -9,18 +9,12 @@ from accounts.models import EmailKind, EmailLog
 from accounts.services.email_retry import RebuiltEmail, rebuilder
 from orders.models import Order, Status, StatusChange
 from orders.services.emails import (
-    CANCELLED_BY_AGENCY_TEMPLATE,
-    CANCELLED_BY_CLIENT_TEMPLATE,
-    CONFIRMED_TEMPLATE,
-    NEW_ORDER_ALERT_TEMPLATE,
-    PLACED_TEMPLATE,
     cancelled_by_agency_context,
     client_context,
     confirmed_context,
     new_order_alert_context,
     placed_context,
 )
-from orders.services.reminders import TEMPLATE as DEPARTURE_REMINDER_TEMPLATE
 from orders.services.reminders import departure_reminder_context
 from orders.services.status import departure_passed
 
@@ -40,7 +34,7 @@ def _last_change(order: Order) -> StatusChange | None:
 @rebuilder(EmailKind.ORDER_PLACED)
 def _order_placed(log: EmailLog) -> RebuiltEmail | None:
     order = _order_of(log, Status.PENDING)
-    return RebuiltEmail(PLACED_TEMPLATE, placed_context(order)) if order else None
+    return RebuiltEmail(placed_context(order)) if order else None
 
 
 @rebuilder(EmailKind.ORDER_CONFIRMED)
@@ -50,7 +44,7 @@ def _order_confirmed(log: EmailLog) -> RebuiltEmail | None:
     if change is None:
         return None
     # Nom figé de l'agent dans l'historique (prénom et nom), même si son compte a été supprimé.
-    return RebuiltEmail(CONFIRMED_TEMPLATE, confirmed_context(order, change.author_name))
+    return RebuiltEmail(confirmed_context(order, change.author_name))
 
 
 @rebuilder(EmailKind.ORDER_CANCELLED_BY_CLIENT)
@@ -59,7 +53,7 @@ def _order_cancelled_by_client(log: EmailLog) -> RebuiltEmail | None:
     change = _last_change(order) if order else None
     if change is None or not change.by_client:
         return None
-    return RebuiltEmail(CANCELLED_BY_CLIENT_TEMPLATE, client_context(order))
+    return RebuiltEmail(client_context(order))
 
 
 @rebuilder(EmailKind.ORDER_CANCELLED_BY_AGENCY)
@@ -69,7 +63,7 @@ def _order_cancelled_by_agency(log: EmailLog) -> RebuiltEmail | None:
     if change is None or change.by_client:
         return None
     # Explication pour le client (champ reason) ; le motif interne n'est jamais repris.
-    return RebuiltEmail(CANCELLED_BY_AGENCY_TEMPLATE, cancelled_by_agency_context(order, change.reason))
+    return RebuiltEmail(cancelled_by_agency_context(order, change.reason))
 
 
 @rebuilder(EmailKind.NEW_ORDER_ALERT)
@@ -78,7 +72,7 @@ def _new_order_alert(log: EmailLog) -> RebuiltEmail | None:
     if log.order_number is None:
         return None
     order = Order.objects.filter(pk=log.order_number, client__isnull=False, status=Status.PENDING).first()
-    return RebuiltEmail(NEW_ORDER_ALERT_TEMPLATE, new_order_alert_context(order)) if order else None
+    return RebuiltEmail(new_order_alert_context(order)) if order else None
 
 
 @rebuilder(EmailKind.DEPARTURE_REMINDER)
@@ -87,4 +81,4 @@ def _departure_reminder(log: EmailLog) -> RebuiltEmail | None:
     order = _order_of(log, Status.CONFIRMED)
     if order is None or departure_passed(order):
         return None
-    return RebuiltEmail(DEPARTURE_REMINDER_TEMPLATE, departure_reminder_context(order))
+    return RebuiltEmail(departure_reminder_context(order))

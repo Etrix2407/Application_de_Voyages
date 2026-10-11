@@ -5,19 +5,12 @@ from django.db import transaction
 from accounts.models import EmailKind, User
 from accounts.services.emails import send_email
 
-# Un type d'e-mail par cas : chaque texte est différent (et sera modifiable séparément).
-TEMPLATES = {
-    EmailKind.ACCOUNT_DELETED: "accounts/emails/account_deleted.txt",
-    EmailKind.UNCONFIRMED_ACCOUNT_DELETED: "accounts/emails/unconfirmed_account_deleted.txt",
-    EmailKind.STAFF_ACCOUNT_DELETED: "accounts/emails/staff_account_deleted.txt",
-}
-
 
 def delete_account(user: User, kind: EmailKind = EmailKind.ACCOUNT_DELETED) -> None:
     """Supprime le compte et prévient son titulaire : ce message est le dernier qu'il reçoit.
 
     `kind` : suppression par le client (défaut), purge d'un compte jamais confirmé,
-    ou suppression d'un membre du personnel par l'administrateur.
+    ou suppression d'un membre du personnel par l'administrateur (un texte différent par cas).
 
     L'e-mail est préparé avant la suppression, pendant que l'adresse existe encore, et part
     après la validation de la transaction : seulement si la suppression a réussi (aussi hors
@@ -28,5 +21,7 @@ def delete_account(user: User, kind: EmailKind = EmailKind.ACCOUNT_DELETED) -> N
     """
     with transaction.atomic():
         # Pas de compte lié (user) : il n'existera plus quand le journal notera le résultat de l'envoi.
-        send_email(user.email, kind, TEMPLATES[kind], {"user": user})
+        # Le numéro d'employé ne sert qu'au texte du personnel.
+        fields = {"prénom": user.first_name, "numéro d'employé": user.employee_number}
+        send_email(user.email, kind, fields)
         user.delete()

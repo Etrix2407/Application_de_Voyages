@@ -98,6 +98,9 @@ ACCESS = {
     "reactivate_staff_member": ADMIN,
     "resend_staff_link": ADMIN,
     "delete_staff_member": ADMIN,
+    "email_text_list": ADMIN,
+    "edit_email_text": ADMIN,
+    "reset_email_text": ADMIN,
 }
 
 # Rôles autorisés pour chaque niveau d'accès.
@@ -148,6 +151,8 @@ class AccessMatrixTests(TestCase):
             "reactivate_staff_member": {"pk": member},
             "resend_staff_link": {"pk": member},
             "delete_staff_member": {"pk": member},
+            "edit_email_text": {"kind": EmailKind.PROMOTION},
+            "reset_email_text": {"kind": EmailKind.PROMOTION},
             "country_detail": {"pk": self.country.pk},
             "destination_detail": {"pk": self.destination.pk},
             "activity_detail": {"pk": self.activity.pk},

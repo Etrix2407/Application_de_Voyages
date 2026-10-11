@@ -8,8 +8,8 @@ from accounts.services.emails import MAX_ATTEMPTS, deliver, send_email
 
 from .factories import create_client
 
-TEMPLATE = "accounts/emails/client_password.txt"
 LINK = "https://horizons-lointains.be/reinitialisation/abc/jeton-secret/"
+FIELDS = {"prénom": "Marie", "lien": LINK}
 
 
 class SendEmailTests(TestCase):
@@ -22,15 +22,14 @@ class SendEmailTests(TestCase):
             return send_email(
                 "marie@example.com",
                 EmailKind.CLIENT_PASSWORD_LINK,
-                TEMPLATE,
-                {"user": self.marie, "link": LINK},
+                FIELDS,
                 user=self.marie,
                 order_number=42,
             )
 
     def test_sent_after_commit_only(self):
         with self.captureOnCommitCallbacks(execute=True):
-            send_email("marie@example.com", EmailKind.CLIENT_PASSWORD_LINK, TEMPLATE, {"user": self.marie, "link": LINK})
+            send_email("marie@example.com", EmailKind.CLIENT_PASSWORD_LINK, FIELDS)
             self.assertEqual(len(mail.outbox), 0)
             self.assertEqual(EmailLog.objects.get().status, EmailStatus.PENDING)
 

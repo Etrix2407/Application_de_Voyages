@@ -12,6 +12,7 @@ from datetime import datetime, time, timedelta
 from django.db import transaction
 from django.urls import reverse
 from django.utils import timezone
+from django.utils.formats import date_format
 
 from accounts.models import EmailKind
 from accounts.services.emails import send_email, site_url
@@ -19,7 +20,6 @@ from catalog.services.time_zones import BELGIUM, format_offset, offset_from_belg
 from orders.models import Order, Status
 
 REMINDER_DAYS_BEFORE_DEPARTURE = 7
-TEMPLATE = "orders/emails/departure_reminder.txt"
 
 
 def due_departure_reminders():
@@ -43,17 +43,27 @@ def send_departure_reminders(order_pk: int | None = None) -> int:
 
 
 def departure_reminder_context(order: Order) -> dict:
-    """Variables du rappel, lues sur la fiche pays au moment de l'envoi."""
+    """Champs du rappel, lus sur la fiche pays au moment de l'envoi."""
     country = order.destination.country
+    if country.passport_required:
+        identity = "Un passeport valide est obligatoire pour ce pays."
+    else:
+        identity = "Une carte d'identité valide suffit pour ce pays."
+    # Fuseau non renseigné : la ligne du décalage horaire est omise.
+    time_offset = ""
+    if country.time_zone:
+        time_offset = f"- Décalage horaire le jour du départ : {_offset_on(country.time_zone, order.departure_date)}"
     return {
-        "order": order,
-        "user": order.client,
-        "passport_required": country.passport_required,
+        "prénom": order.client.first_name,
+        "destination": f"{order.destination_name} ({order.country_name})",
+        "date de départ": date_format(order.departure_date, "j F Y"),
+        "date de retour": date_format(order.return_date, "j F Y"),
+        "numéro": order.pk,
+        "pièce d'identité": identity,
         "visa": country.get_visa_display(),
-        # Fuseau non renseigné : la ligne du décalage horaire est omise.
-        "time_offset": _offset_on(country.time_zone, order.departure_date) if country.time_zone else "",
-        "currency": country.currency,
-        "order_link": site_url(reverse("my_order_detail", kwargs={"pk": order.pk})),
+        "décalage horaire": time_offset,
+        "monnaie": country.currency,
+        "lien": site_url(reverse("my_order_detail", kwargs={"pk": order.pk})),
     }
 
 
@@ -68,7 +78,6 @@ def _send_reminder(order: Order) -> bool:
     send_email(
         order.client.email,
         EmailKind.DEPARTURE_REMINDER,
-        TEMPLATE,
         departure_reminder_context(order),
         user=order.client,
         order_number=order.pk,

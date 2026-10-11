@@ -13,9 +13,8 @@ from django.utils import timezone
 from accounts.models import EmailKind
 from accounts.services.emails import send_email, site_url
 from orders.models import Order
+from orders.services.emails import order_dates
 from reviews.services.eligibility import all_reviewable_orders
-
-TEMPLATE = "reviews/emails/review_invitation.txt"
 
 
 def due_review_invitations():
@@ -30,9 +29,10 @@ def send_review_invitations() -> int:
 
 def review_invitation_context(order: Order) -> dict:
     return {
-        "order": order,
-        "user": order.client,
-        "review_link": site_url(reverse("create_review", kwargs={"order_pk": order.pk})),
+        "prénom": order.client.first_name,
+        "destination": f"{order.destination_name} ({order.country_name})",
+        "dates": order_dates(order),
+        "lien": site_url(reverse("create_review", kwargs={"order_pk": order.pk})),
     }
 
 
@@ -47,7 +47,6 @@ def _send_invitation(order: Order) -> bool:
     send_email(
         order.client.email,
         EmailKind.REVIEW_INVITATION,
-        TEMPLATE,
         review_invitation_context(order),
         user=order.client,
         order_number=order.pk,

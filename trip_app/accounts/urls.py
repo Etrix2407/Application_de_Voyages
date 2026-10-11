@@ -2,7 +2,7 @@ from django.contrib.auth import views as auth_views
 from django.urls import path, reverse_lazy
 
 from .forms import PasswordResetRequestForm
-from .views import auth, clients, data_export, email_failures, profile, staff, unsubscribe
+from .views import auth, clients, data_export, email_failures, email_texts, profile, staff, unsubscribe
 
 urlpatterns = [
     path("inscription/", auth.sign_up, name="sign_up"),
@@ -36,6 +36,9 @@ urlpatterns = [
     ),
     path("emails-en-echec/", email_failures.email_failure_list, name="email_failure_list"),
     path("emails-en-echec/<int:pk>/renvoyer/", email_failures.resend_email, name="resend_email"),
+    path("modeles-emails/", email_texts.email_text_list, name="email_text_list"),
+    path("modeles-emails/<str:kind>/", email_texts.edit_email_text, name="edit_email_text"),
+    path("modeles-emails/<str:kind>/retablir/", email_texts.reset_email_text, name="reset_email_text"),
     path("personnel/", staff.staff_list, name="staff_list"),
     path("personnel/nouveau/", staff.create_agent, name="create_agent"),
     path("personnel/<int:pk>/modifier/", staff.edit_staff_member, name="edit_staff_member"),
@@ -58,7 +61,6 @@ urlpatterns = [
         auth_views.PasswordResetView.as_view(
             form_class=PasswordResetRequestForm,
             template_name="accounts/auth/password_reset.html",
-            email_template_name="accounts/emails/password_reset.txt",
             success_url=reverse_lazy("password_reset_done"),
         ),
         name="password_reset",

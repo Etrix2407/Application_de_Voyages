@@ -1,42 +1,40 @@
 """E-mails envoyés au client sur son avis (v5) : publié, refusé ou retiré, réponse de l'agence.
 
 Le client dont le compte est supprimé (avis anonymisé) ne reçoit rien.
-Les fonctions *_context servent aussi à reconstruire un message pour une nouvelle tentative
-(voir reviews/services/email_rebuilders.py).
+Les fonctions *_context donnent la valeur des champs variables de chaque e-mail (voir
+accounts/services/email_texts.py) ; elles servent aussi à reconstruire un message pour une
+nouvelle tentative (voir reviews/services/email_rebuilders.py).
 """
 
 from django.urls import reverse
+from django.utils.formats import date_format
 
 from accounts.models import EmailKind
 from accounts.services.emails import send_email, site_url
 from reviews.models import AgencyResponse, RefusalReason, Review
 from reviews.services.writing import client_can_edit
 
-PUBLISHED_TEMPLATE = "reviews/emails/review_published.txt"
-REFUSED_TEMPLATE = "reviews/emails/review_refused.txt"
-RESPONSE_TEMPLATE = "reviews/emails/review_response.txt"
-
 
 def notify_published(review: Review) -> None:
-    _notify(review, EmailKind.REVIEW_PUBLISHED, PUBLISHED_TEMPLATE, published_context)
+    _notify(review, EmailKind.REVIEW_PUBLISHED, published_context)
 
 
 def notify_refused(review: Review) -> None:
-    _notify(review, EmailKind.REVIEW_REFUSED, REFUSED_TEMPLATE, refused_context)
+    _notify(review, EmailKind.REVIEW_REFUSED, refused_context)
 
 
 def notify_response(response: AgencyResponse, created: bool) -> None:
     """Réponse de l'agence publiée (`created`) ou modifiée sous l'avis du client."""
-    _notify(response.review, EmailKind.REVIEW_RESPONSE, RESPONSE_TEMPLATE,
-            lambda review: response_context(response, created))
+    _notify(response.review, EmailKind.REVIEW_RESPONSE, lambda review: response_context(response, created))
 
 
 def published_context(review: Review) -> dict:
     """« Merci, votre avis est en ligne », avec le lien vers la destination si elle est visible."""
     destination_link = ""
     if Review.objects.public().filter(pk=review.pk).exists():
-        destination_link = site_url(reverse("destination_detail", args=[review.order.destination_id]))
-    return {**_base_context(review), "destination_link": destination_link}
+        link = site_url(reverse("destination_detail", args=[review.order.destination_id]))
+        destination_link = f"Vous pouvez le lire sur la page de la destination :\n\n{link}"
+    return {**_base_context(review), "lien vers la destination": destination_link}
 
 
 def refused_context(review: Review) -> dict:
@@ -46,22 +44,42 @@ def refused_context(review: Review) -> dict:
     (30 jours après sa création, voyage toujours confirmé : voir client_can_edit).
     Délai dépassé : l'e-mail le dit, sauf pour « Voyage annulé » (correction impossible pour une autre raison).
     """
-    deadline_passed = (
-        not review.can_be_changed_by_client() and review.refusal_reason != RefusalReason.TRIP_CANCELLED
-    )
-    return {**_base_context(review), "can_correct": client_can_edit(review), "deadline_passed": deadline_passed}
+    reason = review.get_refusal_reason_display()
+    if review.refusal_details:
+        reason += f" — {review.refusal_details}"
+    correction = ""
+    if client_can_edit(review):
+        correction = (
+            f"Vous pouvez corriger votre avis jusqu'au {date_format(review.editable_until, 'j F Y')}, depuis la "
+            "page « Mes avis ». Il sera de nouveau relu par l'agence avant sa publication.\n\n"
+            f"{site_url(reverse('my_reviews'))}"
+        )
+    elif not review.can_be_changed_by_client() and review.refusal_reason != RefusalReason.TRIP_CANCELLED:
+        correction = "Le délai de 30 jours pour corriger cet avis est dépassé."
+    return {**_base_context(review), "motif": reason, "correction": correction}
 
 
 def response_context(response: AgencyResponse, created: bool) -> dict:
-    return {**_base_context(response.review), "response": response, "created": created}
+    return {
+        **_base_context(response.review),
+        "annonce": "L'agence a répondu" if created else "L'agence a modifié sa réponse",
+        "auteur": response.author_first_name,
+        "réponse": response.text,
+        "lien": site_url(reverse("my_reviews")),
+    }
 
 
 def _base_context(review: Review) -> dict:
-    return {"client": review.order.client, "review": review, "my_reviews_link": site_url(reverse("my_reviews"))}
+    order = review.order
+    return {
+        "prénom": order.client.first_name,
+        "titre": review.title,
+        "destination": f"{order.destination_name}, {order.country_name}",
+    }
 
 
-def _notify(review: Review, kind: EmailKind, template_name: str, build_context) -> None:
+def _notify(review: Review, kind: EmailKind, build_context) -> None:
     client = review.order.client
     if client is None:
         return
-    send_email(client.email, kind, template_name, build_context(review), user=client, order_number=review.order_id)
+    send_email(client.email, kind, build_context(review), user=client, order_number=review.order_id)

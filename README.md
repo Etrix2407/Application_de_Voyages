@@ -1,6 +1,6 @@
 # Application_de_Voyages
 
-Application web (Python 3, Django 5.2) pour une agence de voyage. Elle gère les comptes des clients et du personnel, et propose un catalogue de pays, destinations et activités. Le cahier des charges est résumé dans [Recap.md](Recap.md) (v1 : comptes et catalogue), [Recap_2.md](Recap_2.md) (v2 : demandes de voyage), [Recap_3.md](Recap_3.md) (v3 : avis clients), [Recap_4.md](Recap_4.md) (v4 : promotions) et [Recap_5.md](Recap_5.md) (v5 : envoi d'e-mails, en cours de développement). Les énoncés ne sont jamais modifiés : les décisions prises ensuite avec la cliente sont décrites dans ce README.
+Application web (Python 3, Django 5.2) pour une agence de voyage. Elle gère les comptes des clients et du personnel, et propose un catalogue de pays, destinations et activités. Le cahier des charges est résumé dans [Recap.md](Recap.md) (v1 : comptes et catalogue), [Recap_2.md](Recap_2.md) (v2 : demandes de voyage), [Recap_3.md](Recap_3.md) (v3 : avis clients), [Recap_4.md](Recap_4.md) (v4 : promotions) et [Recap_5.md](Recap_5.md) (v5 : envoi d'e-mails). Les énoncés ne sont jamais modifiés : les décisions prises ensuite avec la cliente sont décrites dans ce README.
 
 ## Sommaire
 
@@ -114,6 +114,12 @@ Formats à respecter :
 1. Menu **E-mails en échec** : les e-mails qui n'ont pas pu partir et peuvent encore être renvoyés, les plus récents d'abord, par pages de 25, avec le destinataire, le compte et la demande de voyage liés, le type, l'objet, le nombre de tentatives et la raison de l'échec.
 2. **Renvoyer** : le message est refait à neuf (avec un nouveau lien s'il en contient un) et envoyé tout de suite. S'il échoue encore, de nouvelles tentatives automatiques ont lieu 5 puis 15 minutes plus tard. Un message devenu sans objet (par exemple un lien de confirmation pour une adresse déjà confirmée, ou un lien de mot de passe pour une adresse qui a changé) n'est pas renvoyé : la raison est affichée et il disparaît de la liste. L'invitation d'un agent et le lien « Choisissez un nouveau mot de passe » envoyé à un membre du personnel ne peuvent être renvoyés que par l'administrateur (avec un nouveau lien de 7 jours). Les e-mails « Votre compte a été supprimé » ne sont jamais renvoyés : l'adresse est effacée à la suppression du compte.
 
+### Modèles des e-mails (administrateur)
+
+1. Menu **Modèles des e-mails** : tous les e-mails envoyés par le site, avec leur objet et l'indication « Texte d'origine » ou « Modifié le … par … ».
+2. **Modifier** : changez l'objet et le texte, puis **Enregistrer**. Les mots entre accolades, comme `{prénom}` ou `{lien}`, sont des **champs variables** remplis à l'envoi : leur liste et leur rôle sont affichés sous le texte. Vous pouvez les déplacer, mais pas les supprimer ni en inventer ; l'objet n'en contient pas. Le logo et la signature de l'agence sont ajoutés automatiquement.
+3. **Rétablir le texte d'origine** revient au texte prévu par le site.
+
 ### Traiter les demandes de voyage (agent ou administrateur)
 
 1. Menu **Demandes de voyage** : toutes les demandes, les plus récentes d'abord (tri inversable), par pages de 25.
@@ -183,7 +189,7 @@ Limites par adresse IP, contre les robots : 20 échecs de connexion par 15 minut
 | Visiteur | Catalogue complet (pays, destinations, activités) ; page « Destinations » avec les notes ; lecture des avis vérifiés ; recherche et filtres ; inscription ; connexion |
 | Client | Détail des pays, destinations et activités ; recherche et filtres ; favoris ; demandes de voyage (faire une demande une fois l'adresse e-mail confirmée, suivre et annuler ses demandes en attente) ; avis sur ses voyages terminés (donner, modifier 30 jours, supprimer) ; profil (modifier, changer le mot de passe ou l'adresse e-mail, télécharger ses données, supprimer le compte) |
 | Agent | Consultation et recherche ; gestion du catalogue ; liste des clients (avec le badge « Adresse à vérifier »), correction de leurs informations (sauf e-mail et mot de passe), envoi d'un lien de mot de passe ; liste des e-mails en échec et renvoi ; traitement des demandes de voyage (filtrer, confirmer, annuler avec motif) ; modération des avis (publier, refuser ou masquer avec motif), réponse de l'agence, liste filtrée de tous les avis ; consultation des promotions ; profil (consultation, changement du mot de passe, téléchargement de ses informations de compte et de la liste des e-mails reçus au format JSON) |
-| Administrateur | Droits de l'agent + gestion du personnel + gestion des promotions (créer, modifier, désactiver, supprimer si jamais utilisée) |
+| Administrateur | Droits de l'agent + gestion du personnel + gestion des promotions (créer, modifier, désactiver, supprimer si jamais utilisée) + modification du texte des e-mails |
 
 ## Règles de gestion appliquées
 
@@ -239,12 +245,11 @@ Version terminée. Le [Recap_4.md](Recap_4.md) décrit les promotions ; voici le
 Tous les e-mails du site passent par un seul service, `accounts/services/emails.py` (dans `accounts`, la première application : toutes les autres peuvent l'utiliser) :
 
 ```python
-send_email(to, kind, template_name, context, *, user=None, order_number=None) -> bool
+send_email(to, kind, fields, *, user=None, order_number=None) -> bool
 ```
 
-- `kind` : type de l'e-mail (`EmailKind`, dans `accounts/models.py`), clé stable qui fixe l'objet ; elle servira à rendre les textes modifiables par l'administrateur. Chaque nouvel e-mail ajoute son type et son objet (`SUBJECTS`).
-- `template_name` : gabarit du **texte**, qui commence par `{% autoescape off %}`. La version **HTML** est construite à partir de ce texte, dans la mise en page commune `templates/emails/base.html` (liens cliquables, gros caractères) : un seul texte à écrire par e-mail.
-- `context` : variables du gabarit. Les liens sont absolus : `request.build_absolute_uri(...)` pendant une requête, `site_url(reverse(...))` dans une commande planifiée (réglage `DJANGO_SITE_URL`).
+- `kind` : type de l'e-mail (`EmailKind`, dans `accounts/models.py`), clé stable qui fixe l'objet et le **texte** : celui de l'administrateur s'il l'a modifié, sinon le texte d'origine (voir [Modèles des e-mails](#modèles-des-e-mails)). La version **HTML** est construite à partir de ce texte, dans la mise en page commune `templates/emails/base.html` (liens cliquables, gros caractères) : un seul texte par e-mail. Chaque nouvel e-mail ajoute son type, son objet, son texte d'origine et ses champs variables dans `DEFAULT_TEXTS` (`accounts/services/email_texts.py`).
+- `fields` : valeur de chaque champ variable du type, par son nom français (ex. `{"prénom": ..., "lien": ...}`). Les liens sont absolus : `request.build_absolute_uri(...)` pendant une requête, `site_url(reverse(...))` dans une commande planifiée (réglage `DJANGO_SITE_URL`).
 - `user`, `order_number` : compte et demande de voyage concernés, notés dans le journal.
 
 Fonctionnement :
@@ -298,6 +303,16 @@ L'administrateur envoie une promotion existante, **en cours ou à venir**, avec 
 - **Envoi programmé** (`promotions/services/mailing.py`) : l'envoi (`PromotionMailing` : promotion, texte, date, auteur au nom figé, nombre de destinataires) et un e-mail en attente par client sont enregistrés d'un coup (`queue_emails`, jusqu'à 1 000 e-mails), sans rien envoyer pendant la requête. La commande `process_emails` les envoie à son passage suivant (5 minutes au plus), puis applique les nouvelles tentatives habituelles. L'envoi est lié au journal par son numéro (`promotion_mailing_number`, sans clé étrangère).
 - **Message construit au moment de l'envoi** (`promotions/services/email_rebuilders.py`), comme pour une nouvelle tentative : « Bonjour » et le prénom, le texte de l'administrateur, l'offre (nom, remise, validité, code s'il y en a un) et un lien vers « Nos offres du moment » (promotion automatique en cours) ou vers le catalogue. Rien ne part si, entre-temps, le client s'est désinscrit, a changé d'adresse, a été désactivé ou supprimé, ou si la promotion a été supprimée, désactivée ou est terminée.
 - **Désinscription en un clic** (`accounts/services/unsubscribe.py`) : chaque e-mail contient un lien personnel signé, sans date d'expiration, dans le texte et dans les en-têtes `List-Unsubscribe` et `List-Unsubscribe-Post` (désinscription directe depuis la messagerie). Ouvrir le lien affiche un bouton « Me désinscrire » (les logiciels qui inspectent les liens ne désinscrivent personne) ; le clic retire le consentement, sans connexion. Un lien faux affiche une page d'explication.
+
+### Modèles des e-mails
+
+L'administrateur modifie le **texte** de chaque type d'e-mail (menu **Modèles des e-mails**), mais pas la mise en page (logo, signature, coordonnées de l'agence) ni les **champs variables** (Recap 5).
+
+- **Textes d'origine** : `DEFAULT_TEXTS` (`accounts/services/email_texts.py`) est la seule source de l'objet, du texte et des champs variables de chaque type, avec la description de chaque champ affichée à l'administrateur. Il n'y a plus de gabarit `.txt` par e-mail.
+- **Champs variables** : écrits entre accolades, avec un nom en français : `{prénom}`, `{numéro}`, `{destination}`, `{dates}`, `{récapitulatif}`, `{lien}`… Les parties calculées forment chacune un seul champ, préparé par le service de l'application concernée : récapitulatif d'une demande, motif et délai de correction d'un avis refusé, bloc de l'offre et phrase de désinscription d'un e-mail promotionnel, lignes facultatives (explication d'une annulation par l'agence, décalage horaire du rappel avant le départ, lien vers la destination d'un avis publié…). L'administrateur ne voit donc jamais de syntaxe de gabarit.
+- **Remplissage** (`render_email`) : le texte de l'administrateur s'il existe (modèle `EmailText`, une ligne par type modifié), sinon le texte d'origine ; chaque champ est remplacé par sa valeur. Une valeur n'est jamais relue : des accolades dans un prénom, un titre d'avis ou un message restent telles quelles. Un champ facultatif vide, seul sur sa ligne, fait disparaître la ligne sans laisser de lignes vides en trop. `send_email`, `queue_emails` et les nouvelles tentatives l'utilisent : l'objet noté au journal est celui réellement envoyé (mis à jour si le texte a changé entre deux tentatives). Le journal ne garde toujours pas le contenu.
+- **Contrôles à l'enregistrement** : objet et texte obligatoires ; chaque champ du type doit rester au moins une fois dans le texte ; un champ inconnu ou une accolade seule sont refusés ; l'objet ne contient aucun champ. Le message d'erreur nomme les champs manquants ou inconnus.
+- **Pages** (administrateur seulement, `accounts/views/email_texts.py`) : la liste des types avec leur objet actuel et « Texte d'origine » ou « Modifié le … par … » (nom figé), puis la page de modification (objet, texte, liste des champs avec leur description) et le bouton **Rétablir le texte d'origine**, qui supprime le texte modifié.
 
 ## Tests
 
@@ -396,9 +411,11 @@ trip_app/
 ├── config/                 # paramètres, routes et page d'accueil (views.py) du projet ; tests transversaux (droits d'accès, nombre de requêtes)
 ├── common/                 # outils partagés entre applications (normalisation du texte)
 ├── accounts/               # comptes : utilisateurs, rôles, RGPD ; journal des e-mails (v5)
-│   ├── views/              # auth, profile, data_export, staff, clients, email_failures, unsubscribe (une responsabilité par module)
+│   ├── views/              # auth, profile, data_export, staff, clients, email_failures, email_texts, unsubscribe
+│   │                       # (une responsabilité par module)
 │   ├── services/           # inscription, changement d'e-mail, emails (envoi de tous les e-mails du site
-│   │                       # et journal), email_retry (nouvelles tentatives, renvoi), email_rebuilders
+│   │                       # et journal), email_texts (textes d'origine, champs variables, texte de
+│   │                       # l'administrateur), email_retry (nouvelles tentatives, renvoi), email_rebuilders
 │   │                       # (reconstruction des e-mails des comptes), address_check (« adresse à vérifier »),
 │   │                       # password_links (liens de mot de passe), password_notice (alerte « mot de passe
 │   │                       # modifié »), account_deletion (suppression du compte avec un dernier e-mail),
@@ -439,7 +456,7 @@ trip_app/
 ├── templates/
 │   ├── base.html · home.html · privacy.html · 403/404/500.html
 │   ├── emails/             # base.html : mise en page HTML commune à tous les e-mails
-│   ├── accounts/           # auth/ · profile/ · staff/ · clients/ · email_failures/ · emails/ (textes des e-mails)
+│   ├── accounts/           # auth/ · profile/ · staff/ · clients/ · email_failures/ · email_texts/ (modèles des e-mails)
 │   ├── catalog/            # pages publiques, fragments _*.html, manage/
 │   ├── orders/             # demandes côté client, fragments _*.html, manage/
 │   ├── promotions/         # offers.html (offres du moment), fragment _offer_terms.html, manage/ (gestion)

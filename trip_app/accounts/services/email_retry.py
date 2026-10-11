@@ -18,10 +18,10 @@ from datetime import datetime, timedelta
 from typing import NamedTuple
 
 from django.db.models import Q
-from django.template.loader import render_to_string
 from django.utils import timezone
 
 from accounts.models import EmailKind, EmailLog, EmailStatus
+from accounts.services.email_texts import render_email
 from accounts.services.emails import build_message, deliver
 
 logger = logging.getLogger(__name__)
@@ -39,13 +39,12 @@ OBSOLETE = "Message devenu sans objet (compte supprimé ou modifié depuis) : il
 
 
 class RebuiltEmail(NamedTuple):
-    """Gabarit et variables d'un message reconstruit (liens de sécurité neufs).
+    """Valeurs des champs variables d'un message reconstruit (liens de sécurité neufs).
 
     `headers` : en-têtes supplémentaires, facultatifs (ex. List-Unsubscribe).
     """
 
-    template_name: str
-    context: dict
+    fields: dict
     headers: dict[str, str] | None = None
 
 
@@ -107,6 +106,8 @@ def redeliver(log: EmailLog) -> bool:
     """Reconstruit le message et tente l'envoi ; renvoie True s'il est parti.
 
     Si le message ne peut pas être reconstruit, la ligne passe à l'état « échec » avec la raison.
+    Le texte est celui du moment (modifié entre-temps par l'administrateur, peut-être) : l'objet
+    noté au journal est mis à jour s'il a changé.
     """
     rebuild = _REBUILDERS.get(log.kind)
     rebuilt = rebuild(log) if rebuild and log.recipient else None
@@ -115,8 +116,11 @@ def redeliver(log: EmailLog) -> bool:
         log.last_error = OBSOLETE if rebuild else NOT_REBUILDABLE
         log.save(update_fields=["status", "last_error"])
         return False
-    body = render_to_string(rebuilt.template_name, rebuilt.context)
-    return deliver(log, build_message(log.recipient, log.subject, body, rebuilt.headers))
+    subject, body = render_email(log.kind, rebuilt.fields)
+    if subject != log.subject:
+        log.subject = subject
+        log.save(update_fields=["subject"])
+    return deliver(log, build_message(log.recipient, subject, body, rebuilt.headers))
 
 
 def _claim(log: EmailLog, now: datetime) -> bool:

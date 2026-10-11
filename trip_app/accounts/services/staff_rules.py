@@ -26,7 +26,5 @@ def send_activation_link(request, agent: User) -> bool:
     déjà un mot de passe reçoit un autre texte que l'invitation (« nouveau mot de passe »).
     """
     if agent.has_usable_password():
-        return send_staff_link(
-            request, agent, EmailKind.STAFF_PASSWORD_LINK, "accounts/emails/staff_password.txt"
-        )
-    return send_staff_link(request, agent, EmailKind.AGENT_ACTIVATION, "accounts/emails/agent_activation.txt")
+        return send_staff_link(request, agent, EmailKind.STAFF_PASSWORD_LINK)
+    return send_staff_link(request, agent, EmailKind.AGENT_ACTIVATION)

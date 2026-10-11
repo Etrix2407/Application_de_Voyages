@@ -6,7 +6,7 @@ Un échec d'envoi ne bloque jamais l'action de l'utilisateur : il est noté dans
 """
 
 import logging
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 
 from django.conf import settings
 from django.core.mail import EmailMultiAlternatives
@@ -16,64 +16,35 @@ from django.templatetags.static import static
 from django.utils import timezone
 
 from accounts.models import EmailKind, EmailLog, EmailStatus, User
+from accounts.services.email_texts import current_subject, render_email
 
 logger = logging.getLogger(__name__)
 
 # Après 3 tentatives, l'envoi passe à l'état « échec » (Recap 5).
 MAX_ATTEMPTS = 3
 
-# Objet de chaque type d'e-mail.
-SUBJECTS = {
-    EmailKind.SIGN_UP_CONFIRMATION: "Confirmez votre inscription",
-    EmailKind.SIGN_UP_EXISTING: "Tentative d'inscription avec votre adresse",
-    EmailKind.EMAIL_CHANGE_CONFIRMATION: "Confirmez votre nouvelle adresse e-mail",
-    EmailKind.EMAIL_CHANGE_NOTICE: "Demande de changement de votre adresse e-mail",
-    EmailKind.PASSWORD_RESET: "Changement de votre mot de passe",
-    EmailKind.CLIENT_PASSWORD_LINK: "Changement de votre mot de passe",
-    EmailKind.AGENT_ACTIVATION: "Activation de votre compte",
-    EmailKind.REVIEW_PUBLISHED: "Merci, votre avis est en ligne",
-    EmailKind.REVIEW_REFUSED: "Votre avis n'est pas publié",
-    EmailKind.REVIEW_RESPONSE: "Réponse de l'agence à votre avis",
-    EmailKind.ORDER_PLACED: "Nous avons bien reçu votre demande de voyage",
-    EmailKind.ORDER_CONFIRMED: "Votre demande de voyage est confirmée",
-    EmailKind.ORDER_CANCELLED_BY_CLIENT: "Annulation de votre demande de voyage",
-    EmailKind.ORDER_CANCELLED_BY_AGENCY: "Annulation de votre demande de voyage",
-    EmailKind.NEW_ORDER_ALERT: "Nouvelle demande de voyage",
-    EmailKind.DEPARTURE_REMINDER: "Votre départ approche",
-    EmailKind.REVIEW_INVITATION: "Comment s'est passé votre voyage ?",
-    EmailKind.PASSWORD_CHANGED: "Votre mot de passe a été modifié",
-    EmailKind.ACCOUNT_DELETED: "Votre compte a été supprimé",
-    EmailKind.UNCONFIRMED_ACCOUNT_DELETED: "Votre compte a été supprimé",
-    EmailKind.STAFF_ACCOUNT_DELETED: "Votre compte a été supprimé",
-    EmailKind.STAFF_PASSWORD_LINK: "Choisissez un nouveau mot de passe",
-    EmailKind.PROMOTION: "Une offre pour votre prochain voyage",
-}
-
-
 def send_email(
     to: str,
     kind: EmailKind,
-    template_name: str,
-    context: dict,
+    fields: Mapping[str, object],
     *,
     user: User | None = None,
     order_number: int | None = None,
 ) -> bool:
     """Envoie un e-mail à `to` et l'inscrit au journal. À utiliser pour tout nouvel e-mail.
 
-    - `kind` : type de l'e-mail (EmailKind) ; il fixe l'objet (SUBJECTS).
-    - `template_name` : gabarit du texte, en texte brut, qui commence par {% autoescape off %} ;
-      la version HTML est construite à partir de ce texte dans la mise en page commune.
-    - `context` : variables du gabarit. Les liens doivent être absolus (request.build_absolute_uri,
-      ou site_url() hors d'une requête).
+    - `kind` : type de l'e-mail (EmailKind) ; il fixe l'objet et le texte : celui de l'administrateur
+      s'il l'a modifié, sinon le texte d'origine (voir email_texts.py). La version HTML est
+      construite à partir de ce texte dans la mise en page commune.
+    - `fields` : valeur de chaque champ variable du type (ex. {"prénom": ..., "lien": ...}).
+      Les liens doivent être absolus (request.build_absolute_uri, ou site_url() hors d'une requête).
     - `user`, `order_number` : compte et demande de voyage concernés, notés dans le journal.
 
     L'envoi a lieu après la validation de la transaction en cours (immédiatement hors transaction).
     Renvoie False si l'envoi immédiat a échoué ; True s'il a réussi ou s'il aura lieu à la
     validation de la transaction. Ne lève jamais d'exception à cause de l'envoi lui-même.
     """
-    subject = SUBJECTS[kind]
-    text = render_to_string(template_name, context)
+    subject, text = render_email(kind, fields)
     log = EmailLog.objects.create(
         recipient=to, kind=kind, subject=subject, user=user, order_number=order_number
     )
@@ -92,7 +63,7 @@ def queue_emails(users: Iterable[User], kind: EmailKind, *, promotion_mailing_nu
     (voir retry_due_emails) ; le message est construit à ce moment par la reconstruction du type.
     Renvoie le nombre d'e-mails mis en attente.
     """
-    subject = SUBJECTS[kind]
+    subject = current_subject(kind)
     logs = [
         EmailLog(
             recipient=user.email,

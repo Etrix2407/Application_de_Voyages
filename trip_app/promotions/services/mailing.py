@@ -9,13 +9,12 @@ entre-temps ne reçoit rien.
 from django.db import transaction
 from django.urls import reverse
 from django.utils import timezone
+from django.utils.formats import date_format
 
 from accounts.models import EmailKind, User
 from accounts.services.emails import queue_emails, site_url
 from accounts.services.unsubscribe import unsubscribe_link
 from promotions.models import Promotion, PromotionMailing, State
-
-TEMPLATE = "promotions/emails/promotion.txt"
 
 
 class NoRecipients(Exception):
@@ -45,15 +44,42 @@ def send_promotion_mailing(promotion: Promotion, message: str, author: User) -> 
 
 
 def promotion_email_context(mailing: PromotionMailing, user: User) -> dict:
-    """Variables de l'e-mail d'un client, lues au moment de l'envoi."""
+    """Champs de l'e-mail d'un client, lus au moment de l'envoi."""
     promotion = mailing.promotion
     # La page « Nos offres du moment » ne montre que les promotions automatiques en cours.
     on_offers_page = promotion.is_automatic and promotion.state() == State.RUNNING
     return {
-        "first_name": user.first_name,
+        "prénom": user.first_name,
         "message": mailing.message,
-        "promotion": promotion,
-        "upcoming": promotion.starts_on > timezone.localdate(),
-        "link": site_url(reverse("offers" if on_offers_page else "country_list")),
-        "unsubscribe_link": unsubscribe_link(user),
+        "offre": _offer(promotion),
+        "lien": site_url(reverse("offers" if on_offers_page else "country_list")),
+        "désinscription": (
+            "Vous recevez cet e-mail parce que vous avez accepté de recevoir nos offres. "
+            f"Pour ne plus les recevoir, suivez ce lien :\n{unsubscribe_link(user)}"
+        ),
     }
+
+
+def _offer(promotion: Promotion) -> str:
+    """Bloc de l'offre : remise, description, destinations, validité et code promo."""
+    if promotion.starts_on > timezone.localdate():
+        period = f"du {_day(promotion.starts_on)} au {_day(promotion.ends_on)}"
+    else:
+        period = f"jusqu'au {_day(promotion.ends_on)}"
+    validity = f"Offre valable pour les demandes de voyage faites {period} inclus"
+    if promotion.departure_from:
+        validity += f", pour les départs du {_day(promotion.departure_from)} au {_day(promotion.departure_until)}"
+    lines = [f"{promotion.name} : {promotion.discount_label} {promotion.base_label}."]
+    if promotion.description:
+        lines.append(promotion.description)
+    lines += [f"Destinations concernées : {promotion.targets_label}.", f"{validity}."]
+    if promotion.code:
+        lines.append(
+            f"Votre code promo : {promotion.code}. "
+            "Saisissez-le dans le champ « Code promo » de votre demande de voyage."
+        )
+    return "\n".join(lines)
+
+
+def _day(day) -> str:
+    return date_format(day, "j F Y")

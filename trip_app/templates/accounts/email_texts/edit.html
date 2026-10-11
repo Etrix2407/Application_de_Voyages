@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block title %}Modifier l'e-mail « {{ kind.label }} »{% endblock %}
+
+{% block content %}
+    <h1>Modifier l'e-mail « {{ kind.label }} »</h1>
+
+    <p>
+        {% if custom %}
+            Texte modifié le {{ custom.updated_at|date:"j F Y à H:i" }} par {{ custom.updated_by_name }}.
+        {% else %}
+            Texte d'origine.
+        {% endif %}
+        Le logo et la signature de l'agence sont ajoutés automatiquement : ne les écrivez pas.
+    </p>
+
+    <form method="post" novalidate>
+        {% csrf_token %}
+        {{ form }}
+
+        <h2>Champs variables de cet e-mail</h2>
+        <p>Chaque champ doit rester dans le texte, écrit exactement comme ci-dessous, accolades comprises. Vous pouvez le déplacer, mais pas le supprimer.</p>
+        <dl>
+            {% for field, description in fields %}
+                <dt><code>{{ field }}</code></dt>
+                <dd>{{ description }}</dd>
+            {% endfor %}
+        </dl>
+
+        <button type="submit">Enregistrer</button>
+    </form>
+
+    {% if custom %}
+        <form method="post" action="{% url 'reset_email_text' kind.value %}">
+            {% csrf_token %}
+            <button type="submit">Rétablir le texte d'origine</button>
+        </form>
+    {% endif %}
+
+    <p><a href="{% url 'email_text_list' %}">Retour aux modèles des e-mails</a></p>
+{% endblock %}
