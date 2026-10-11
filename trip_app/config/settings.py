@@ -259,6 +259,42 @@ if EMAIL_TEST_MODE and not EMAIL_TEST_RECIPIENT:
     EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
 
+# Journal : avertissements et erreurs affichés dans la sortie du serveur, y compris en production
+# (sans ce réglage, Django n'y affiche pas les erreurs 500). Les pages introuvables (404) ne sont
+# pas journalisées. Format sans données personnelles : date, niveau, origine et message.
+# Facultatif : DJANGO_ADMINS (adresses séparées par des virgules) reçoit aussi chaque erreur 500
+# par e-mail en production, envoyé depuis DEFAULT_FROM_EMAIL.
+ADMINS = [(email, email) for email in (part.strip() for part in env_str("DJANGO_ADMINS").split(",")) if email]
+SERVER_EMAIL = DEFAULT_FROM_EMAIL
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "simple": {"format": "{asctime} {levelname} {name} : {message}", "style": "{"},
+    },
+    "filters": {
+        "require_debug_false": {"()": "django.utils.log.RequireDebugFalse"},
+    },
+    "handlers": {
+        "console": {"class": "logging.StreamHandler", "formatter": "simple"},
+        "mail_admins": {
+            "class": "django.utils.log.AdminEmailHandler",
+            "level": "ERROR",
+            "filters": ["require_debug_false"],
+        },
+    },
+    "root": {"handlers": ["console"], "level": "WARNING"},
+    "loggers": {
+        # Remplace la configuration par défaut de Django, qui n'affiche rien quand DEBUG vaut 0.
+        "django": {"handlers": ["console", "mail_admins"], "level": "WARNING", "propagate": False},
+        "django.request": {"level": "ERROR"},
+    },
+}
+if TESTING:
+    # Les erreurs provoquées exprès par les tests n'encombrent pas leur affichage.
+    LOGGING["handlers"]["console"]["level"] = "CRITICAL"
+
+
 # Sécurité en production (site servi en HTTPS).
 if not DEBUG and not TESTING:
     SESSION_COOKIE_SECURE = True
