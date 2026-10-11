@@ -274,7 +274,8 @@ class StatusChange(models.Model):
     # Texte montré au client dans l'historique : son propre motif, la note de prix recalculé,
     # ou l'explication de l'agence quand elle annule.
     reason = models.TextField("motif visible par le client", blank=True)
-    # Annulation par l'agence : motif réservé au personnel, jamais montré au client.
+    # Annulation par l'agence : n'apparaît ni sur le site ni dans les e-mails du client,
+    # mais figure dans les données qu'il peut télécharger (droit d'accès, services/data_export.py).
     internal_reason = models.TextField("motif interne", blank=True)
     # Action du client lui-même (sinon : le personnel). Ne dépend pas du libellé affiché.
     by_client = models.BooleanField("par le client", default=False)

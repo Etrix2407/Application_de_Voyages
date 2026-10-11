@@ -125,7 +125,10 @@ class StaffCancelForm(forms.Form):
         label="Motif interne",
         max_length=1000,
         widget=forms.Textarea(attrs={"rows": 3}),
-        help_text="Obligatoire. Réservé au personnel : le client ne le voit pas.",
+        help_text=(
+            "Obligatoire. Il n'apparaît ni sur le site ni dans les e-mails, "
+            "mais figure dans les données que le client peut télécharger."
+        ),
         error_messages={"required": "Le motif interne est obligatoire."},
     )
     explanation = forms.CharField(

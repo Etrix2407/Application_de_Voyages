@@ -7,7 +7,8 @@
 | cancel_by_staff       | En attente ou Confirmée   | agent ou administrateur   | interne obligatoire, explication facultative |
 | cancel_after_account_deletion | En attente        | automatique (« Client »)  | interne, fixé |
 
-Le motif (champ reason) est visible par le client ; le motif interne, par le personnel seulement.
+Le motif (champ reason) est visible par le client. Le motif interne n'apparaît ni sur le site ni dans
+les e-mails du client, mais figure dans les données qu'il peut télécharger.
 Le client est prévenu par e-mail de chaque action, sauf de l'annulation automatique (compte supprimé).
 """
 
@@ -88,7 +89,8 @@ def confirm_by_staff(order: Order, staff_member) -> None:
 def cancel_by_staff(order: Order, staff_member, internal_reason: str, explanation: str = "") -> None:
     """Annulation par l'agence : motif interne obligatoire, explication pour le client facultative.
 
-    Le motif interne n'est montré qu'au personnel ; l'explication apparaît dans l'historique du client.
+    Le motif interne n'apparaît ni sur le site ni dans les e-mails du client, mais figure dans les données
+    qu'il peut télécharger ; l'explication apparaît dans l'historique du client.
     """
     if not internal_reason.strip():
         raise ValueError("Le motif interne est obligatoire quand le personnel annule une demande.")

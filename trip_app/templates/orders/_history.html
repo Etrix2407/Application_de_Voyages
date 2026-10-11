@@ -22,7 +22,7 @@
                         {# Nom de l'agent réservé au personnel ; le client voit « Agence ». #}
                         <td>{% if show_staff_names %}{{ change.author_name }}{% else %}{{ change.author_for_client }}{% endif %}</td>
                         <td>{{ change.reason|default:"—" }}</td>
-                        {# Motif interne réservé au personnel : jamais affiché au client. #}
+                        {# Motif interne : jamais affiché au client sur le site (il figure dans ses données téléchargeables). #}
                         {% if show_internal_reasons %}<td>{{ change.internal_reason|default:"—" }}</td>{% endif %}
                     </tr>
                 {% endfor %}
