@@ -58,3 +58,14 @@ class LoginPageMarkupTests(TestCase):
         self.assertEqual(html.count("<form"), 1)
         self.assertNotIn("{#", html)
 
+class ErrorReportTests(SimpleTestCase):
+    def test_error_report_hides_posted_fields_and_cookies(self):
+        from django.test import RequestFactory
+        from django.views.debug import get_exception_reporter_filter
+
+        request = RequestFactory().post("/comptes/inscription/", {"email": "marie@example.com", "password1": "s3cret"})
+        request.COOKIES["sessionid"] = "abc"
+        reporter_filter = get_exception_reporter_filter(request)
+
+        self.assertEqual(set(reporter_filter.get_post_parameters(request).values()), {"********************"})
+        self.assertEqual(reporter_filter.get_safe_cookies(request), {"sessionid": "********************"})
