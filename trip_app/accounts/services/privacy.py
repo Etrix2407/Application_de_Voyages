@@ -12,8 +12,11 @@ EMAIL_LOG_RETENTION = timedelta(days=365)
 
 
 def erase_email_log_of(user: User) -> None:
-    """Journal des e-mails : les lignes restent (statistiques anonymes), sans adresse ni lien au compte."""
-    EmailLog.objects.filter(Q(user=user) | Q(recipient=user.email)).update(recipient="", user=None)
+    """Journal des e-mails : les lignes restent (statistiques anonymes), sans adresse ni lien au compte.
+
+    Le détail technique de l'échec est vidé aussi : il contient souvent l'adresse (« 550 <marie@...> »).
+    """
+    EmailLog.objects.filter(Q(user=user) | Q(recipient=user.email)).update(recipient="", user=None, last_error="")
 
 
 def purge_old_email_log(now: datetime | None = None) -> int:

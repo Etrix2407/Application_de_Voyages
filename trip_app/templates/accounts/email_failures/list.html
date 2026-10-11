@@ -32,7 +32,10 @@
                             </td>
                             <td>{{ log.get_kind_display }}<br>« {{ log.subject }} »</td>
                             <td>{{ log.attempts }}</td>
-                            <td>{{ log.last_error|default:"—" }}</td>
+                            <td>
+                                {{ log.get_failure_display|default:"—" }}
+                                {% if log.last_error %}<br><small>Détail technique : {{ log.last_error }}</small>{% endif %}
+                            </td>
                             <td>
                                 {% if log.can_resend %}
                                     <form method="post" action="{% url 'resend_email' log.pk %}">

@@ -259,7 +259,7 @@ class EmailFailureTests(SendEmailsImmediately, TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTrue(User.objects.filter(email="luc@example.com").exists())
         self.assertContains(response, "n&#x27;a pas pu être envoyé")
-        self.assertIn("serveur SMTP injoignable", logs.output[0])
+        self.assertIn("OSError", logs.output[0])
 
     def test_resend_link_failure_is_reported(self, _send_mail):
         agent = create_agent()
@@ -269,7 +269,7 @@ class EmailFailureTests(SendEmailsImmediately, TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "n&#x27;a pas pu être envoyé")
-        self.assertIn("serveur SMTP injoignable", logs.output[0])
+        self.assertIn("OSError", logs.output[0])
 
 
 class InactiveMemberLinkTests(TestCase):

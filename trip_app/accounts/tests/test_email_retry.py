@@ -1,15 +1,25 @@
 from datetime import timedelta
+from io import StringIO
 from unittest import mock
 
 from django.core import mail
+from django.core.management import call_command
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
-from accounts.models import EmailKind, EmailLog, EmailStatus
+from accounts.models import EmailFailure, EmailKind, EmailLog, EmailStatus, TaskLock
 from accounts.services.account_deletion import delete_account
-from accounts.services.email_retry import NOT_REBUILDABLE, OBSOLETE, retry_due_emails
+from accounts.services.email_retry import (
+    _REBUILDERS,
+    NOT_REBUILDABLE,
+    OBSOLETE,
+    AlreadyResent,
+    resend,
+    retry_due_emails,
+)
 from accounts.services.privacy import purge_old_email_log
+from accounts.services.task_lock import task_lock
 
 from .factories import create_admin, create_agent, create_client
 
@@ -68,6 +78,21 @@ class RetryTests(TestCase):
         log.refresh_from_db()
         self.assertEqual((log.status, log.attempts, log.last_error), (EmailStatus.FAILED, 3, "serveur injoignable"))
 
+    def test_error_on_one_email_does_not_block_the_next(self):
+        broken = pending_log(self.marie, attempts=1, minutes_ago=6)
+        next_one = pending_log(self.marie, attempts=1, minutes_ago=6, kind=EmailKind.PASSWORD_CHANGED)
+
+        def crash(log):
+            raise RuntimeError("bogue de reconstruction")
+
+        with mock.patch.dict(_REBUILDERS, {EmailKind.CLIENT_PASSWORD_LINK: crash}):
+            with self.assertLogs("accounts.services.email_retry", level="ERROR") as logs:
+                self.assertEqual(retry_due_emails(), 2)
+
+        self.assertIn(f"n° {broken.pk}", logs.output[0])
+        next_one.refresh_from_db()
+        self.assertEqual(next_one.status, EmailStatus.SENT)
+
     def test_no_security_link_to_a_former_address(self):
         log = pending_log(self.marie, attempts=1, minutes_ago=6)
         self.marie.email = "marie.nouvelle@example.com"
@@ -87,6 +112,28 @@ class RetryTests(TestCase):
         log.refresh_from_db()
         self.assertEqual((log.status, log.last_error), (EmailStatus.FAILED, NOT_REBUILDABLE))
         self.assertEqual(mail.outbox, [])
+
+
+class ProcessEmailsLockTests(TestCase):
+    def run_command(self):
+        output = StringIO()
+        call_command("process_emails", stdout=output)
+        return output.getvalue()
+
+    def test_one_pass_at_a_time_and_lock_expires(self):
+        log = pending_log(create_client(), attempts=1, minutes_ago=6)
+
+        with task_lock("process_emails", timedelta(minutes=30)):
+            self.assertIn("Un autre passage est en cours", self.run_command())
+        self.assertEqual(mail.outbox, [])
+
+        # Passage interrompu sans rendre le verrou : il est repris une fois expiré.
+        TaskLock.objects.filter(name="process_emails").update(
+            locked_until=timezone.now() - timedelta(seconds=1), holder="passage interrompu"
+        )
+        self.assertIn("E-mails envoyés ou retentés : 1", self.run_command())
+        log.refresh_from_db()
+        self.assertEqual(log.status, EmailStatus.SENT)
 
 
 class ManualResendTests(TestCase):
@@ -113,8 +160,17 @@ class ManualResendTests(TestCase):
         self.log.refresh_from_db()
         self.assertEqual((self.log.status, self.log.attempts), (EmailStatus.PENDING, 1))
 
+    def test_resend_already_taken_is_not_sent_twice(self):
+        stale = EmailLog.objects.get(pk=self.log.pk)  # ligne lue avant le renvoi d'un collègue
+        resend(self.log)
+
+        with self.assertRaises(AlreadyResent):
+            resend(stale)
+
+        self.assertEqual(len(mail.outbox), 1)
+
     def test_emails_that_cannot_be_resent_are_not_listed(self):
-        self.log.last_error = OBSOLETE
+        self.log.failure = EmailFailure.OBSOLETE
         self.log.save()
 
         self.assertNotContains(self.client.get(reverse("email_failure_list")), "marie@example.com")
@@ -195,7 +251,9 @@ class AddressToCheckTests(TestCase):
 
     def fail(self, count):
         for _ in range(count):
-            pending_log(self.marie, attempts=3, minutes_ago=30, status=EmailStatus.FAILED)
+            pending_log(
+                self.marie, attempts=3, minutes_ago=30, status=EmailStatus.FAILED, failure=EmailFailure.RECIPIENT_REFUSED
+            )
 
     def is_marked(self):
         return "Adresse à vérifier" in self.client.get(reverse("client_list")).content.decode()

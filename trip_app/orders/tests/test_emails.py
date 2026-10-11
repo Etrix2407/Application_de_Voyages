@@ -110,7 +110,7 @@ class OrderEmailsTests(SendEmailsImmediately, TestCase):
         order = create_order(self.marie, self.destination)
         with mock.patch(
             "accounts.services.emails.EmailMultiAlternatives.send", side_effect=OSError("serveur injoignable")
-        ):
+        ), self.assertLogs("accounts.services.emails", level="ERROR"):
             cancel_by_staff(order, self.agent, "Client agressif au téléphone.", "Plus de places disponibles.")
         EmailLog.objects.update(last_attempt_at=timezone.now() - timedelta(minutes=6))
 

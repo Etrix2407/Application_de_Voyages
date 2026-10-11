@@ -110,7 +110,7 @@ class DepartureReminderTests(SendEmailsImmediately, TestCase):
         cancelled = self.confirmed_order(5)
         with mock.patch(
             "accounts.services.emails.EmailMultiAlternatives.send", side_effect=OSError("serveur injoignable")
-        ):
+        ), self.assertLogs("accounts.services.emails", level="ERROR"):
             self.run_command()
         Order.objects.filter(pk=cancelled.pk).update(status=Status.CANCELLED)
         EmailLog.objects.update(last_attempt_at=timezone.now() - timedelta(minutes=6))
