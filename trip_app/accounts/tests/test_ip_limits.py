@@ -69,7 +69,7 @@ class LoginIpLimitTests(TestCase):
 
         response = self.log_in("client@example.com", PASSWORD)
 
-        self.assertContains(response, "Trop de tentatives")
+        self.assertContains(response, "Trop de tentatives échouées depuis cette connexion.")
         self.assertNotIn("_auth_user_id", self.client.session)
 
     def test_other_ip_not_affected(self):

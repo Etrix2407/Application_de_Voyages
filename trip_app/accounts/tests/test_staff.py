@@ -4,6 +4,7 @@ from unittest import mock
 
 from django.contrib.auth import get_user_model
 from django.core import mail
+from django.db import IntegrityError
 from django.test import TestCase
 from django.urls import reverse
 
@@ -118,6 +119,14 @@ class AgentCreationTests(SendEmailsImmediately, TestCase):
 
         self.assertContains(response, "Un compte existe déjà avec cette adresse e-mail.")
         self.assertEqual(User.objects.filter(email="pris@example.com").count(), 1)
+
+    def test_other_integrity_error_not_disguised_as_taken_address(self):
+        # Seul un vrai doublon d'adresse donne ce message : toute autre erreur reste une erreur.
+        with mock.patch.object(AgentCreationForm, "save", side_effect=IntegrityError("autre contrainte")):
+            with self.assertRaises(IntegrityError):
+                self.client.post(
+                    reverse("create_agent"), {"first_name": "L", "last_name": "M", "email": "libre@example.com"}
+                )
 
 
 class StaffMemberEditTests(TestCase):

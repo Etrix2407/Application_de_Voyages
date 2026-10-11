@@ -7,7 +7,7 @@ from accounts.tests.factories import create_admin, create_agent, create_client
 from catalog.tests.factories import create_country, create_destination
 from reviews.models import AgencyResponse, Review, ReviewStatus
 from reviews.services.moderation import publish
-from reviews.services.responses import ResponseNotAllowed, save_response
+from reviews.services.responses import CHANGED_MESSAGE, ResponseNotAllowed, save_response
 from reviews.services.writing import update_review
 
 from .factories import create_review, create_trip_done
@@ -80,6 +80,13 @@ class AgencyResponseTests(TestCase):
                 with self.assertRaises(ResponseNotAllowed):
                     save_response(self.review, self.luc, "Merci")
 
+    def test_form_sends_the_version_read(self):
+        self.client.force_login(self.luc)
+
+        page = self.client.get(self.url)
+
+        self.assertContains(page, f'name="version" value="{self.review.version}"')
+
     def test_refused_when_review_republished_with_another_text_meanwhile(self):
         # L'agent lit l'avis ; le client le modifie et il est republié avant l'envoi de la réponse.
         self.client.force_login(self.luc)
@@ -89,7 +96,7 @@ class AgencyResponseTests(TestCase):
 
         page = self.client.post(self.url, {"text": "Merci !", "version": seen_version}, follow=True)
 
-        self.assertContains(page, "Le client a modifié cet avis pendant votre lecture")
+        self.assertContains(page, CHANGED_MESSAGE)
         self.assertFalse(AgencyResponse.objects.exists())
 
     def test_response_required(self):
