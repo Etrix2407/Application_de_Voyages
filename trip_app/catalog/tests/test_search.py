@@ -3,7 +3,7 @@ from decimal import Decimal
 from django.test import SimpleTestCase, TestCase
 from django.urls import reverse
 
-from catalog.models import Category, Continent, Difficulty, Month
+from catalog.models import Category, Continent, Destination, Difficulty, Month
 from catalog.services.search import Criteria, search
 from accounts.tests.factories import create_client
 from common.text import normalize
@@ -116,6 +116,17 @@ class SearchTests(TestCase):
         results = search(Criteria(month=Month.JANUARY))
 
         self.assertNotIn("Osaka", names(results.destinations))
+
+    def test_month_filter_matches_ideal_period(self):
+        # Le filtre fait par la base suit la même règle que Destination.ideal_months.
+        create_destination(self.japan, "Osaka", start_month=Month.JULY, end_month=Month.JULY)
+        create_destination(self.japan, "Nara", start_month=Month.JANUARY, end_month=Month.DECEMBER)
+        create_destination(self.japan, "Nikko")
+        for month in Month:
+            with self.subTest(month=month.label):
+                expected = [d.name for d in Destination.objects.all() if month in d.ideal_months()]
+
+                self.assertEqual(names(search(Criteria(month=month)).destinations), sorted(expected))
 
     def test_traveller_age(self):
         self.assertEqual(names(search(Criteria(age=10)).activities), ["Cérémonie du thé"])
