@@ -119,6 +119,9 @@ confirmation_emails = Limiter("sign-up-emails", max_attempts=3, window_seconds=6
 # Par compte connecté : ressaisie du mot de passe (changement d'e-mail ou de mot de passe,
 # suppression du compte). Empêche de le deviner depuis une session volée.
 password_confirmations = Limiter("password-confirmations", max_attempts=5, window_seconds=15 * 60)
+# Par compte connecté : demandes de changement d'adresse (chacune envoie un e-mail à une adresse
+# choisie par le client) ; on ne peut pas se servir du site pour écrire en masse à des tiers.
+email_change_requests = Limiter("email-change", max_attempts=3, window_seconds=60 * 60)
 # Par client : codes promo faux (essais au hasard).
 wrong_promo_codes = Limiter("promo-codes", max_attempts=10, window_seconds=60 * 60)
 
@@ -127,6 +130,7 @@ login_failures_by_ip = Limiter("login-failures-ip", max_attempts=20, window_seco
 sign_ups_by_ip = Limiter("sign-ups-ip", max_attempts=5, window_seconds=60 * 60)
 password_reset_requests_by_ip = Limiter("password-reset-ip", max_attempts=10, window_seconds=60 * 60)
 confirmation_requests_by_ip = Limiter("confirmation-resend-ip", max_attempts=10, window_seconds=60 * 60)
+email_change_requests_by_ip = Limiter("email-change-ip", max_attempts=10, window_seconds=60 * 60)
 # Empêche de contourner la limite des codes promo en changeant de compte.
 wrong_promo_codes_by_ip = Limiter("promo-codes-ip", max_attempts=30, window_seconds=60 * 60)
 
