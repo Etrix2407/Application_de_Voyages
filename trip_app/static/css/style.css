@@ -329,6 +329,8 @@ textarea:focus-visible {
     font-family: var(--font-heading);
     font-size: 1.3rem;
     font-weight: 700;
+    /* Chiffres de même hauteur dans les ronds (Candara les fait descendre). */
+    font-variant-numeric: lining-nums;
     color: #ffffff;
     background: var(--color-primary);
     border-radius: 50%;
@@ -350,6 +352,17 @@ textarea:focus-visible {
 
 /* Moins de trois colonnes (sous 900 px ; dans une media query, 1rem = 16 px) : pas de route horizontale. */
 @media (max-width: 56.25rem) {
+    .steps li::after {
+        display: none;
+    }
+}
+
+/* Même règle mesurée sur la liste elle-même, barre de défilement comprise. */
+.steps {
+    container-type: inline-size;
+}
+
+@container (width < 48rem) {
     .steps li::after {
         display: none;
     }
@@ -395,15 +408,16 @@ textarea:focus-visible {
 .message-success,
 .message-warning,
 .message-error {
-    display: flex;
-    align-items: flex-start;
-    gap: 0.6rem;
+    position: relative;
+    padding-left: calc(1rem + 1.6rem + 0.6rem);
 }
 
 .message-success::before,
 .message-warning::before,
 .message-error::before {
-    flex-shrink: 0;
+    position: absolute;
+    top: 0.8rem;
+    left: 1rem;
     display: grid;
     place-items: center;
     width: 1.6rem;
@@ -415,17 +429,19 @@ textarea:focus-visible {
 }
 
 .message-success::before {
+    content: "✓";
     content: "✓" / "";
     background: var(--color-primary);
 }
 
 .message-warning::before {
+    content: "!";
     content: "!" / "";
-    color: #ffffff;
     background: var(--color-accent);
 }
 
 .message-error::before {
+    content: "✕";
     content: "✕" / "";
     background: var(--color-error);
 }
@@ -543,11 +559,24 @@ button:hover {
     background: var(--color-primary-dark);
 }
 
-/* Espace porté par le premier bouton : si le bouton secondaire passe à la ligne,
-   il reste aligné à gauche. */
-button:has(+ .button-secondary),
-.button:has(+ .button-secondary) {
-    margin-right: 0.5rem;
+/* Espace entre deux boutons voisins. */
+button + .button-secondary,
+.button + .button-secondary {
+    margin-left: 0.5rem;
+}
+
+/* Si le navigateur reconnaît :has, l'espace est porté par le premier bouton :
+   si le bouton secondaire passe à la ligne, il reste aligné à gauche. */
+@supports selector(:has(+ *)) {
+    button + .button-secondary,
+    .button + .button-secondary {
+        margin-left: 0;
+    }
+
+    button:has(+ .button-secondary),
+    .button:has(+ .button-secondary) {
+        margin-right: 0.5rem;
+    }
 }
 
 .button-danger {
