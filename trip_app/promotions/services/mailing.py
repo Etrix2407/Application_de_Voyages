@@ -42,10 +42,13 @@ class AlreadySent(Exception):
 def can_be_mailed(promotion: Promotion) -> bool:
     """En cours ou à venir, et vise encore un pays ou une destination proposé.
 
-    Les pays et destinations visés doivent être préchargés avec visible_targets : l'e-mail ne cite
-    jamais un élément désactivé.
+    Les pays et destinations visés sont préchargés ici avec visible_targets s'ils ne le sont pas
+    déjà (aucune requête de plus sinon) : un élément désactivé n'est jamais compté ni cité.
     """
-    return promotion.state() in (PromotionState.RUNNING, PromotionState.UPCOMING) and offers_something(promotion)
+    if promotion.state() not in (PromotionState.RUNNING, PromotionState.UPCOMING):
+        return False
+    prefetch_related_objects([promotion], *visible_targets(promotion.scope))
+    return offers_something(promotion)
 
 
 def mailable_promotions(exclude=()) -> list[Promotion]:

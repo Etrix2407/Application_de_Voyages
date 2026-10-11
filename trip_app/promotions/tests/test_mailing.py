@@ -11,8 +11,9 @@ from accounts.services.email_retry import OBSOLETE, retry_due_emails
 from accounts.tests.factories import create_admin, create_agent, create_client
 from catalog.tests.factories import create_country, create_destination
 from orders.tests.factories import create_order
-from promotions.models import PromotionEmail, PromotionMailing, Scope
-from promotions.services.mailing import send_promotion_mailing
+from promotions.models import Promotion, PromotionEmail, PromotionMailing, Scope
+from promotions.services.mailing import can_be_mailed, send_promotion_mailing
+from promotions.services.public import visible_targets
 from promotions.tests.factories import create_promotion
 
 
@@ -176,6 +177,16 @@ class MailablePromotionsTests(TestCase):
         self.assertContains(response, "Offre valable")
         self.assertNotContains(response, "Printemps à Nara")
         self.assertNotContains(response, "Offre épuisée")
+
+    def test_can_be_mailed_preloads_visible_targets_when_needed(self):
+        """Sans préchargement, un pays désactivé n'est pas compté ; préchargé, aucune requête de plus."""
+        portugal = create_country("Portugal", active=False)
+        create_promotion(scope=Scope.COUNTRIES, countries=[portugal])
+
+        self.assertFalse(can_be_mailed(Promotion.objects.get()))
+        preloaded = Promotion.objects.prefetch_related(*visible_targets()).get()
+        with self.assertNumQueries(0):
+            self.assertFalse(can_be_mailed(preloaded))
 
     def test_withdrawn_country_not_named_in_the_email(self):
         create_client("marie@example.com", accepts_promotional_emails=True)
