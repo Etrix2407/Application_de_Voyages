@@ -7,8 +7,8 @@ from django.views.decorators.http import require_POST
 
 from accounts.decorators import staff_required
 from reviews.forms import RefusalForm, ResponseForm, StaffReviewFilterForm
-from reviews.services.filtering import filter_reviews
 from reviews.models import Review, ReviewStatus
+from reviews.services.filtering import filter_reviews
 from reviews.services.moderation import ModerationNotAllowed, hide, pending_reviews, publish, refuse
 from reviews.services.responses import ResponseNotAllowed, can_write_response, existing_response, save_response
 

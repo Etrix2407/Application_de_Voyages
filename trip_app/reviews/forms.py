@@ -1,11 +1,8 @@
-"""Formulaire d'avis du client."""
+"""Formulaires des avis : avis du client, tri public, modération, réponse et filtres (personnel)."""
 
 from django import forms
 
 from catalog.models import Country, Destination
-
-from reviews.services.ratings import BEST_REVIEWS_FIRST, NEWEST_REVIEWS_FIRST
-
 from reviews.models import (
     MAX_COMMENT_LENGTH,
     MAX_RATING,
@@ -18,6 +15,7 @@ from reviews.models import (
     ReviewStatus,
     refusal_problem,
 )
+from reviews.services.ratings import BEST_REVIEWS_FIRST, NEWEST_REVIEWS_FIRST
 
 RATING_CHOICES = [
     (rating, f"{rating} étoile{'s' if rating > 1 else ''} sur {MAX_RATING}")

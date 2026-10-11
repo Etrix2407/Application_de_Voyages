@@ -1,4 +1,4 @@
-"""Formulaire de demande de voyage (client)."""
+"""Formulaires des demandes de voyage : demande et annulation (client), filtres et annulation (personnel)."""
 
 from datetime import timedelta
 
