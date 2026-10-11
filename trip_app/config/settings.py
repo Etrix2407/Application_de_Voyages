@@ -9,6 +9,7 @@ from dotenv import load_dotenv
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Les tests ne dépendent jamais des réglages locaux : même résultat sur toutes les machines.
+# Reconnu uniquement avec « python manage.py test » (pas avec un autre lanceur de tests).
 TESTING = "test" in sys.argv[1:2]
 
 # Réglages locaux et secrets : fichier .env à la racine du dépôt (modèle : .env.example).
@@ -16,16 +17,50 @@ TESTING = "test" in sys.argv[1:2]
 if not TESTING:
     load_dotenv(BASE_DIR.parent / ".env")
 
+
+def env_str(name: str, default: str = "") -> str:
+    """Valeur d'une variable d'environnement, sans espaces autour.
+
+    Pendant les tests, l'environnement est ignoré : la valeur par défaut s'applique toujours.
+    """
+    if TESTING:
+        return default
+    return os.environ.get(name, default).strip()
+
+
+def env_int(name: str, default: int) -> int:
+    """Nombre entier lu dans l'environnement ; une valeur vide garde la valeur par défaut."""
+    value = env_str(name)
+    if not value:
+        return default
+    try:
+        return int(value)
+    except ValueError:
+        raise RuntimeError(
+            f"La variable d'environnement {name} doit être un nombre entier (valeur reçue : « {value} »)."
+        ) from None
+
+
+def env_bool(name: str, default: bool) -> bool:
+    """Oui/non lu dans l'environnement : 1 = oui, 0 = non ; une valeur vide garde la valeur par défaut."""
+    value = env_str(name)
+    if not value:
+        return default
+    if value not in ("0", "1"):
+        raise RuntimeError(f"La variable d'environnement {name} doit valoir 0 ou 1 (valeur reçue : « {value} »).")
+    return value == "1"
+
+
 # Nom affiché sur le site (titres, en-tête, pied de page).
 SITE_NAME = "Horizons Lointains"
 
 # Mode debug désactivé par défaut : un oubli en production ne l'active jamais.
 # En développement, mettre DJANGO_DEBUG=1 dans le fichier .env (voir .env.example).
-DEBUG = os.environ.get("DJANGO_DEBUG", "1" if TESTING else "0") == "1"
+DEBUG = env_bool("DJANGO_DEBUG", default=TESTING)
 
 # La clé secrète ne doit jamais être commitée : elle vient toujours de l'environnement,
 # même en développement. Seuls les tests ont une valeur fixe, inutilisable ailleurs.
-SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "")
+SECRET_KEY = env_str("DJANGO_SECRET_KEY")
 if not SECRET_KEY:
     if not TESTING:
         raise RuntimeError("La variable d'environnement DJANGO_SECRET_KEY est obligatoire.")
@@ -33,11 +68,9 @@ if not SECRET_KEY:
 
 # Nombre de serveurs intermédiaires (proxy) de confiance devant le site : 0 en direct.
 # Sert à retrouver la vraie IP des visiteurs pour les limites anti-abus.
-NUM_PROXIES = int(os.environ.get("DJANGO_NUM_PROXIES", "0"))
+NUM_PROXIES = env_int("DJANGO_NUM_PROXIES", 0)
 
-ALLOWED_HOSTS = [
-    host for host in os.environ.get("DJANGO_ALLOWED_HOSTS", "").split(",") if host
-]
+ALLOWED_HOSTS = [host.strip() for host in env_str("DJANGO_ALLOWED_HOSTS").split(",") if host.strip()]
 
 
 INSTALLED_APPS = [
@@ -118,7 +151,7 @@ AUTH_PASSWORD_VALIDATORS = [
 # « Poivre » : secret commun ajouté au hachage des mots de passe, gardé hors de la base.
 # Obligatoire en production. Ne jamais le perdre ni le changer : tous les mots de passe
 # deviendraient inutilisables (voir accounts/hashers.py).
-PASSWORD_PEPPER = os.environ.get("DJANGO_PASSWORD_PEPPER", "")
+PASSWORD_PEPPER = env_str("DJANGO_PASSWORD_PEPPER")
 if not PASSWORD_PEPPER and not DEBUG and not TESTING:
     raise RuntimeError("La variable d'environnement DJANGO_PASSWORD_PEPPER est obligatoire.")
 if PASSWORD_PEPPER:
@@ -172,30 +205,31 @@ PASSWORD_RESET_TIMEOUT = 60 * 60
 
 # En développement, les e-mails s'affichent dans le terminal.
 # En production : DJANGO_EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend et réglages SMTP.
-EMAIL_BACKEND = os.environ.get(
-    "DJANGO_EMAIL_BACKEND", "django.core.mail.backends.console.EmailBackend"
-)
+EMAIL_BACKEND = env_str("DJANGO_EMAIL_BACKEND") or "django.core.mail.backends.console.EmailBackend"
 # Expéditeur et adresse des réponses (Recap 5). Une ligne vide dans .env garde l'expéditeur
 # par défaut ; avec Outlook, l'expéditeur doit être l'adresse Outlook (voir .env.example).
-DEFAULT_FROM_EMAIL = (
-    os.environ.get("DJANGO_DEFAULT_FROM_EMAIL") or "Horizons Lointains <noreply@horizons-lointains.be>"
-)
+DEFAULT_FROM_EMAIL = env_str("DJANGO_DEFAULT_FROM_EMAIL") or "Horizons Lointains <noreply@horizons-lointains.be>"
 # En-tête Reply-To des e-mails ; vide = pas d'en-tête (les réponses vont à l'expéditeur).
-EMAIL_REPLY_TO = os.environ.get("DJANGO_EMAIL_REPLY_TO", "info@horizons-lointains.be").strip()
-EMAIL_HOST = os.environ.get("DJANGO_EMAIL_HOST", "localhost")
-EMAIL_PORT = int(os.environ.get("DJANGO_EMAIL_PORT", "587"))
-EMAIL_HOST_USER = os.environ.get("DJANGO_EMAIL_HOST_USER", "")
-EMAIL_HOST_PASSWORD = os.environ.get("DJANGO_EMAIL_HOST_PASSWORD", "")
-EMAIL_USE_TLS = os.environ.get("DJANGO_EMAIL_USE_TLS", "1") == "1"
+EMAIL_REPLY_TO = env_str("DJANGO_EMAIL_REPLY_TO", "info@horizons-lointains.be")
+EMAIL_HOST = env_str("DJANGO_EMAIL_HOST") or "localhost"
+EMAIL_PORT = env_int("DJANGO_EMAIL_PORT", 587)
+EMAIL_HOST_USER = env_str("DJANGO_EMAIL_HOST_USER")
+EMAIL_HOST_PASSWORD = env_str("DJANGO_EMAIL_HOST_PASSWORD")
+EMAIL_USE_TLS = env_bool("DJANGO_EMAIL_USE_TLS", True)
 # Délai maximal d'attente du serveur SMTP, en secondes : un serveur lent ne bloque pas la page.
-EMAIL_TIMEOUT = int(os.environ.get("DJANGO_EMAIL_TIMEOUT") or "10")
+EMAIL_TIMEOUT = env_int("DJANGO_EMAIL_TIMEOUT", 10)
 # Adresse commune du personnel qui reçoit l'alerte « Nouvelle demande de voyage » (Recap 5).
 # Une ligne vide dans .env garde l'adresse par défaut.
-RESERVATIONS_EMAIL = os.environ.get("DJANGO_RESERVATIONS_EMAIL", "").strip() or "reservations@horizons-lointains.be"
+RESERVATIONS_EMAIL = env_str("DJANGO_RESERVATIONS_EMAIL") or "reservations@horizons-lointains.be"
 
 # Adresse du site (ex. https://horizons-lointains.be), pour les liens absolus des e-mails
-# envoyés hors d'une requête (commandes planifiées) et pour le logo. Obligatoire en production.
-SITE_URL = (os.environ.get("DJANGO_SITE_URL") or ("http://127.0.0.1:8000" if DEBUG else "")).rstrip("/")
+# envoyés hors d'une requête (commandes planifiées) et pour le logo. Obligatoire en production :
+# sans elle, les liens de ces e-mails (dont le lien de désinscription, obligatoire) seraient incomplets.
+SITE_URL = (env_str("DJANGO_SITE_URL") or ("http://127.0.0.1:8000" if DEBUG else "")).rstrip("/")
+if not SITE_URL and not DEBUG and not TESTING:
+    raise RuntimeError("La variable d'environnement DJANGO_SITE_URL est obligatoire (ex. https://horizons-lointains.be).")
+if SITE_URL and not SITE_URL.startswith(("http://", "https://")):
+    raise RuntimeError("DJANGO_SITE_URL doit commencer par http:// ou https:// (ex. https://horizons-lointains.be).")
 
 # Mise en page des e-mails : logo (chemin d'un fichier static, ex. « img/logo-email.png ») et
 # coordonnées de l'agence, ajoutées sous la signature « L'équipe Horizons Lointains » (une ligne
@@ -203,11 +237,12 @@ SITE_URL = (os.environ.get("DJANGO_SITE_URL") or ("http://127.0.0.1:8000" if DEB
 EMAIL_LOGO_STATIC_PATH = ""
 EMAIL_SIGNATURE_LINES: list[str] = []
 
-# Mode test des e-mails (Recap 5) : activé par défaut hors production, toujours désactivé en
-# production (DJANGO_DEBUG=0). Avec DJANGO_EMAIL_TEST_RECIPIENT, tous les messages partent à
-# cette adresse (l'adresse d'origine est ajoutée dans l'objet) ; sinon ils s'affichent dans le terminal.
-EMAIL_TEST_MODE = DEBUG and os.environ.get("DJANGO_EMAIL_TEST_MODE", "1") == "1"
-EMAIL_TEST_RECIPIENT = "" if TESTING else os.environ.get("DJANGO_EMAIL_TEST_RECIPIENT", "").strip()
+# Mode test des e-mails (Recap 5) : il dépend uniquement de DJANGO_DEBUG. Actif par défaut avec
+# DJANGO_DEBUG=1 (DJANGO_EMAIL_TEST_MODE=0 le désactive), toujours désactivé avec DJANGO_DEBUG=0.
+# Avec DJANGO_EMAIL_TEST_RECIPIENT, tous les messages partent à cette adresse (l'adresse d'origine
+# est ajoutée dans l'objet) ; sinon ils s'affichent dans le terminal, quel que soit DJANGO_EMAIL_BACKEND.
+EMAIL_TEST_MODE = DEBUG and env_bool("DJANGO_EMAIL_TEST_MODE", True)
+EMAIL_TEST_RECIPIENT = env_str("DJANGO_EMAIL_TEST_RECIPIENT")
 if EMAIL_TEST_MODE and not EMAIL_TEST_RECIPIENT:
     EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
@@ -216,11 +251,11 @@ if EMAIL_TEST_MODE and not EMAIL_TEST_RECIPIENT:
 if not DEBUG and not TESTING:
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
-    SECURE_SSL_REDIRECT = os.environ.get("DJANGO_SECURE_SSL_REDIRECT", "1") == "1"
+    SECURE_SSL_REDIRECT = env_bool("DJANGO_SECURE_SSL_REDIRECT", True)
     # HSTS : à activer seulement une fois le HTTPS validé (ex. 31536000 = 1 an).
-    SECURE_HSTS_SECONDS = int(os.environ.get("DJANGO_HSTS_SECONDS", "0"))
+    SECURE_HSTS_SECONDS = env_int("DJANGO_HSTS_SECONDS", 0)
     # Seulement si tous les sous-domaines du site sont eux aussi en HTTPS.
-    SECURE_HSTS_INCLUDE_SUBDOMAINS = os.environ.get("DJANGO_HSTS_INCLUDE_SUBDOMAINS", "0") == "1"
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = env_bool("DJANGO_HSTS_INCLUDE_SUBDOMAINS", False)
     if NUM_PROXIES:
         # Derrière un proxy qui gère le HTTPS, Django reçoit la requête en HTTP : l'en-tête
         # posé par le proxy indique l'origine HTTPS (liens des e-mails en https://, pas de
