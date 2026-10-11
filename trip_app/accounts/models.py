@@ -281,8 +281,6 @@ class EmailLog(models.Model):
             models.Index(fields=["-created_at", "-id"], name="emaillog_recent_idx"),
             # « Adresse à vérifier » et effacement RGPD : recherche par adresse.
             models.Index(fields=["recipient"], name="emaillog_recipient_idx"),
-            # File d'envoi (en attente) et liste des échecs : quelques lignes parmi tous les envois réussis.
-            models.Index(fields=["status"], name="emaillog_status_idx"),
         ]
 
     def __str__(self) -> str:

@@ -18,8 +18,4 @@ class Migration(migrations.Migration):
             model_name='emaillog',
             index=models.Index(fields=['recipient'], name='emaillog_recipient_idx'),
         ),
-        migrations.AddIndex(
-            model_name='emaillog',
-            index=models.Index(fields=['status'], name='emaillog_status_idx'),
-        ),
     ]
