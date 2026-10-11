@@ -20,6 +20,14 @@
     --color-error: #a4161a;
     --color-error-dark: #7a1013;
 
+    /* Texte posé sur une couleur pleine (bouton, pastille, étiquette). */
+    --color-on-fill: #ffffff;
+
+    /* Le ciel de l'en-tête reste bleu nuit dans les deux modes. */
+    --color-sky: var(--color-primary);
+    --color-on-sky: #ffffff;
+    --color-on-sky-hover: #e7eef3;
+
     /* Contour de focus : ambre sur fond clair, blanc sur l'en-tête bleu. */
     --color-focus: var(--color-accent);
     --color-focus-on-primary: #ffffff;
@@ -27,6 +35,50 @@
     --font-heading: Candara, "Gill Sans", "Gill Sans MT", Optima, "Segoe UI", sans-serif;
     --font-body: "Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif;
     --radius-window: 2.75rem / 2.25rem;
+
+    color-scheme: light;
+}
+
+/* Mode sombre : le même paysage, de nuit. Le bleu et l'ambre s'éclaircissent pour rester
+   lisibles sur le fond nuit ; le texte posé sur eux devient sombre.
+   Suit le réglage de l'appareil, sauf si la personne a choisi un mode avec le bouton.
+   Écran seulement : l'impression reste en clair. */
+@media screen and (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+        --color-primary: #a9cbe8;       /* 10,3:1 sur le fond nuit */
+        --color-soft: #1a2b3d;
+        --color-accent: #f0a85a;        /* 8,7:1 sur le fond nuit, 7,2:1 sur la brume */
+        --color-primary-dark: #d2e4f3;
+        --color-text: #e6edf3;
+        --color-text-muted: #aebccb;    /* 9,0:1 sur le fond nuit */
+        --color-line: #3d546c;
+        --color-background: #0f1b28;
+        --color-error: #ff8f85;
+        --color-error-dark: #ffb7b0;
+        --color-on-fill: #0f1b28;
+        --color-sky: #0a1520;
+        color-scheme: dark;
+    }
+}
+
+/* Même liste, pour le choix fait avec le bouton. CSS ne peut pas réunir une media query et un
+   attribut dans un seul bloc : la suivre sans JavaScript impose ces deux copies, à garder identiques. */
+@media screen {
+    :root[data-theme="dark"] {
+        --color-primary: #a9cbe8;
+        --color-soft: #1a2b3d;
+        --color-accent: #f0a85a;
+        --color-primary-dark: #d2e4f3;
+        --color-text: #e6edf3;
+        --color-text-muted: #aebccb;
+        --color-line: #3d546c;
+        --color-background: #0f1b28;
+        --color-error: #ff8f85;
+        --color-error-dark: #ffb7b0;
+        --color-on-fill: #0f1b28;
+        --color-sky: #0a1520;
+        color-scheme: dark;
+    }
 }
 
 *,
@@ -141,16 +193,16 @@ textarea:focus-visible {
     gap: 0.5rem 2rem;
     /* Aligné sur la colonne de contenu (64rem moins ses marges). */
     padding: 1rem max(1rem, calc((100% - 62rem) / 2));
-    background: var(--color-primary);
+    background: var(--color-sky);
     border-bottom: 4px solid var(--color-accent);
 }
 
 .site-header a {
-    color: #ffffff;
+    color: var(--color-on-sky);
 }
 
 .site-header a:hover {
-    color: var(--color-soft);
+    color: var(--color-on-sky-hover);
 }
 
 /* Logo : un avion qui décolle au-dessus d'une ligne d'horizon ambrée, avant le nom. */
@@ -194,7 +246,8 @@ textarea:focus-visible {
 
 /* Cibles d'au moins 44 px de haut, faciles à toucher. */
 .menu a,
-.logout-form button {
+.logout-form button,
+.theme-toggle {
     display: inline-block;
     min-height: 44px;
     padding: 0.5rem 0.1rem;
@@ -209,9 +262,10 @@ textarea:focus-visible {
     border-bottom-color: var(--color-accent);
 }
 
-.logout-form button {
+.logout-form button,
+.theme-toggle {
     margin: 0;
-    color: #ffffff;
+    color: var(--color-on-sky);
     font-size: 1rem;
     font-weight: normal;
     border: none;
@@ -221,9 +275,28 @@ textarea:focus-visible {
     background: none;
 }
 
-.logout-form button:hover {
-    color: var(--color-soft);
+.logout-form button:hover,
+.theme-toggle:hover {
+    color: var(--color-on-sky-hover);
     background: none;
+}
+
+/* Sans script, le bouton reste caché (la règle display ci-dessus l'emporterait sur hidden). */
+.theme-toggle[hidden] {
+    display: none;
+}
+
+/* Lune ou soleil selon le mode proposé ; décoratif, le libellé suffit. */
+.theme-toggle::before {
+    /* inline-block : l'icône n'est pas soulignée avec le libellé. */
+    display: inline-block;
+    content: "☾\00a0";
+    content: "☾\00a0" / "";
+}
+
+.theme-toggle[data-next="light"]::before {
+    content: "☀\00a0";
+    content: "☀\00a0" / "";
 }
 
 .content {
@@ -338,7 +411,7 @@ textarea:focus-visible {
     font-weight: 700;
     /* Chiffres de même hauteur dans les ronds (Candara les fait descendre). */
     font-variant-numeric: lining-nums;
-    color: #ffffff;
+    color: var(--color-on-fill);
     background: var(--color-primary);
     border-radius: 50%;
 }
@@ -431,7 +504,7 @@ textarea:focus-visible {
     height: 1.6rem;
     font-weight: bold;
     line-height: 1;
-    color: #ffffff;
+    color: var(--color-on-fill);
     border-radius: 50%;
 }
 
@@ -541,7 +614,7 @@ button {
     padding: 0.75rem 1.5rem;
     font: inherit;
     font-weight: 600;
-    color: #ffffff;
+    color: var(--color-on-fill);
     text-decoration: none;
     background: var(--color-primary);
     border: 2px solid var(--color-primary);
@@ -551,7 +624,7 @@ button {
 
 .button:hover,
 button:hover {
-    color: #ffffff;
+    color: var(--color-on-fill);
     background: var(--color-primary-dark);
     border-color: var(--color-primary-dark);
 }
@@ -562,7 +635,7 @@ button:hover {
 }
 
 .button-secondary:hover {
-    color: #ffffff;
+    color: var(--color-on-fill);
     background: var(--color-primary-dark);
 }
 
@@ -850,7 +923,7 @@ thead th {
 .status-confirmed,
 .status-published,
 .status-running {
-    color: #ffffff;
+    color: var(--color-on-fill);
     background: var(--color-primary);
     border-color: var(--color-primary);
 }
@@ -877,7 +950,7 @@ thead th {
     display: inline-block;
     padding: 0.1rem 0.6rem;
     font-weight: 600;
-    color: #ffffff;
+    color: var(--color-on-fill);
     border-radius: 999px;
 }
 
