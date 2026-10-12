@@ -271,15 +271,15 @@ textarea:focus-visible,
     border-bottom: 4px solid currentColor;
 }
 
+/* Boutons du menu (déconnexion, mode clair ou sombre) : même aspect que les liens voisins. */
 .logout-form button,
 .theme-toggle {
     margin: 0;
     color: var(--color-on-sky);
     font-weight: normal;
     border: none;
+    border-bottom: 2px solid transparent;
     border-radius: 0;
-    text-decoration: underline;
-    text-underline-offset: 0.2em;
     background: none;
 }
 
@@ -287,11 +287,11 @@ textarea:focus-visible,
 .theme-toggle:hover {
     color: var(--color-on-sky-hover);
     background: none;
+    border-bottom-color: var(--color-accent);
 }
 
 /* Lune ou soleil selon le mode proposé ; décoratif, le libellé suffit. */
 .theme-toggle::before {
-    /* inline-block : l'icône n'est pas soulignée avec le libellé. */
     display: inline-block;
     content: "☾\00a0";
     content: "☾\00a0" / "";
