@@ -46,3 +46,14 @@ class PeriodForm(forms.Form):
         if data["shortcut"] == Shortcut.CUSTOM:
             return custom_period(data["start"], data["end"], data["basis"])
         return shortcut_period(data["shortcut"], data["basis"])
+
+
+def export_period_form(period: Period) -> PeriodForm:
+    """Période affichée, renvoyée à l'export en champs cachés.
+
+    Toujours en dates explicites (période personnalisée) : le fichier couvre exactement les jours
+    affichés, même si le formulaire de la page était invalide (on affiche alors ce mois-ci).
+    """
+    return PeriodForm(
+        initial={"shortcut": Shortcut.CUSTOM, "basis": period.basis, "start": period.start, "end": period.end}
+    )

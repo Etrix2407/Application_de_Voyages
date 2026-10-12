@@ -21,6 +21,13 @@
     {% endwith %}
     <p class="updated-at">Dernière mise à jour : le {{ updated_at|date:"d/m/Y" }} à {{ updated_at|date:"H:i" }}. Les chiffres sont recalculés toutes les heures.</p>
 
+    <form method="post" action="{% url 'export_orders' %}">
+        {% csrf_token %}
+        {% for field in export_form %}{{ field.as_hidden }}{% endfor %}
+        <button type="submit">Exporter les commandes de la période (fichier CSV pour Excel)</button>
+        <a href="{% url 'export_log' %}">Journal des exports</a>
+    </form>
+
     {# section: orders #}
 
     {% include "dashboard/_rankings.html" %}

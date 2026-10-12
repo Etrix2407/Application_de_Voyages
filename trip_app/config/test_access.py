@@ -104,6 +104,8 @@ ACCESS = {
     "edit_email_text": ADMIN,
     "reset_email_text": ADMIN,
     "pilotage_dashboard": ADMIN,
+    "export_orders": ADMIN,
+    "export_log": ADMIN,
 }
 
 # Rôles autorisés pour chaque niveau d'accès.

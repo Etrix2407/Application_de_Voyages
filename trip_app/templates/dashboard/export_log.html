@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block title %}Journal des exports{% endblock %}
+
+{% block content %}
+    <h1>Journal des exports</h1>
+
+    <p>Chaque export des commandes est enregistré ici : qui l'a fait, quand, et pour quelle période.</p>
+    <p><a href="{% url 'pilotage_dashboard' %}">← Retour au tableau de pilotage</a></p>
+
+    {% if page.object_list %}
+        <div class="table-scroll" tabindex="0" role="region" aria-label="Tableau des exports">
+            <table>
+                <caption>Exports des commandes, du plus récent au plus ancien{% if page.paginator.num_pages > 1 %}, page {{ page.number }} sur {{ page.paginator.num_pages }}{% endif %}</caption>
+                <thead>
+                    <tr>
+                        <th scope="col">Date</th>
+                        <th scope="col">Auteur</th>
+                        <th scope="col">Période</th>
+                        <th scope="col">Lignes</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in page.object_list %}
+                        <tr>
+                            <td>{{ log.exported_at|date:"j F Y à H:i" }}</td>
+                            <td>{{ log.author_name }}</td>
+                            <td>Du {{ log.start|date:"j F Y" }} au {{ log.end|date:"j F Y" }}, selon la {{ log.get_basis_display|lower }}</td>
+                            <td>{{ log.row_count }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% include "_pagination.html" with page=page label="journal des exports" %}
+    {% else %}
+        <p>Aucun export pour le moment.</p>
+    {% endif %}
+{% endblock %}
