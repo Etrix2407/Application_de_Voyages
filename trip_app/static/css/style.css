@@ -1,7 +1,7 @@
 /* Design « Ligne d'horizon » : le nom de l'agence mis en image.
-   Un ciel bleu nuit, une ligne d'horizon ambrée, un avion qui décolle et un soleil couchant ;
+   Un ciel bleu nuit, une ligne d'horizon ambrée, un avion qui décolle et un soleil sur l'horizon ;
    les photos sont cadrées comme des hublots d'avion.
-   Trois couleurs : bleu altitude, brume et ambre du soir. Le rouge est réservé aux erreurs. */
+   Trois couleurs : bleu altitude, brume et ambre du soir. Le rouge est réservé aux erreurs et aux alertes. */
 
 :root {
     /* Les trois couleurs de l'agence. */
@@ -15,18 +15,19 @@
     --color-text-muted: #47566a;    /* 7,5:1 sur le blanc */
     --color-line: #b9c8d4;
     --color-background: #ffffff;
+    --color-text-inverse: #ffffff;  /* texte sur fond bleu, ambre ou rouge */
 
-    /* Erreurs et suppressions seulement. */
+    /* Erreurs, suppressions et alertes (avis négatif, adresse à vérifier) seulement. */
     --color-error: #a4161a;
     --color-error-dark: #7a1013;
 
     /* Contour de focus : ambre sur fond clair, blanc sur l'en-tête bleu. */
     --color-focus: var(--color-accent);
-    --color-focus-on-primary: #ffffff;
+    --color-focus-on-primary: var(--color-text-inverse);
 
     --font-heading: Candara, "Gill Sans", "Gill Sans MT", Optima, "Segoe UI", sans-serif;
     --font-body: "Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif;
-    --radius-window: 2.75rem / 2.25rem;
+    --radius-pill: 999px;
 }
 
 *,
@@ -53,6 +54,8 @@ h1,
 h2,
 h3 {
     font-family: var(--font-heading);
+    /* Chiffres de même hauteur que les lettres (Candara les fait descendre). */
+    font-variant-numeric: lining-nums;
     line-height: 1.2;
     color: var(--color-primary);
 }
@@ -60,13 +63,11 @@ h3 {
 h1 {
     margin: 0.5rem 0 1rem;
     font-size: 2.4rem;
-    font-weight: 700;
 }
 
 h2 {
     margin: 2.5rem 0 0.75rem;
     font-size: 1.7rem;
-    font-weight: 700;
 }
 
 h3 {
@@ -89,11 +90,13 @@ a:hover {
     color: var(--color-accent);
 }
 
+/* Le tableau défilant (tabindex="0") est lui aussi atteint au clavier. */
 a:focus-visible,
 button:focus-visible,
 input:focus-visible,
 select:focus-visible,
-textarea:focus-visible {
+textarea:focus-visible,
+.table-scroll:focus-visible {
     outline: 3px solid var(--color-focus);
     outline-offset: 3px;
 }
@@ -146,7 +149,7 @@ textarea:focus-visible {
 }
 
 .site-header a {
-    color: #ffffff;
+    color: var(--color-text-inverse);
 }
 
 .site-header a:hover {
@@ -177,7 +180,6 @@ textarea:focus-visible {
     height: 2rem;
     margin-bottom: 0.15rem;
     background: currentColor;
-    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 2c.8 0 1.4.7 1.4 1.6V9L22 14v2l-8.6-2.6v5.1L16 20.5V22l-4-1-4 1v-1.5l2.6-2v-5.1L2 16v-2l8.6-5V3.6c0-.9.6-1.6 1.4-1.6z'/%3E%3C/svg%3E") center / contain no-repeat;
     mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 2c.8 0 1.4.7 1.4 1.6V9L22 14v2l-8.6-2.6v5.1L16 20.5V22l-4-1-4 1v-1.5l2.6-2v-5.1L2 16v-2l8.6-5V3.6c0-.9.6-1.6 1.4-1.6z'/%3E%3C/svg%3E") center / contain no-repeat;
     /* Nez vers le haut à droite : l'avion prend son envol. */
     transform: rotate(60deg);
@@ -209,10 +211,15 @@ textarea:focus-visible {
     border-bottom-color: var(--color-accent);
 }
 
+/* Page affichée : texte gras et trait épais de la couleur du texte (blanc), distinct du survol ambré. */
+.menu a[aria-current="page"] {
+    padding-bottom: calc(0.5rem - 2px);
+    font-weight: 700;
+    border-bottom: 4px solid currentColor;
+}
+
 .logout-form button {
     margin: 0;
-    color: #ffffff;
-    font-size: 1rem;
     font-weight: normal;
     border: none;
     border-radius: 0;
@@ -235,7 +242,6 @@ textarea:focus-visible {
 .site-footer {
     padding: 1.5rem 1rem;
     text-align: center;
-    color: var(--color-text);
     background: var(--color-soft);
     border-top: 4px solid var(--color-primary);
 }
@@ -244,7 +250,7 @@ textarea:focus-visible {
     margin: 0 auto;
 }
 
-/* Accueil : le ciel en grand, et le soleil qui se lève une seule fois au chargement. */
+/* Accueil : le ciel en grand, et le soleil qui monte sur l'horizon une seule fois au chargement. */
 
 .hero {
     position: relative;
@@ -316,6 +322,8 @@ textarea:focus-visible {
     padding: 0;
     list-style: none;
     counter-reset: step;
+    /* Largeur mesurée par la règle @container plus bas. */
+    container-type: inline-size;
 }
 
 .steps li {
@@ -338,7 +346,7 @@ textarea:focus-visible {
     font-weight: 700;
     /* Chiffres de même hauteur dans les ronds (Candara les fait descendre). */
     font-variant-numeric: lining-nums;
-    color: #ffffff;
+    color: var(--color-text-inverse);
     background: var(--color-primary);
     border-radius: 50%;
 }
@@ -357,18 +365,8 @@ textarea:focus-visible {
     display: none;
 }
 
-/* Moins de trois colonnes (sous 900 px ; dans une media query, 1rem = 16 px) : pas de route horizontale. */
-@media (max-width: 56.25rem) {
-    .steps li::after {
-        display: none;
-    }
-}
-
-/* Même règle mesurée sur la liste elle-même, barre de défilement comprise. */
-.steps {
-    container-type: inline-size;
-}
-
+/* Moins de trois colonnes (3 × 15rem + 2 × 1,5rem d'espace = 48rem, mesurés sur la liste elle-même,
+   barre de défilement comprise) : pas de route horizontale. */
 @container (width < 48rem) {
     .steps li::after {
         display: none;
@@ -391,23 +389,21 @@ textarea:focus-visible {
 }
 
 .message {
+    /* Couleur du type de message : bordure et symbole. */
+    --message-color: var(--color-primary);
     padding: 0.8rem 1rem;
     margin-bottom: 0.5rem;
     background: var(--color-soft);
-    border-left: 6px solid var(--color-primary);
+    border-left: 6px solid var(--message-color);
     border-radius: 0 0.75rem 0.75rem 0;
 }
 
-.message-success {
-    border-color: var(--color-primary);
-}
-
 .message-warning {
-    border-color: var(--color-accent);
+    --message-color: var(--color-accent);
 }
 
 .message-error {
-    border-color: var(--color-error);
+    --message-color: var(--color-error);
 }
 
 /* Le type du message est aussi donné par un symbole, pas seulement par la couleur.
@@ -429,28 +425,26 @@ textarea:focus-visible {
     place-items: center;
     width: 1.6rem;
     height: 1.6rem;
-    font-weight: bold;
+    font-weight: 700;
     line-height: 1;
-    color: #ffffff;
+    color: var(--color-text-inverse);
+    background: var(--message-color);
     border-radius: 50%;
 }
 
 .message-success::before {
     content: "✓";
     content: "✓" / "";
-    background: var(--color-primary);
 }
 
 .message-warning::before {
     content: "!";
     content: "!" / "";
-    background: var(--color-accent);
 }
 
 .message-error::before {
     content: "✕";
     content: "✕" / "";
-    background: var(--color-error);
 }
 
 /* Formulaires */
@@ -472,6 +466,47 @@ textarea {
     background: var(--color-background);
     border: 2px solid var(--color-text-muted);
     border-radius: 0.6rem;
+}
+
+/* Champ en erreur (Django lui ajoute aria-invalid="true") : bord rouge épaissi… */
+input[aria-invalid="true"],
+select[aria-invalid="true"],
+textarea[aria-invalid="true"] {
+    border-color: var(--color-error);
+    border-width: 3px;
+}
+
+/* … et tout son bloc (libellé, aide, message, champ) repéré par un trait rouge à gauche.
+   Sans :has, seul le bord du champ change. */
+form > div:has([aria-invalid="true"]) {
+    padding-left: 1rem;
+    border-left: 6px solid var(--color-error);
+}
+
+/* Lien du récapitulatif d'erreurs : le champ (ou le groupe de cases) s'arrête plus bas que le haut
+   de l'écran, pour que son libellé, son aide et son message restent visibles au-dessus. */
+[aria-invalid="true"],
+fieldset > div[id] {
+    scroll-margin-top: min(14rem, 40vh);
+}
+
+/* Champ non modifiable (ex. promotion déjà utilisée) : fond brume et bord en pointillés.
+   Sans cette règle, rien ne le distingue d'un champ modifiable. */
+input:disabled,
+select:disabled,
+textarea:disabled {
+    color: var(--color-text-muted);
+    background: var(--color-soft);
+    border-style: dashed;
+    cursor: not-allowed;
+}
+
+/* Icône du calendrier agrandie, plus facile à viser (Chrome, Edge, Safari ; Firefox garde la sienne). */
+input[type="date"]::-webkit-calendar-picker-indicator {
+    width: 1.5rem;
+    height: 1.5rem;
+    padding: 0.2rem;
+    cursor: pointer;
 }
 
 /* Cases à cocher et boutons radio : grands, placés devant leur libellé, sur la même ligne. */
@@ -499,16 +534,18 @@ form div:has(> input[type="checkbox"]) > input[type="checkbox"] {
 form div:has(> input[type="checkbox"]) > label {
     flex: 1;
     min-width: 0;
+    max-width: 42rem;
     margin-top: 0;
     font-weight: normal;
 }
 
 form div:has(> input[type="checkbox"]) > :not(label, input) {
     flex-basis: 100%;
+    /* Aide et erreur alignées sur le texte de la case (case 1.5rem + écart 0.75rem). */
+    margin-left: 2.25rem;
 }
 
-label:has(> input[type="checkbox"]),
-label:has(> input[type="radio"]) {
+label:has(> input[type="checkbox"], > input[type="radio"]) {
     display: flex;
     /* Le texte à côté de la case peut se couper : sinon un mot très long sort de l'écran. */
     overflow-wrap: anywhere;
@@ -521,7 +558,8 @@ label:has(> input[type="radio"]) {
 fieldset {
     /* Sinon le cadre s'élargit au libellé le plus long et sort de l'écran. */
     min-width: 0;
-    margin-top: 1rem;
+    max-width: 32rem;
+    margin: 1rem 0 0;
     padding: 0.5rem 1rem 1rem;
     border: 2px solid var(--color-text-muted);
     border-radius: 1rem;
@@ -541,17 +579,17 @@ button {
     padding: 0.75rem 1.5rem;
     font: inherit;
     font-weight: 600;
-    color: #ffffff;
+    color: var(--color-text-inverse);
     text-decoration: none;
     background: var(--color-primary);
     border: 2px solid var(--color-primary);
-    border-radius: 999px;
+    border-radius: var(--radius-pill);
     cursor: pointer;
 }
 
 .button:hover,
 button:hover {
-    color: #ffffff;
+    color: var(--color-text-inverse);
     background: var(--color-primary-dark);
     border-color: var(--color-primary-dark);
 }
@@ -559,11 +597,6 @@ button:hover {
 .button-secondary {
     color: var(--color-primary);
     background: var(--color-background);
-}
-
-.button-secondary:hover {
-    color: #ffffff;
-    background: var(--color-primary-dark);
 }
 
 /* Espace entre deux boutons voisins. */
@@ -618,12 +651,20 @@ button + .button-secondary,
     color: var(--color-error);
 }
 
+.form-errors ul {
+    margin: 0;
+    padding-left: 1.25rem;
+}
+
+.form-errors li + li {
+    margin-top: 0.4rem;
+}
+
 .form-errors + form > .errorlist.nonfield {
     display: none;
 }
 
 .helptext {
-    display: block;
     margin-top: 0.25rem;
     color: var(--color-text-muted);
 }
@@ -639,13 +680,19 @@ button + .button-secondary,
     border-radius: 1.5rem;
 }
 
+.search-form > label:first-child,
+.search-form > div:first-child > label:first-child,
+.filters > label:first-child,
+.filters > div:first-child > label:first-child {
+    margin-top: 0;
+}
+
 /* Fiches de détail : libellé à gauche, valeur à droite sur grand écran. */
 
 .details {
     display: grid;
-    grid-template-columns: minmax(10rem, max-content) 1fr;
-    gap: 0;
-    max-width: 44rem;
+    grid-template-columns: minmax(10rem, 15rem) 1fr;
+    max-width: 42rem;
     border-top: 2px solid var(--color-line);
 }
 
@@ -682,16 +729,22 @@ button + .button-secondary,
     list-style: none;
 }
 
+/* Une action accompagnée d'un texte explicatif occupe toute la ligne : l'action suivante passe dessous. */
+.actions > li:has(> p) {
+    flex-basis: 100%;
+    max-width: none;
+}
+
 /* Tableaux : défilement horizontal limité au tableau sur petit écran. */
 
 .table-scroll {
     overflow-x: auto;
-}
-
-/* Tableau défilant atteint au clavier (tabindex="0") : même contour que les liens. */
-.table-scroll:focus-visible {
-    outline: 3px solid var(--color-focus);
-    outline-offset: 3px;
+    /* Ombre sur le bord qui cache des colonnes : elle disparaît quand le tableau tient en entier. */
+    background:
+        linear-gradient(to right, var(--color-background) 40%, transparent) left / 2rem 100% no-repeat local,
+        linear-gradient(to left, var(--color-background) 40%, transparent) right / 2rem 100% no-repeat local,
+        linear-gradient(to right, var(--color-line), transparent) left / 1rem 100% no-repeat scroll,
+        linear-gradient(to left, var(--color-line), transparent) right / 1rem 100% no-repeat scroll;
 }
 
 table {
@@ -722,15 +775,22 @@ thead th {
 .table-actions {
     flex-direction: column;
     gap: 0.5rem;
-    margin: 0;
 }
 
+/* Boutons dans un tableau : discrets, pour ne pas écraser le reste de la page. */
 .table-actions button {
     margin: 0;
-    padding: 0.7rem 1rem;
+    padding: 0.4rem 1rem;
+    color: var(--color-primary);
+    background: var(--color-background);
 }
 
-/* Tableaux du client sur téléphone : chaque ligne devient une carte. */
+.table-actions button:hover {
+    color: var(--color-text-inverse);
+    background: var(--color-primary-dark);
+}
+
+/* Tableaux .table-cards (pages du client, historique d'une demande) : sur téléphone, chaque ligne devient une carte. */
 
 @media (max-width: 40rem) {
     .table-cards thead {
@@ -751,6 +811,7 @@ thead th {
 
     .table-cards td {
         display: block;
+        padding: 0.35rem 0.5rem;
         border-bottom: none;
     }
 
@@ -801,11 +862,11 @@ thead th {
     height: auto;
     background: var(--color-soft);
     border: 0.5rem solid var(--color-soft);
-    border-radius: var(--radius-window);
 }
 
 .card-photo {
     width: 100%;
+    border-radius: 2.75rem / 2.25rem;
     aspect-ratio: 5 / 4;
     object-fit: cover;
     margin-bottom: 0.5rem;
@@ -825,6 +886,11 @@ thead th {
     border-radius: 1.5rem / 1.25rem;
 }
 
+/* Dans un tableau défilant, la miniature garde sa taille au lieu de rétrécir. */
+td .thumbnail {
+    max-width: none;
+}
+
 .result-count {
     font-size: 1.25rem;
     font-weight: 700;
@@ -836,7 +902,8 @@ thead th {
 }
 
 /* États : toujours écrits en toutes lettres. La forme les distingue aussi :
-   plein = acquis, contour = en cours, pointillés = terminé ou annulé. */
+   plein = confirmé, publié ou en cours ; contour = en attente ou à venir ;
+   pointillés = terminé, annulé, refusé ou désactivé. */
 
 .status {
     display: inline-block;
@@ -844,13 +911,13 @@ thead th {
     font-weight: 600;
     white-space: nowrap;
     border: 2px solid currentColor;
-    border-radius: 999px;
+    border-radius: var(--radius-pill);
 }
 
 .status-confirmed,
 .status-published,
 .status-running {
-    color: #ffffff;
+    color: var(--color-text-inverse);
     background: var(--color-primary);
     border-color: var(--color-primary);
 }
@@ -870,15 +937,12 @@ thead th {
 
 /* Étiquettes : texte toujours présent, la couleur n'est qu'un repère. */
 
-.badge,
-.badge-negative,
-.badge-warning,
-.badge-promo {
+.badge {
     display: inline-block;
     padding: 0.1rem 0.6rem;
     font-weight: 600;
-    color: #ffffff;
-    border-radius: 999px;
+    color: var(--color-text-inverse);
+    border-radius: var(--radius-pill);
 }
 
 .badge-negative,
@@ -936,4 +1000,66 @@ thead th {
 .stars {
     color: var(--color-accent);
     letter-spacing: 0.1em;
+}
+
+/* Impression (ex. une demande de voyage) : le contenu seul, lisible même sans les fonds,
+   que les navigateurs n'impriment pas par défaut. */
+@media print {
+    .site-header nav,
+    .messages,
+    .button,
+    button {
+        display: none;
+    }
+
+    .site-header {
+        padding: 0 0 0.5rem;
+        background: none;
+        border-bottom: 2px solid var(--color-text);
+    }
+
+    /* .site-header .logo : .logo seul perdrait face à .site-header a, et le nom resterait blanc. */
+    .site-header .logo {
+        color: var(--color-text);
+        background: none;
+    }
+
+    .logo::before {
+        display: none;
+    }
+
+    .content {
+        max-width: none;
+        padding: 1rem 0 0;
+    }
+
+    /* Texte blanc sur fond plein : sans le fond, le texte disparaîtrait. */
+    .status-confirmed,
+    .status-published,
+    .status-running,
+    .badge {
+        color: var(--color-text);
+        background: none;
+        border: 2px solid currentColor;
+    }
+
+    .table-scroll {
+        overflow: visible;
+        background: none;
+    }
+
+    tr,
+    .details dt,
+    .details dd {
+        break-inside: avoid;
+    }
+
+    h2 {
+        break-after: avoid;
+    }
+
+    .site-footer {
+        background: none;
+        border-top-width: 2px;
+    }
 }
