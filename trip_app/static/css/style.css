@@ -162,6 +162,14 @@ label {
     font-weight: bold;
 }
 
+/* Les champs et boutons ne reprennent pas d'eux-mêmes la police de la page : même texte partout. */
+button,
+input,
+select,
+textarea {
+    font-family: inherit;
+}
+
 input,
 select,
 textarea {
@@ -430,6 +438,7 @@ td {
 
 .status {
     display: inline-block;
+    white-space: nowrap; /* « En attente » n'est jamais coupé en deux lignes */
     padding: 0.1rem 0.6rem;
     font-weight: bold;
     border-radius: 4px;
