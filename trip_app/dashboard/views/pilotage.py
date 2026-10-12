@@ -4,7 +4,9 @@ from django.shortcuts import render
 
 from accounts.decorators import administrator_required
 from dashboard.forms import PeriodForm, export_period_form
+from dashboard.models import SignalThresholds
 from dashboard.services.cache import pilotage_snapshot
+from dashboard.services.signals import active_signals
 
 
 @administrator_required
@@ -19,5 +21,7 @@ def pilotage_dashboard(request):
         # Lu par le partiel _comparison.html : « par rapport au mois dernier ».
         "compared_to": period.compared_to,
         "export_form": export_period_form(period),
+        # Hors cache : un seuil modifié s'applique dès l'affichage suivant.
+        "signals": active_signals(snapshot.sections["orders"], SignalThresholds.current()),
     }
     return render(request, "dashboard/pilotage.html", context)

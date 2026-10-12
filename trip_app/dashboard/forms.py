@@ -1,9 +1,10 @@
-"""Formulaire de période du tableau de pilotage (GET)."""
+"""Formulaires du tableau de pilotage : période (GET) et seuils des signaux (POST)."""
 
 from django import forms
 
 from catalog.forms import PERIOD_ERROR
 from common.forms import DateInput
+from dashboard.models import SignalThresholds
 from dashboard.services.periods import (
     MAX_CUSTOM_DAYS,
     DateBasis,
@@ -57,3 +58,11 @@ def export_period_form(period: Period) -> PeriodForm:
     return PeriodForm(
         initial={"shortcut": Shortcut.CUSTOM, "basis": period.basis, "start": period.start, "end": period.end}
     )
+
+
+class SignalThresholdsForm(forms.ModelForm):
+    """Seuils des signaux ; libellés, aides et bornes viennent du modèle."""
+
+    class Meta:
+        model = SignalThresholds
+        fields = ("max_cancellation_rate", "max_overdue_pending", "min_processed_within_48h_rate")

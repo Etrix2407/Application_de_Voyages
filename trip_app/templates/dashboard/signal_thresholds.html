@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block title %}Seuils des signaux{% endblock %}
+
+{% block content %}
+    <h1>Seuils des signaux</h1>
+
+    <p>
+        Un signal s'affiche en haut du tableau de pilotage quand un indicateur sort de son seuil.
+        Un indicateur égal au seuil ne donne pas de signal. Aucun e-mail n'est envoyé.
+        Les nouveaux seuils s'appliquent dès l'enregistrement.
+    </p>
+    <p>
+        {% if thresholds.updated_at %}
+            Seuils modifiés le {{ thresholds.updated_at|date:"j F Y à H:i" }} par {{ thresholds.updated_by_name }}.
+        {% else %}
+            Seuils d'origine.
+        {% endif %}
+    </p>
+
+    {% include "_form_errors.html" %}
+    <form method="post" novalidate>
+        {% csrf_token %}
+        {{ form }}
+        <button type="submit">Enregistrer</button>
+    </form>
+
+    <p><a href="{% url 'pilotage_dashboard' %}">← Retour au tableau de pilotage</a></p>
+{% endblock %}

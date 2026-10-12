@@ -28,6 +28,21 @@
         <a href="{% url 'export_log' %}">Journal des exports</a>
     </form>
 
+    {# Signaux évalués à chaque affichage (dashboard.services.signals) ; « Attention » ne dépend pas de la couleur. #}
+    <section class="signals" aria-labelledby="signals-title">
+        <h2 id="signals-title">Signaux</h2>
+        {% if signals %}
+            <ul class="signal-list">
+                {% for signal in signals %}
+                    <li class="signal"><strong class="signal-word">Attention :</strong> {{ signal }}</li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p class="signals-none">Aucun signal : tous les indicateurs sont dans les seuils.</p>
+        {% endif %}
+        <p><a href="{% url 'signal_thresholds' %}">Modifier les seuils des signaux</a></p>
+    </section>
+
     {% include "dashboard/_orders.html" %}
 
     {% include "dashboard/_rankings.html" %}

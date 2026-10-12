@@ -107,6 +107,7 @@ ACCESS = {
     "pilotage_dashboard": ADMIN,
     "export_orders": ADMIN,
     "export_log": ADMIN,
+    "signal_thresholds": ADMIN,
 }
 
 # Rôles autorisés pour chaque niveau d'accès.

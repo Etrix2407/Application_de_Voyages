@@ -1202,6 +1202,32 @@ td .thumbnail {
     color: var(--color-error);
 }
 
+/* Signaux du tableau de pilotage : encadré rouge à bordure épaisse, comme un chiffre en alerte ;
+   le mot « Attention » dit l'alerte sans dépendre de la couleur. Texte normal sur la brume. */
+.signal-list {
+    padding: 0;
+    list-style: none;
+}
+
+.signal {
+    max-width: none;
+    padding: 1rem 1.25rem;
+    margin-bottom: 0.75rem;
+    font-size: 1.15rem;
+    background: var(--color-soft);
+    border: 2px solid var(--color-error);
+    border-left-width: 12px;
+    border-radius: 0 1rem 1rem 0;
+}
+
+.signal-word {
+    color: var(--color-error);
+}
+
+.signals-none {
+    color: var(--color-text-muted);
+}
+
 /* Évolution : flèche et signe disent le sens, la couleur dit si c'est favorable. */
 .comparison {
     font-weight: 600;
