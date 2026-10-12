@@ -5,6 +5,7 @@ Le résultat est mis en cache (voir dashboard.services.cache) : il ne contient q
 """
 
 from dashboard.services.periods import Period
+from dashboard.services.rankings import build_rankings
 
 
 def build_pilotage(period: Period) -> dict:
@@ -15,7 +16,7 @@ def build_pilotage(period: Period) -> dict:
 
         # section: orders
 
-        # section: rankings
+        "rankings": build_rankings(period),
 
         # section: charts
 

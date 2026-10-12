@@ -1,0 +1,31 @@
+{% comment %}
+Un classement (dashboard.services.rankings.RankedItem), en tableau qui devient des cartes sur téléphone.
+Paramètres : items, caption, name_label (en-tête de la colonne du nom), link (nom de la route de gestion),
+count_label, empty (message si la liste est vide) ; facultatif : show_amount (colonne du montant estimé).
+{% endcomment %}
+{% load money %}
+{% if items %}
+    <div class="table-scroll" tabindex="0" role="region" aria-label="{{ caption }}">
+        <table class="table-cards">
+            <caption>{{ caption }}</caption>
+            <thead>
+                <tr>
+                    <th scope="col">{{ name_label }}</th>
+                    <th scope="col">{{ count_label }}</th>
+                    {% if show_amount %}<th scope="col">Montant estimé</th>{% endif %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in items %}
+                    <tr>
+                        <td data-label="{{ name_label }}"><a href="{% url link item.pk %}">{{ item.name }}</a>{% if item.country_name %} ({{ item.country_name }}){% endif %}</td>
+                        <td data-label="{{ count_label }}">{{ item.order_count }}</td>
+                        {% if show_amount %}<td data-label="Montant estimé">{{ item.estimated_amount|euros }}</td>{% endif %}
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% else %}
+    <p>{{ empty }}</p>
+{% endif %}
