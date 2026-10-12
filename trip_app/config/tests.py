@@ -1,3 +1,4 @@
+import re
 from datetime import timedelta
 
 from django.conf import settings
@@ -99,3 +100,15 @@ class DurationTextTests(SimpleTestCase):
     def test_less_than_a_minute_refused(self):
         with self.assertRaises(ValueError):
             duration_text(timedelta(seconds=30))
+
+
+class DarkModeColorsTests(SimpleTestCase):
+    def test_both_dark_mode_blocks_stay_identical(self):
+        # Couleurs sombres écrites deux fois (réglage de l'appareil, choix du bouton) : CSS ne peut pas
+        # les réunir sans JavaScript. Une couleur changée d'un seul côté donnerait deux modes sombres.
+        css = (settings.BASE_DIR / "static" / "css" / "style.css").read_text(encoding="utf-8")
+        blocks = re.findall(r':root(?::not\(\[data-theme="light"\]\)|\[data-theme="dark"\]) \{(.*?)\}', css, re.S)
+        declarations = [sorted(re.findall(r"(--[\w-]+|color-scheme):\s*([^;]+);", block)) for block in blocks]
+
+        self.assertEqual(len(declarations), 2)
+        self.assertEqual(declarations[0], declarations[1])

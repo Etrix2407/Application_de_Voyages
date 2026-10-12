@@ -49,7 +49,7 @@
                     <li><a href="{% url 'sign_up' %}"{% current_page 'sign_up' %}>Créer un compte</a></li>
                 {% endif %}
                 {# Caché tant que le script n'est pas chargé : sans lui, la page suit le réglage de l'appareil. #}
-                <li><button class="theme-toggle" id="theme-toggle" type="button" hidden>Mode sombre</button></li>
+                <li hidden><button class="theme-toggle" id="theme-toggle" type="button">Mode sombre</button></li>
             </ul>
         </nav>
     </header>

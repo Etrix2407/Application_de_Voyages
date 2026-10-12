@@ -46,7 +46,14 @@
             return;
         }
         updateButton(button);
-        button.hidden = false;
+        button.parentElement.hidden = false;
+        // Sans choix enregistré, l'appareil peut changer de mode pendant la visite (ex. le soir).
+        var deviceDark = window.matchMedia("(prefers-color-scheme: dark)");
+        if (deviceDark.addEventListener) {
+            deviceDark.addEventListener("change", function () {
+                updateButton(button);
+            });
+        }
         button.addEventListener("click", function () {
             var theme = button.getAttribute("data-next");
             root.setAttribute("data-theme", theme);
