@@ -28,7 +28,7 @@
         <a href="{% url 'export_log' %}">Journal des exports</a>
     </form>
 
-    {# section: orders #}
+    {% include "dashboard/_orders.html" %}
 
     {% include "dashboard/_rankings.html" %}
 

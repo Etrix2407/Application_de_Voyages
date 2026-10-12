@@ -1,0 +1,39 @@
+{% comment %}
+Section « commandes » du tableau de pilotage (dashboard.services.orders_section.OrdersSection).
+Chiffres déjà mis en forme en Python ; lit pilotage.orders.
+{% endcomment %}
+{% with section=pilotage.orders %}
+    <section aria-labelledby="orders-title">
+        <h2 id="orders-title">Commandes</h2>
+        <ul class="key-figures">
+            {% for figure in section.counts %}
+                {% include "dashboard/_figure.html" with label=figure.label value=figure.value comparison=figure.comparison %}
+            {% endfor %}
+        </ul>
+
+        <h3>Montants</h3>
+        <p>Montants estimés, après remise : ce n'est pas de l'argent encaissé.</p>
+        <ul class="key-figures">
+            {% for figure in section.amounts %}
+                {% include "dashboard/_figure.html" with label=figure.label value=figure.value comparison=figure.comparison %}
+            {% endfor %}
+        </ul>
+        <p>Les commandes annulées ne comptent ni dans le montant confirmé ni dans les remises.</p>
+        <ul class="key-figures">
+            {% with figure=section.cancelled_amount %}
+                {% include "dashboard/_figure.html" with label=figure.label value=figure.value comparison=figure.comparison %}
+            {% endwith %}
+        </ul>
+
+        <h3>Délai de traitement</h3>
+        <p>
+            Temps entre la commande et la première confirmation ou annulation par l'agence, en heures réelles
+            (week-end compris). Une annulation par le client n'est pas un traitement de l'agence : elle ne compte pas.
+        </p>
+        <ul class="key-figures">
+            {% for figure in section.delays %}
+                {% include "dashboard/_figure.html" with label=figure.label value=figure.value comparison=figure.comparison %}
+            {% endfor %}
+        </ul>
+    </section>
+{% endwith %}

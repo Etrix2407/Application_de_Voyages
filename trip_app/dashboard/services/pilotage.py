@@ -4,6 +4,7 @@ Le résultat est mis en cache (voir dashboard.services.cache) : il ne contient q
 (nombres, textes, listes, dataclasses), jamais de QuerySet, qui serait recalculé à chaque lecture.
 """
 
+from dashboard.services.orders_section import orders_section
 from dashboard.services.periods import Period
 from dashboard.services.promotions_reviews import promotions_reviews
 from dashboard.services.rankings import build_rankings
@@ -15,7 +16,7 @@ def build_pilotage(period: Period) -> dict:
         "period": period,
         "previous_period": period.previous(),
 
-        # section: orders
+        "orders": orders_section(period),
 
         "rankings": build_rankings(period),
 
