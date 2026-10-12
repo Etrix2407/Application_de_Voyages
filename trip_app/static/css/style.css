@@ -1218,3 +1218,73 @@ td .thumbnail {
 .comparison-neutral {
     color: var(--color-text-muted);
 }
+
+/* Tableau de pilotage : graphiques SVG (courbe et barres), suivis du tableau de leurs chiffres.
+   Texte et traits en currentColor : ils suivent le mode clair ou sombre. */
+
+.chart {
+    margin: 2rem 0;
+}
+
+.chart figcaption {
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+}
+
+.chart-svg {
+    display: block;
+    width: 100%;
+    max-width: 48rem;
+    height: auto;
+    overflow: visible;
+    color: var(--color-text);
+}
+
+.chart-svg text {
+    font-size: 18px;
+    fill: currentColor;
+}
+
+.chart-axis {
+    stroke: currentColor;
+    stroke-width: 2;
+}
+
+.chart-grid {
+    stroke: var(--color-line);
+    stroke-width: 2;
+    stroke-dasharray: 6 6;
+}
+
+.chart-line {
+    fill: none;
+    stroke: var(--color-primary);
+    stroke-width: 4;
+    stroke-linejoin: round;
+}
+
+.chart-point,
+.chart-bar {
+    fill: var(--color-primary);
+}
+
+/* Couleurs des états, comme leurs étiquettes ; le libellé texte de chaque barre dit l'état. */
+.chart-bar-pending {
+    fill: var(--color-accent);
+}
+
+.chart-bar-cancelled {
+    fill: var(--color-text-muted);
+}
+
+.chart summary {
+    padding: 0.5rem 0;
+    font-weight: 600;
+    color: var(--color-primary);
+    cursor: pointer;
+}
+
+.chart summary:focus-visible {
+    outline: 3px solid var(--color-focus);
+    outline-offset: 3px;
+}
