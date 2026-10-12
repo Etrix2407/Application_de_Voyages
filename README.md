@@ -224,7 +224,8 @@ Le site vise le niveau **WCAG 2.1 AA**, pour un public plutôt âgé :
 - autocomplétion des champs d'identité (prénom, nom, date de naissance, e-mail, téléphone), désactivée quand un agent corrige un client ;
 - tableaux défilables au clavier ; ceux des clients s'affichent en cartes sur téléphone ;
 - les liens répétés (« Modifier », « Supprimer »…) précisent leur objet aux lecteurs d'écran, et les symboles décoratifs ne sont pas lus ;
-- aucun style ni script dans les pages (compatible avec la `Content-Security-Policy`) : tout est dans `static/css/style.css` ;
+- aucun style ni script écrit dans les pages (compatible avec la `Content-Security-Policy`) : tout est dans `static/css/style.css` et `static/js/theme.js` ;
+- **mode sombre** : le site suit le réglage clair/sombre de l'appareil, même sans JavaScript ; le bouton « Mode sombre » / « Mode clair » du menu force l'un ou l'autre, et le navigateur retient ce choix. Les contrastes restent au niveau AA dans les deux modes, et l'impression se fait toujours en clair ;
 - montants avec séparateur des milliers (« 2 100,00 € », filtre `|euros`) ; le montant et le symbole € ne sont jamais coupés en fin de ligne ;
 - les durées annoncées (liens valables 48 heures, 1 heure, 24 heures ; avis modifiable 30 jours…) viennent des réglages du code : le texte suit toujours la règle appliquée.
 
