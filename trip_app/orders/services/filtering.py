@@ -3,8 +3,7 @@
 from django.utils import timezone
 
 from accounts.services.client_search import matching_clients, search_words
-from dashboard.services.order_figures import OVERDUE_DELAY
-from orders.models import Order, OrderStatus
+from orders.models import OVERDUE_DELAY, Order, OrderStatus
 
 NEWEST_FIRST = "recent"
 OLDEST_FIRST = "ancien"

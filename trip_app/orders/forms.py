@@ -8,13 +8,13 @@ from catalog.forms import StaffFilterForm
 from catalog.models import Activity, Destination
 from common.forms import DateInput, optional_date_field
 from common.text import euros
-from dashboard.services.order_figures import OVERDUE_DELAY
 from orders.models import (
     AT_LEAST_ONE_ADULT,
     MAX_REMARKS_LENGTH,
     MAX_STAY_DAYS,
     MAX_TRAVELLERS,
     MIN_DAYS_BEFORE_DEPARTURE,
+    OVERDUE_DELAY,
     Order,
     OrderStatus,
     departure_window,

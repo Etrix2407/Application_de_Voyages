@@ -16,7 +16,7 @@ from django.db.models import Count, DateField, Q
 from django.db.models.functions import TruncMonth
 
 from common.text import NBSP, normalize
-from dashboard.services.periods import DateBasis, Period, _add_months
+from dashboard.services.periods import DateBasis, Period, add_months
 from orders.models import Order, OrderStatus
 
 MONTHS_SHOWN = 12
@@ -97,8 +97,8 @@ def order_charts(period: Period) -> OrderCharts:
 def monthly_chart(period: Period) -> MonthlyChart:
     """Commandes par mois sur les 12 mois civils qui se terminent par le mois de fin de la période."""
     last_month = period.end.replace(day=1)
-    months = [_add_months(last_month, offset) for offset in range(1 - MONTHS_SHOWN, 1)]
-    chart_period = replace(period, start=months[0], end=_add_months(last_month, 1) - timedelta(days=1))
+    months = [add_months(last_month, offset) for offset in range(1 - MONTHS_SHOWN, 1)]
+    chart_period = replace(period, start=months[0], end=add_months(last_month, 1) - timedelta(days=1))
     # Date de commande : TruncMonth suit le fuseau courant (Bruxelles), comme les bornes de filter_orders.
     field = "departure_date" if period.basis == DateBasis.DEPARTURE else "created_at"
     rows = (

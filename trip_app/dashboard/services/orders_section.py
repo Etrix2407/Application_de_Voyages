@@ -31,9 +31,9 @@ from django.utils import timezone
 
 from common.text import NBSP, euros
 from dashboard.services.comparison import NEUTRAL, Comparison, compare
-from dashboard.services.order_figures import OVERDUE_DELAY, latest_discount, latest_price
+from dashboard.services.order_figures import latest_discount, latest_price
 from dashboard.services.periods import Period
-from orders.models import Order, OrderStatus, StatusChange
+from orders.models import OVERDUE_DELAY, Order, OrderStatus, StatusChange
 
 DASH = "—"
 _ZERO = Decimal("0.00")

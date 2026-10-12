@@ -13,18 +13,12 @@ from dashboard.services.rankings import build_rankings
 
 
 def build_pilotage(period: Period) -> dict:
-    # Une ligne par section, ajoutée chacune à la place de son repère.
     return {
         "period": period,
         "previous_period": period.previous(),
-
         "orders": orders_section(period),
-
         "rankings": build_rankings(period),
-
         "charts": order_charts(period),
-
         "promotions_reviews": promotions_reviews(period),
-
         "clients_emails": clients_emails_section(period),
     }

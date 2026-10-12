@@ -53,7 +53,7 @@ class Period:
 
     def previous(self) -> "Period":
         if self.months:
-            start = _add_months(self.start, -self.months)
+            start = add_months(self.start, -self.months)
         else:
             start = self.start - (self.end - self.start + timedelta(days=1))
         end = self.start - timedelta(days=1)
@@ -88,14 +88,14 @@ def shortcut_period(shortcut: str, basis: str = DateBasis.ORDERED, today: date |
     first_of_month = (today or timezone.localdate()).replace(day=1)
     start = {
         Shortcut.THIS_MONTH: first_of_month,
-        Shortcut.LAST_MONTH: _add_months(first_of_month, -1),
+        Shortcut.LAST_MONTH: add_months(first_of_month, -1),
         Shortcut.THIS_QUARTER: first_of_month.replace(month=(first_of_month.month - 1) // 3 * 3 + 1),
         Shortcut.THIS_YEAR: first_of_month.replace(month=1),
         # Les 12 mois civils qui se terminent par le mois en cours.
-        Shortcut.LAST_12_MONTHS: _add_months(first_of_month, -11),
+        Shortcut.LAST_12_MONTHS: add_months(first_of_month, -11),
     }[shortcut]
     label, previous_label, months = _SHORTCUTS[shortcut]
-    end = _add_months(start, months) - timedelta(days=1)
+    end = add_months(start, months) - timedelta(days=1)
     return Period(start, end, basis, label, previous_label, months)
 
 
@@ -107,7 +107,7 @@ def default_period() -> Period:
     return shortcut_period(Shortcut.THIS_MONTH)
 
 
-def _add_months(first_of_month: date, months: int) -> date:
+def add_months(first_of_month: date, months: int) -> date:
     """Premier jour du mois décalé de `months` mois (négatif : en arrière)."""
     index = first_of_month.year * 12 + first_of_month.month - 1 + months
     return date(index // 12, index % 12 + 1, 1)
