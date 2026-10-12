@@ -74,7 +74,7 @@ class SignUpForm(BaseUserCreationForm):
         # Django place d'office le curseur dans l'e-mail, 3e champ : la page sautait le prénom et le nom
         # (et, après une erreur, le récapitulatif des erreurs). Le client commence en haut du formulaire.
         self.fields["email"].widget.attrs.pop("autofocus", None)
-        self.fields["birth_date"].required = True
+        _birth_date_required(self)
         # Le rôle doit être connu avant la validation du modèle (règles propres aux clients).
         self.instance.role = Role.CLIENT
 
@@ -175,6 +175,12 @@ class PasswordResetRequestForm(PasswordResetForm):
             send_password_link(user, AccountEmail.PASSWORD_RESET)
 
 
+def _birth_date_required(form) -> None:
+    # Obligatoire pour un client : la règle et son message viennent du modèle, pour un seul message
+    # d'erreur. L'attribut required le signale au navigateur et aux lecteurs d'écran.
+    form.fields["birth_date"].widget.attrs["required"] = True
+
+
 class ClientDataForm(forms.ModelForm):
     """L'e-mail se change à part (mot de passe + lien de confirmation) : voir EmailChangeForm."""
 
@@ -186,7 +192,7 @@ class ClientDataForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["birth_date"].required = True
+        _birth_date_required(self)
 
 
 class ClientProfileForm(ClientDataForm):
