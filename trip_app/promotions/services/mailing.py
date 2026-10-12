@@ -15,11 +15,11 @@ from django.urls import reverse
 from django.utils import timezone
 from django.utils.formats import date_format
 
-from accounts.models import EmailKind, User
+from accounts.models import User
 from accounts.services.email_texts import render_email
 from accounts.services.emails import queue_emails, site_url
 from accounts.services.unsubscribe import unsubscribe_link
-from promotions.models import Promotion, PromotionMailing, State
+from promotions.models import Promotion, PromotionEmail, PromotionMailing, PromotionState
 from promotions.services.public import offers_something, visible_targets
 
 # Aperçu avant l'envoi : chaque client lit son prénom et son propre lien de désinscription.
@@ -42,10 +42,13 @@ class AlreadySent(Exception):
 def can_be_mailed(promotion: Promotion) -> bool:
     """En cours ou à venir, et vise encore un pays ou une destination proposé.
 
-    Les pays et destinations visés doivent être préchargés avec visible_targets : l'e-mail ne cite
-    jamais un élément désactivé.
+    Les pays et destinations visés sont préchargés ici avec visible_targets s'ils ne le sont pas
+    déjà (aucune requête de plus sinon) : un élément désactivé n'est jamais compté ni cité.
     """
-    return promotion.state() in (State.RUNNING, State.UPCOMING) and offers_something(promotion)
+    if promotion.state() not in (PromotionState.RUNNING, PromotionState.UPCOMING):
+        return False
+    prefetch_related_objects([promotion], *visible_targets(promotion.scope))
+    return offers_something(promotion)
 
 
 def mailable_promotions(exclude=()) -> list[Promotion]:
@@ -96,7 +99,7 @@ def _create_mailing(promotion: Promotion, message: str, author: User, submission
         recipients_count=len(recipients),
         submission_token=submission_token,
     )
-    queue_emails(recipients, EmailKind.PROMOTION, promotion_mailing_number=mailing.pk)
+    queue_emails(recipients, PromotionEmail.PROMOTION, promotion_mailing_number=mailing.pk)
     return mailing
 
 
@@ -104,7 +107,7 @@ def mailing_preview(promotion: Promotion, message: str) -> tuple[str, str]:
     """Objet et texte de l'e-mail, avant l'envoi. Prénom et lien de désinscription : des exemples."""
     prefetch_related_objects([promotion], *visible_targets(promotion.scope))
     rendered = render_email(
-        EmailKind.PROMOTION, _email_fields(promotion, message, PREVIEW_FIRST_NAME, PREVIEW_UNSUBSCRIBE_LINK)
+        PromotionEmail.PROMOTION, _email_fields(promotion, message, PREVIEW_FIRST_NAME, PREVIEW_UNSUBSCRIBE_LINK)
     )
     return rendered.subject, rendered.text
 
@@ -116,7 +119,7 @@ def promotion_email_context(mailing: PromotionMailing, user: User) -> dict:
 
 def _email_fields(promotion: Promotion, message: str, first_name: str, unsubscribe: str) -> dict:
     # La page « Nos offres du moment » ne montre que les promotions automatiques en cours.
-    on_offers_page = promotion.is_automatic and promotion.state() == State.RUNNING
+    on_offers_page = promotion.is_automatic and promotion.state() == PromotionState.RUNNING
     return {
         "prénom": first_name,
         "message": message,

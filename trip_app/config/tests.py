@@ -77,7 +77,16 @@ class ErrorReportTests(SimpleTestCase):
 
 class DurationTextTests(SimpleTestCase):
     def test_durations_in_words(self):
-        cases = {timedelta(minutes=1): "une minute", timedelta(hours=1): "une heure", timedelta(hours=72): "3 jours"}
+        cases = {
+            timedelta(minutes=1): "une minute",
+            timedelta(hours=1): "une heure",
+            timedelta(hours=24): "24 heures",  # les délais annoncés en heures le restent
+            timedelta(hours=72): "3 jours",
+        }
         for duration, text in cases.items():
             with self.subTest(text=text):
                 self.assertEqual(duration_text(duration), text)
+
+    def test_less_than_a_minute_refused(self):
+        with self.assertRaises(ValueError):
+            duration_text(timedelta(seconds=30))

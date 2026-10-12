@@ -47,6 +47,18 @@ class RefusalReason(models.TextChoices):
 STAFF_REFUSAL_REASONS = [reason for reason in RefusalReason if reason != RefusalReason.TRIP_CANCELLED]
 
 
+class ReviewEmail(models.TextChoices):
+    """Types des e-mails des avis ; textes d'origine dans reviews/services/email_texts.py.
+
+    La valeur est la clé stockée au journal des e-mails : elle ne change jamais.
+    """
+
+    REVIEW_PUBLISHED = "review_published", "Avis publié"
+    REVIEW_REFUSED = "review_refused", "Avis refusé ou retiré"
+    REVIEW_RESPONSE = "review_response", "Réponse de l'agence à un avis"
+    REVIEW_INVITATION = "review_invitation", "Invitation à donner un avis"
+
+
 class ReviewQuerySet(models.QuerySet):
     def public(self):
         """Avis visibles par tous : publiés, sur une destination encore proposée."""

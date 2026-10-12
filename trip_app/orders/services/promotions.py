@@ -16,9 +16,9 @@ from django.utils import timezone
 
 from accounts.services.throttling import wrong_promo_codes, wrong_promo_codes_by_ip
 from catalog.models import Destination
+from common.text import euros
 from orders.models import Order, OrderStatus, client_fingerprint
 from promotions.models import Promotion, normalize_code
-from common.text import euros
 from promotions.services.discounts import (
     Offer,
     PriceParts,
@@ -37,7 +37,9 @@ WRONG_DEPARTURE = "Ce code ne s'applique pas à ces dates de départ"
 NOT_FOR_THIS_ORDER = "Ce code ne s'applique pas à cette demande"
 ALREADY_USED = "Vous avez déjà utilisé ce code"
 NO_LONGER_AVAILABLE = "Ce code n'est plus disponible"
-TOO_MANY_WRONG_CODES = "Trop de codes incorrects ont été essayés. Réessayez dans une heure, ou appelez l'agence."
+TOO_MANY_WRONG_CODES = (
+    f"Trop de codes incorrects ont été essayés. Réessayez dans {wrong_promo_codes.window_text}, ou appelez l'agence."
+)
 
 @dataclass(frozen=True)
 class PromotionChoice:

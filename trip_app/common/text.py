@@ -5,7 +5,7 @@ from datetime import timedelta
 
 
 # Espace insécable : un montant n'est jamais coupé en fin de ligne.
-NBSP = " "
+NBSP = "\u00a0"
 
 
 def euros(amount) -> str:

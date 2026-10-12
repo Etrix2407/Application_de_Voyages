@@ -17,7 +17,7 @@ from datetime import date
 from decimal import ROUND_HALF_UP, Decimal
 
 from catalog.models import Destination
-from promotions.models import Base, Kind, Promotion, Scope
+from promotions.models import DiscountBase, DiscountKind, Promotion, Scope
 
 _CENT = Decimal("0.01")
 
@@ -43,10 +43,12 @@ class Offer:
 
 
 def discount_amount(promotion: Promotion, prices: PriceParts) -> Decimal:
-    base_amount = {Base.STAY: prices.stay, Base.ACTIVITIES: prices.activities, Base.TOTAL: prices.total}[
-        promotion.base
-    ]
-    if promotion.kind == Kind.PERCENT:
+    base_amount = {
+        DiscountBase.STAY: prices.stay,
+        DiscountBase.ACTIVITIES: prices.activities,
+        DiscountBase.TOTAL: prices.total,
+    }[promotion.base]
+    if promotion.kind == DiscountKind.PERCENT:
         discount = base_amount * promotion.value / 100
     else:
         discount = min(promotion.value, base_amount)

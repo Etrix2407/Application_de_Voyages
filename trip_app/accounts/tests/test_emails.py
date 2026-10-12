@@ -5,7 +5,7 @@ from unittest import mock
 from django.core import mail
 from django.test import TestCase, override_settings
 
-from accounts.models import EmailKind, EmailLog, EmailStatus, EmailText
+from accounts.models import AccountEmail, EmailLog, EmailStatus, EmailText
 from accounts.services.emails import MAX_ATTEMPTS, deliver, send_email
 
 from .factories import create_client
@@ -23,7 +23,7 @@ class SendEmailTests(TestCase):
         with self.captureOnCommitCallbacks(execute=True):
             return send_email(
                 "marie@example.com",
-                EmailKind.CLIENT_PASSWORD_LINK,
+                AccountEmail.CLIENT_PASSWORD_LINK,
                 FIELDS,
                 user=self.marie,
                 order_number=42,
@@ -31,7 +31,7 @@ class SendEmailTests(TestCase):
 
     def test_sent_after_commit_only(self):
         with self.captureOnCommitCallbacks(execute=True):
-            send_email("marie@example.com", EmailKind.CLIENT_PASSWORD_LINK, FIELDS)
+            send_email("marie@example.com", AccountEmail.CLIENT_PASSWORD_LINK, FIELDS)
             self.assertEqual(len(mail.outbox), 0)
             self.assertEqual(EmailLog.objects.get().status, EmailStatus.PENDING)
 
@@ -44,7 +44,7 @@ class SendEmailTests(TestCase):
         log = EmailLog.objects.get()
         self.assertEqual(
             (log.recipient, log.kind, log.subject, log.status, log.attempts, log.user, log.order_number),
-            ("marie@example.com", EmailKind.CLIENT_PASSWORD_LINK, "Changement de votre mot de passe",
+            ("marie@example.com", AccountEmail.CLIENT_PASSWORD_LINK, "Changement de votre mot de passe",
              EmailStatus.SENT, 1, self.marie, 42),
         )
         stored = [str(value) for value in EmailLog.objects.values().get().values()]
@@ -90,14 +90,14 @@ class SendEmailTests(TestCase):
     def test_only_link_fields_are_clickable(self):
         # Hameçonnage : une adresse saisie dans un prénom ou écrite par l'administrateur reste du texte.
         EmailText.objects.create(
-            kind=EmailKind.CLIENT_PASSWORD_LINK,
+            kind=AccountEmail.CLIENT_PASSWORD_LINK,
             subject="Objet",
             body="Bonjour {prénom}, voir https://admin.example/page\n\n{lien}",
             updated_by_name="Admin",
         )
         fields = {"prénom": "Cliquez https://evil.example/login", "lien": LINK}
         with self.captureOnCommitCallbacks(execute=True):
-            send_email("marie@example.com", EmailKind.CLIENT_PASSWORD_LINK, fields)
+            send_email("marie@example.com", AccountEmail.CLIENT_PASSWORD_LINK, fields)
 
         message = mail.outbox[0]
         html = message.alternatives[0][0]

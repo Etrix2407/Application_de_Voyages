@@ -18,7 +18,7 @@ from django.templatetags.static import static
 from django.utils import timezone
 from django.utils.safestring import SafeString
 
-from accounts.models import EmailFailure, EmailKind, EmailLog, EmailStatus, User
+from accounts.models import EmailFailure, EmailLog, EmailStatus, User
 from accounts.services.email_texts import current_subject, render_email
 
 logger = logging.getLogger(__name__)
@@ -28,7 +28,7 @@ MAX_ATTEMPTS = 3
 
 def send_email(
     to: str,
-    kind: EmailKind,
+    kind: str,
     fields: Mapping[str, object],
     *,
     user: User | None = None,
@@ -36,11 +36,13 @@ def send_email(
 ) -> bool:
     """Envoie un e-mail à `to` et l'inscrit au journal. À utiliser pour tout nouvel e-mail.
 
-    - `kind` : type de l'e-mail (EmailKind) ; il fixe l'objet et le texte : celui de l'administrateur
-      s'il l'a modifié, sinon le texte d'origine (voir email_texts.py). La version HTML est
-      construite à partir de ce texte dans la mise en page commune.
+    - `kind` : type de l'e-mail, déclaré par son application (ex. OrderEmail.ORDER_PLACED, voir
+      email_texts.py) ; il fixe l'objet et le texte : celui de l'administrateur s'il l'a modifié,
+      sinon le texte d'origine. La version HTML est construite à partir de ce texte dans la mise
+      en page commune.
     - `fields` : valeur de chaque champ variable du type (ex. {"prénom": ..., "lien": ...}).
-      Les liens doivent être absolus (request.build_absolute_uri, ou site_url() hors d'une requête).
+      Les liens doivent être absolus : site_url(reverse(...)), à partir de DJANGO_SITE_URL, pendant
+      une requête comme dans une commande planifiée.
     - `user`, `order_number` : compte et demande de voyage concernés, notés dans le journal.
 
     L'envoi a lieu après la validation de la transaction en cours (immédiatement hors transaction).
@@ -58,13 +60,13 @@ def send_email(
     return results[0] if results else True
 
 
-def queue_emails(users: Iterable[User], kind: EmailKind, *, promotion_mailing_number: int | None = None) -> int:
+def queue_emails(users: Iterable[User], kind: str, *, promotion_mailing_number: int | None = None) -> int:
     """Met en attente un e-mail par compte, sans l'envoyer : seules les lignes du journal sont créées.
 
     Pour les envois en nombre (jusqu'à 1 000 e-mails promotionnels) : les envoyer pendant la requête
     serait trop long. La commande planifiée process_emails les envoie à son prochain passage
-    (voir retry_due_emails) ; le message est construit à ce moment par la reconstruction du type.
-    Renvoie le nombre d'e-mails mis en attente.
+    (voir retry_due_emails) ; le message est construit à ce moment par la reconstruction du type,
+    déclarée avec @rebuilder(kind, queued=True). Renvoie le nombre d'e-mails mis en attente.
     """
     subject = current_subject(kind)
     logs = [
@@ -177,7 +179,7 @@ def failure_of(error: Exception) -> EmailFailure:
 
 
 def site_url(path: str) -> str:
-    """Lien absolu vers une page du site, hors d'une requête (ex. site_url(reverse("login")))."""
+    """Lien absolu vers une page du site, d'après DJANGO_SITE_URL (ex. site_url(reverse("login")))."""
     return f"{settings.SITE_URL}{path}"
 
 

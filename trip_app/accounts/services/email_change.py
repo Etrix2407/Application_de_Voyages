@@ -16,7 +16,7 @@ from django.urls import reverse
 from django.utils import timezone
 from django.utils.crypto import constant_time_compare, salted_hmac
 
-from accounts.models import EmailKind, Role, User, normalize_email_address
+from accounts.models import AccountEmail, Role, User, normalize_email_address
 from accounts.services.emails import send_email, site_url
 from accounts.signals import email_changed
 from accounts.services.throttling import confirmation_emails
@@ -32,7 +32,7 @@ def request_email_change(user: User, new_email: str) -> None:
         return
     confirmation_emails.record(new_email)
     link = site_url(reverse("confirm_email_change", args=[make_email_change_token(user, new_email)]))
-    send_email(new_email, EmailKind.EMAIL_CHANGE_CONFIRMATION, {"prénom": user.first_name, "lien": link}, user=user)
+    send_email(new_email, AccountEmail.EMAIL_CHANGE_CONFIRMATION, {"prénom": user.first_name, "lien": link}, user=user)
 
 
 def make_email_change_token(user: User, new_email: str) -> str:
@@ -92,4 +92,4 @@ def _fingerprint(value: str) -> str:
 
 
 def _notify_current_address(user: User) -> None:
-    send_email(user.email, EmailKind.EMAIL_CHANGE_NOTICE, {"prénom": user.first_name}, user=user)
+    send_email(user.email, AccountEmail.EMAIL_CHANGE_NOTICE, {"prénom": user.first_name}, user=user)

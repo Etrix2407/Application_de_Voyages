@@ -25,7 +25,7 @@ from orders.models import Order, OrderStatus, StatusChange
 from orders.services.placing import parts_for, place_order
 from orders.services.promotions import choose_promotion
 from orders.services.status import cancel_by_client, confirm_by_staff
-from promotions.models import Base, Kind, Promotion, Scope
+from promotions.models import DiscountBase, DiscountKind, Promotion, Scope
 from reviews.models import Review
 from reviews.services.moderation import publish
 from reviews.services.writing import ReviewNotAllowed, write_review
@@ -86,7 +86,7 @@ PROMO_CODE = "EXEMPLE10"
 PROMOTIONS = [
     {
         "name": "Exemple — Offre des Lacs",
-        "kind": Kind.PERCENT,
+        "kind": DiscountKind.PERCENT,
         "value": Decimal("10"),
         "scope": Scope.COUNTRIES,
         "country": "Exemple — Pays des Lacs",
@@ -94,7 +94,7 @@ PROMOTIONS = [
     },
     {
         "name": "Exemple — Code de bienvenue",
-        "kind": Kind.FIXED,
+        "kind": DiscountKind.FIXED,
         "value": Decimal("10"),
         "scope": Scope.CATALOG,
         "country": None,
@@ -239,7 +239,7 @@ class Command(BaseCommand):
             kind=data["kind"],
             value=data["value"],
             scope=data["scope"],
-            base=Base.TOTAL,
+            base=DiscountBase.TOTAL,
             starts_on=today,
             ends_on=today + timedelta(days=PROMOTION_DAYS),
             code=data["code"],

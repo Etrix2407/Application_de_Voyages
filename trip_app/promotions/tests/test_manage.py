@@ -6,7 +6,7 @@ from django.utils import timezone
 
 from accounts.tests.factories import create_admin, create_agent, create_client
 from catalog.tests.factories import create_country
-from promotions.models import Action, Promotion, PromotionMailing, Scope, State
+from promotions.models import Action, Promotion, PromotionMailing, PromotionState, Scope
 from promotions.services.mailing import send_promotion_mailing
 from promotions.tests.factories import create_promotion
 
@@ -120,7 +120,7 @@ class DisableAndDeleteTests(TestCase):
         response = self.client.post(url, follow=True)
 
         self.promotion.refresh_from_db()
-        self.assertEqual(self.promotion.state(), State.DISABLED)
+        self.assertEqual(self.promotion.state(), PromotionState.DISABLED)
         self.assertEqual(self.promotion.history.get().action, Action.DISABLED)
         self.assertContains(response, "déjà désactivée")
 

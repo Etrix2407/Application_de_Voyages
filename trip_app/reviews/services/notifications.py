@@ -2,7 +2,7 @@
 
 Le client dont le compte est supprimé (avis anonymisé) ne reçoit rien.
 Les fonctions *_context donnent la valeur des champs variables de chaque e-mail (voir
-accounts/services/email_texts.py) ; elles servent aussi à reconstruire un message pour une
+reviews/services/email_texts.py) ; elles servent aussi à reconstruire un message pour une
 nouvelle tentative (voir reviews/services/email_rebuilders.py).
 """
 
@@ -10,23 +10,23 @@ from django.urls import reverse
 from django.utils import timezone
 from django.utils.formats import date_format
 
-from accounts.models import EmailKind
 from accounts.services.emails import send_email, site_url
-from reviews.models import AgencyResponse, RefusalReason, Review
+from common.text import duration_text
+from reviews.models import EDIT_PERIOD, AgencyResponse, RefusalReason, Review, ReviewEmail
 from reviews.services.writing import client_can_edit
 
 
 def notify_published(review: Review) -> None:
-    _notify(review, EmailKind.REVIEW_PUBLISHED, published_context)
+    _notify(review, ReviewEmail.REVIEW_PUBLISHED, published_context)
 
 
 def notify_refused(review: Review) -> None:
-    _notify(review, EmailKind.REVIEW_REFUSED, refused_context)
+    _notify(review, ReviewEmail.REVIEW_REFUSED, refused_context)
 
 
 def notify_response(response: AgencyResponse, created: bool) -> None:
     """Réponse de l'agence publiée (`created`) ou modifiée sous l'avis du client."""
-    _notify(response.review, EmailKind.REVIEW_RESPONSE, lambda review: response_context(response, created))
+    _notify(response.review, ReviewEmail.REVIEW_RESPONSE, lambda review: response_context(response, created))
 
 
 def published_context(review: Review) -> dict:
@@ -45,9 +45,6 @@ def refused_context(review: Review) -> dict:
     (30 jours après sa création, voyage toujours confirmé : voir client_can_edit).
     Délai dépassé : l'e-mail le dit, sauf pour « Voyage annulé » (correction impossible pour une autre raison).
     """
-    reason = review.get_refusal_reason_display()
-    if review.refusal_details:
-        reason += f" — {review.refusal_details}"
     correction = ""
     if client_can_edit(review):
         # Date à l'heure belge : en UTC, une fin de délai en fin de soirée tomberait la veille.
@@ -58,8 +55,8 @@ def refused_context(review: Review) -> dict:
             f"{site_url(reverse('my_reviews'))}"
         )
     elif not review.can_be_changed_by_client() and review.refusal_reason != RefusalReason.TRIP_CANCELLED:
-        correction = "Le délai de 30 jours pour corriger cet avis est dépassé."
-    return {**_base_context(review), "motif": reason, "correction": correction}
+        correction = f"Le délai de {duration_text(EDIT_PERIOD)} pour corriger cet avis est dépassé."
+    return {**_base_context(review), "motif": review.refusal_label, "correction": correction}
 
 
 def response_context(response: AgencyResponse, created: bool) -> dict:
@@ -81,7 +78,7 @@ def _base_context(review: Review) -> dict:
     }
 
 
-def _notify(review: Review, kind: EmailKind, build_context) -> None:
+def _notify(review: Review, kind: ReviewEmail, build_context) -> None:
     client = review.order.client
     if client is None:
         return

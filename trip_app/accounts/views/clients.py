@@ -9,7 +9,7 @@ from django.views.decorators.http import require_POST
 
 from accounts.decorators import staff_required
 from accounts.forms import ClientCorrectionForm
-from accounts.models import EmailKind, Role, User
+from accounts.models import AccountEmail, Role, User
 from accounts.services.address_check import with_address_to_check
 from accounts.services.client_search import matching_clients, search_words
 from accounts.services.password_links import send_password_link
@@ -62,7 +62,7 @@ def edit_client(request, pk):
 @require_POST
 def send_client_link(request, pk):
     client = _get_client(pk)
-    sent = send_password_link(client, EmailKind.CLIENT_PASSWORD_LINK)
+    sent = send_password_link(client, AccountEmail.CLIENT_PASSWORD_LINK)
     if sent:
         messages.success(request, f"Un lien pour choisir un nouveau mot de passe a été envoyé à {client.email}.")
     else:

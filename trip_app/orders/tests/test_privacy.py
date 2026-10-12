@@ -4,10 +4,10 @@ from django.core import mail
 from django.test import TestCase
 from django.urls import reverse
 
-from accounts.models import EmailKind, EmailLog, EmailStatus
+from accounts.models import AccountEmail, EmailLog, EmailStatus
 from accounts.tests.factories import PASSWORD, create_agent, create_client
 from catalog.tests.factories import create_activity, create_country, create_destination
-from orders.models import Order, OrderStatus, StatusChange
+from orders.models import Order, OrderEmail, OrderStatus, StatusChange
 from orders.services.data_export import orders_data
 from orders.services.status import ACCOUNT_DELETED_REASON, cancel_by_staff, confirm_by_staff
 
@@ -161,7 +161,7 @@ class PendingOrdersOfDeletedAccountTests(TestCase):
 
         self.confirmed.refresh_from_db()
         self.assertEqual(self.confirmed.status, OrderStatus.CANCELLED)
-        self.assertEqual(mail.outbox, [])
+        self.assertFalse(EmailLog.objects.filter(order_number=order.pk, kind=OrderEmail.ORDER_CANCELLED_BY_AGENCY).exists())
 
     def test_staff_sees_why_and_cannot_confirm(self):
         self.marie.delete()
@@ -200,5 +200,5 @@ class AccountDeletionEmailTests(TestCase):
             [(["client@example.com"], "Votre compte a été supprimé")],
         )
         # Le journal garde la ligne, sans l'adresse (RGPD), avec le résultat de l'envoi.
-        log = EmailLog.objects.get(kind=EmailKind.ACCOUNT_DELETED)
+        log = EmailLog.objects.get(kind=AccountEmail.ACCOUNT_DELETED)
         self.assertEqual((log.recipient, log.status), ("", EmailStatus.SENT))

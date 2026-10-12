@@ -5,13 +5,13 @@ from django.core import mail
 from django.test import TestCase
 from django.utils import timezone
 
-from accounts.models import EmailKind, EmailLog, EmailStatus
+from accounts.models import EmailLog, EmailStatus
 from accounts.services.email_retry import retry_due_emails
 from accounts.tests.email_delivery import SendEmailsImmediately
 from accounts.tests.factories import create_agent, create_client
 from catalog.models import Visa
 from catalog.tests.factories import create_country, create_destination
-from orders.models import Order, OrderStatus
+from orders.models import Order, OrderEmail, OrderStatus
 from orders.services.reminders import send_departure_reminders
 from orders.services.status import confirm_by_staff
 
@@ -48,7 +48,7 @@ class DepartureReminderTests(SendEmailsImmediately, TestCase):
         self.assertIn(f"{OFFSET_LINE}+", message.body)
         self.assertIn("Monnaie : yen", message.body)
         log = EmailLog.objects.get()
-        self.assertEqual((log.kind, log.user, log.order_number), (EmailKind.DEPARTURE_REMINDER, self.marie, order.pk))
+        self.assertEqual((log.kind, log.user, log.order_number), (OrderEmail.DEPARTURE_REMINDER, self.marie, order.pk))
 
     def test_passport_required_text(self):
         self.country.passport_required = True
@@ -98,12 +98,12 @@ class DepartureReminderTests(SendEmailsImmediately, TestCase):
         # « Demande confirmée » d'abord, puis le rappel ; rien d'autre pour le départ lointain.
         sent = list(EmailLog.objects.order_by("pk").values_list("order_number", "kind"))
         self.assertEqual(sent, [
-            (soon.pk, EmailKind.ORDER_CONFIRMED),
-            (soon.pk, EmailKind.DEPARTURE_REMINDER),
-            (later.pk, EmailKind.ORDER_CONFIRMED),
+            (soon.pk, OrderEmail.ORDER_CONFIRMED),
+            (soon.pk, OrderEmail.DEPARTURE_REMINDER),
+            (later.pk, OrderEmail.ORDER_CONFIRMED),
         ])
         self.run_command()
-        self.assertEqual(EmailLog.objects.filter(kind=EmailKind.DEPARTURE_REMINDER).count(), 1)
+        self.assertEqual(EmailLog.objects.filter(kind=OrderEmail.DEPARTURE_REMINDER).count(), 1)
 
     def test_retry_rebuilds_reminder_unless_cancelled(self):
         kept = self.confirmed_order(5)

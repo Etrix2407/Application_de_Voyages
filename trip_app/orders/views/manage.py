@@ -75,14 +75,13 @@ UNREADABLE_PRICE = Decimal("-1")
 def _posted_price(request) -> Decimal:
     """Prix vu par l'agent (champ caché de la page).
 
-    Absent, illisible ou non fini (« NaN ») : un prix impossible, la confirmation est donc refusée
-    comme si le prix avait changé, après les contrôles de l'état de la demande.
+    Absent ou illisible : un prix impossible, la confirmation est donc refusée comme si le prix
+    avait changé, après les contrôles de l'état de la demande (le service refuse aussi « NaN »).
     """
     try:
-        price = Decimal(request.POST.get("expected_price", ""))
+        return Decimal(request.POST.get("expected_price", ""))
     except InvalidOperation:
         return UNREADABLE_PRICE
-    return price if price.is_finite() else UNREADABLE_PRICE
 
 
 @staff_required

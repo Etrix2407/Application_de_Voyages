@@ -4,8 +4,8 @@ Le journal ne garde ni le contenu ni les liens de sécurité des messages : pour
 le message est reconstruit à partir de son type, de son destinataire et du compte ou de la
 demande liés, avec un lien de sécurité neuf. Chaque type d'e-mail déclare sa reconstruction :
 
-    @rebuilder(EmailKind.MON_TYPE)
-    def _mon_type(log: EmailLog) -> RebuiltEmail | None: ...
+    @rebuilder(OrderEmail.ORDER_PLACED)
+    def _order_placed(log: EmailLog) -> RebuiltEmail | None: ...
 
 Le module qui contient ces fonctions est importé dans le ready() de son application
 (voir accounts/apps.py et accounts/services/email_rebuilders.py). Un type sans reconstruction
@@ -23,7 +23,7 @@ from django.core.mail.backends.base import BaseEmailBackend
 from django.db.models import Case, Q, When
 from django.utils import timezone
 
-from accounts.models import EmailFailure, EmailKind, EmailLog, EmailStatus
+from accounts.models import EmailFailure, EmailLog, EmailStatus
 from accounts.services.email_texts import current_text, render_email
 from accounts.services.emails import build_message, deliver
 
@@ -34,8 +34,6 @@ logger = logging.getLogger(__name__)
 RETRY_DELAYS = {1: timedelta(minutes=5), 2: timedelta(minutes=15)}
 # Envoi jamais tenté (serveur arrêté juste après l'action) : repris au bout de 5 minutes.
 NEVER_ATTEMPTED_DELAY = timedelta(minutes=5)
-# Types mis en attente sans envoi immédiat (queue_emails) : envoyés dès le passage suivant.
-QUEUED_KINDS = (EmailKind.PROMOTION,)
 # Un passage envoie au plus 200 e-mails (le reste part aux passages suivants, toutes les 5 minutes)
 # et ne prend plus de nouveau message après 20 minutes (serveur très lent ou injoignable).
 EMAILS_PER_PASS = 200
@@ -62,6 +60,8 @@ class RebuiltEmail(NamedTuple):
 
 Rebuilder = Callable[[EmailLog], RebuiltEmail | None]
 _REBUILDERS: dict[str, Rebuilder] = {}
+# Types envoyés en nombre par queue_emails (ex. e-mails promotionnels), déclarés par rebuilder(queued=True).
+_QUEUED_KINDS: set[str] = set()
 
 
 class PassTexts(dict):
@@ -72,12 +72,18 @@ class PassTexts(dict):
         return self[kind]
 
 
-def rebuilder(kind: EmailKind) -> Callable[[Rebuilder], Rebuilder]:
+def rebuilder(kind: str, *, queued: bool = False) -> Callable[[Rebuilder], Rebuilder]:
     """Déclare la reconstruction d'un type d'e-mail. Elle renvoie None si le message n'a plus
-    de raison d'être (compte supprimé, adresse changée, lien devenu inutile...)."""
+    de raison d'être (compte supprimé, adresse changée, lien devenu inutile...).
+
+    `queued` : type mis en attente par queue_emails, sans envoi immédiat ; son premier envoi a lieu
+    au passage suivant de process_emails, après les autres e-mails (voir retry_due_emails).
+    """
 
     def register(function: Rebuilder) -> Rebuilder:
         _REBUILDERS[kind] = function
+        if queued:
+            _QUEUED_KINDS.add(kind)
         return function
 
     return register
@@ -86,8 +92,8 @@ def rebuilder(kind: EmailKind) -> Callable[[Rebuilder], Rebuilder]:
 def retry_due_emails(now: datetime | None = None) -> int:
     """Retente les envois en attente dont le délai est écoulé. Renvoie le nombre de messages repris.
 
-    Les e-mails mis en attente par queue_emails (QUEUED_KINDS) partent sans délai : c'est leur
-    premier envoi. Un message déjà pris par une autre reprise (date de tentative posée) n'est repris
+    Les e-mails mis en attente par queue_emails (types déclarés avec queued=True) partent sans délai :
+    c'est leur premier envoi. Un message déjà pris par une autre reprise (date de tentative posée) n'est repris
     qu'au bout de 5 minutes : pas de doublon pendant un envoi en nombre.
 
     Tout le passage utilise une seule connexion au serveur d'envoi, fermée à la fin ; il traite au
@@ -96,19 +102,20 @@ def retry_due_emails(now: datetime | None = None) -> int:
     now = now or timezone.now()
     deadline = time.monotonic() + MAX_PASS_DURATION.total_seconds()
     never_taken = Q(attempts=0, last_attempt_at__isnull=True)
+    queued = Q(kind__in=_QUEUED_KINDS)
     due = (
-        (never_taken & (Q(created_at__lte=now - NEVER_ATTEMPTED_DELAY) | Q(kind__in=QUEUED_KINDS)))
+        (never_taken & (Q(created_at__lte=now - NEVER_ATTEMPTED_DELAY) | queued))
         | Q(attempts=0, last_attempt_at__lte=now - NEVER_ATTEMPTED_DELAY)
     )
     for attempts, delay in RETRY_DELAYS.items():
         due |= Q(attempts=attempts, last_attempt_at__lte=now - delay)
-    # Les promotions passent après les autres e-mails : une nouvelle tentative (demande de voyage,
-    # lien de mot de passe...) n'attend pas la fin d'un envoi à 1 000 clients.
-    promotions_last = Case(When(kind=EmailKind.PROMOTION, then=1), default=0)
+    # Les envois en nombre (promotions) passent après les autres e-mails : une nouvelle tentative
+    # (demande de voyage, lien de mot de passe...) n'attend pas la fin d'un envoi à 1 000 clients.
+    queued_last = Case(When(queued, then=1), default=0)
     logs = list(
         EmailLog.objects.filter(due, status=EmailStatus.PENDING)
         .select_related("user")
-        .order_by(promotions_last, "pk")[:EMAILS_PER_PASS]
+        .order_by(queued_last, "pk")[:EMAILS_PER_PASS]
     )
     if not logs:
         return 0  # rien à envoyer : pas de connexion au serveur

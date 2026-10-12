@@ -8,7 +8,7 @@ from django.utils.crypto import constant_time_compare
 from django.utils.encoding import force_bytes
 from django.utils.http import base36_to_int, urlsafe_base64_encode
 
-from accounts.models import EmailKind, User
+from accounts.models import AccountEmail, User
 from accounts.services.emails import send_email, site_url
 
 # Invitation d'un agent : 7 jours (Recap 5). Les autres liens gardent 1 heure (PASSWORD_RESET_TIMEOUT).
@@ -64,13 +64,13 @@ def staff_link_path(member: User) -> str:
     )
 
 
-def send_password_link(user: User, kind: EmailKind) -> bool:
+def send_password_link(user: User, kind: AccountEmail) -> bool:
     """Envoie un lien valable 1 heure (PASSWORD_RESET_TIMEOUT) ; personne d'autre ne voit le mot de passe."""
     link = site_url(password_link_path(user))
     return send_email(user.email, kind, {"prénom": user.first_name, "lien": link}, user=user)
 
 
-def send_staff_link(member: User, kind: EmailKind) -> bool:
+def send_staff_link(member: User, kind: AccountEmail) -> bool:
     """Envoie à un membre du personnel un lien valable 7 jours pour choisir son mot de passe (pas de mot de passe provisoire)."""
     link = site_url(staff_link_path(member))
     return send_email(member.email, kind, staff_link_fields(member, link), user=member)
