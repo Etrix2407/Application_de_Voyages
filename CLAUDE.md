@@ -25,7 +25,10 @@ trip_app/
 ├── reviews/           # avis clients vérifiés, modération, réponse de l'agence (v3)
 │   ├── views/
 │   └── services/
-├── templates/         # rangés par application : accounts/, catalog/, orders/, promotions/, reviews/ ; emails/ pour les e-mails
+├── dashboard/         # tableaux de bord : opérationnel pour les agents, pilotage pour l'administrateur, export (v6)
+│   ├── views/
+│   └── services/
+├── templates/         # rangés par application : accounts/, catalog/, orders/, promotions/, reviews/, dashboard/ ; emails/ pour les e-mails
 └── static/
 ```
 
