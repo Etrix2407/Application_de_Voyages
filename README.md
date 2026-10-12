@@ -224,7 +224,8 @@ Le site vise le niveau **WCAG 2.1 AA**, pour un public plutôt âgé :
 - autocomplétion des champs d'identité (prénom, nom, date de naissance, e-mail, téléphone), désactivée quand un agent corrige un client ;
 - tableaux défilables au clavier ; ceux des clients s'affichent en cartes sur téléphone ;
 - les liens répétés (« Modifier », « Supprimer »…) précisent leur objet aux lecteurs d'écran, et les symboles décoratifs ne sont pas lus ;
-- aucun style ni script dans les pages (compatible avec la `Content-Security-Policy`) : tout est dans `static/css/style.css` ;
+- aucun style ni script écrit dans les pages (compatible avec la `Content-Security-Policy`) : tout est dans `static/css/style.css` et `static/js/theme.js` ;
+- **mode sombre** : le site suit le réglage clair/sombre de l'appareil, même sans JavaScript ; le bouton « Mode sombre » / « Mode clair » du menu force l'un ou l'autre, et le navigateur retient ce choix. Les contrastes restent au niveau AA dans les deux modes, et l'impression se fait toujours en clair ;
 - montants avec séparateur des milliers (« 2 100,00 € », filtre `|euros`) ; le montant et le symbole € ne sont jamais coupés en fin de ligne ;
 - les durées annoncées (liens valables 48 heures, 1 heure, 24 heures ; avis modifiable 30 jours…) viennent des réglages du code : le texte suit toujours la règle appliquée.
 
@@ -462,7 +463,7 @@ Les liens des e-mails envoyés par ces commandes utilisent `DJANGO_SITE_URL` : r
 - **Ne committez jamais** la clé secrète, le poivre ni les identifiants SMTP.
 - Les limites anti-abus (5 échecs de connexion, 3 liens « mot de passe oublié » par heure, 5 essais quand le mot de passe est redemandé, etc.) sont stockées dans la base, table `django_cache` : elles sont partagées par tous les processus du serveur et conservées au redémarrage. Les adresses IPv6 sont comptées par réseau /64.
 - SQLite suffit pour le volume prévu (environ 1 000 clients). La base est en mode **WAL** (attente de 20 secondes au plus quand elle est occupée) : les fichiers `db.sqlite3-wal` et `db.sqlite3-shm` font partie de la base. Gardez-la sur un disque local, jamais sur un partage réseau. **Sauvegarde** : serveur arrêté, copiez `db.sqlite3` et, s'ils existent, `db.sqlite3-wal` et `db.sqlite3-shm` (SQLite les supprime à la fermeture) ; ou, serveur en marche, `sqlite3 db.sqlite3 ".backup sauvegarde.sqlite3"`. Sauvegardez `trip_app/media/` en même temps.
-- L'application envoie elle-même l'en-tête `Content-Security-Policy` (`common/middleware.py`) : seuls les fichiers du site (et les images intégrées `data:`) sont acceptés, sans script ni style en ligne, et le site ne peut pas être affiché dans un cadre. Ajouter un script, un style en ligne ou une ressource externe (police, CDN) demande de modifier ce middleware.
+- L'application envoie elle-même l'en-tête `Content-Security-Policy` (`common/middleware.py`) : seuls les fichiers du site (et les images intégrées `data:`) sont acceptés, sans script ni style en ligne, et le site ne peut pas être affiché dans un cadre. Un nouveau fichier de script ou de style du site est accepté tel quel ; ajouter un script ou un style écrit dans la page, ou une ressource externe (police, CDN), demande de modifier ce middleware.
 - Durée de connexion : **8 heures pour le personnel** (poste partagé à l'agence), 2 semaines pour les clients.
 
 ## Structure du code
@@ -548,7 +549,9 @@ trip_app/
 │   ├── promotions/         # offers.html (offres du moment), fragment _offer_terms.html, manage/ (gestion,
 │   │                       # désactivation, envoi par e-mail et sa confirmation, statistiques)
 │   └── reviews/            # avis côté client, fragments publics _*.html, manage/ (modération)
-└── static/css/             # feuille de style (texte lisible, adaptée au mobile)
+└── static/
+    ├── css/                # feuille de style (texte lisible, adaptée au mobile, modes clair et sombre)
+    └── js/                 # theme.js : bouton « Mode sombre / Mode clair »
 ```
 
 Règle de rangement : les **vues** ne font que recevoir la requête et afficher la page ; la logique réutilisable va dans **services/** ; un outil utilisé par plusieurs applications va dans **common/**, sauf s'il dépend des modèles d'une application : il reste alors dans celle-ci (par exemple `StaffFilterForm`, qui filtre par pays et destination, est dans `catalog/forms.py`), pour que `common` ne dépende d'aucune application.

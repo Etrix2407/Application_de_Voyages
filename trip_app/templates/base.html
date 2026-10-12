@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{% block title %}{% endblock %} — {{ site_name }}</title>
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <script src="{% static 'js/theme.js' %}"></script>
 </head>
 {# spellcheck désactivé par défaut (noms, adresses, codes) ; réactivé sur les formulaires de texte libre (avis, remarques, motifs). #}
 <body spellcheck="false">
@@ -47,6 +48,8 @@
                     <li><a href="{% url 'login' %}"{% current_page 'login' %}>Se connecter</a></li>
                     <li><a href="{% url 'sign_up' %}"{% current_page 'sign_up' %}>Créer un compte</a></li>
                 {% endif %}
+                {# Caché tant que le script n'est pas chargé : sans lui, la page suit le réglage de l'appareil. #}
+                <li hidden><button class="theme-toggle" id="theme-toggle" type="button">Mode sombre</button></li>
             </ul>
         </nav>
     </header>

@@ -255,6 +255,12 @@ class CurrentPasswordForm(forms.Form):
 
 
 class AccountPasswordChangeForm(PasswordChangeForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Comme à l'inscription : la lecture commence en haut de la page (récapitulatif d'erreurs
+        # compris) et le clavier ne s'ouvre pas tout seul sur téléphone.
+        self.fields["old_password"].widget.attrs.pop("autofocus", None)
+
     def clean_old_password(self) -> str:
         password = self.cleaned_data["old_password"]
         check_current_password(self.user, password)

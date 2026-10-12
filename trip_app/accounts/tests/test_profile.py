@@ -130,6 +130,12 @@ class PasswordChangeTests(SendEmailsImmediately, TestCase):
         self.assertTrue(client.check_password("montagne-lac-77"))
         self.assertEqual(self.client.get(reverse("profile")).status_code, 200)
 
+    def test_page_does_not_place_cursor(self):
+        self.client.force_login(create_client())
+
+        self.assertNotContains(self.client.get(self.url), "autofocus")
+        self.assertNotContains(self.change_password("mauvais-mot-2026"), "autofocus")
+
     def test_old_password_required(self):
         client = create_client()
         self.client.force_login(client)
