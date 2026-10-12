@@ -71,6 +71,9 @@ class SignUpForm(BaseUserCreationForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        # Django place d'office le curseur dans l'e-mail, 3e champ : la page sautait le prénom et le nom
+        # (et, après une erreur, le récapitulatif des erreurs). Le client commence en haut du formulaire.
+        self.fields["email"].widget.attrs.pop("autofocus", None)
         self.fields["birth_date"].required = True
         # Le rôle doit être connu avant la validation du modèle (règles propres aux clients).
         self.instance.role = Role.CLIENT
@@ -110,6 +113,10 @@ class LoginForm(AuthenticationForm):
         # Champ e-mail : clavier adapté sur téléphone et remplissage automatique.
         self.fields["username"].widget.input_type = "email"
         self.fields["username"].widget.attrs.update(autocomplete="email", inputmode="email")
+        # Formulaire renvoyé avec une erreur : pas de curseur placé d'office, sinon, avec un grand texte,
+        # la page défile au-delà du message d'erreur.
+        if self.is_bound:
+            self.fields["username"].widget.attrs.pop("autofocus", None)
 
     def clean(self):
         email = self.cleaned_data.get("username") or ""

@@ -65,6 +65,9 @@ class SignUpTests(SendEmailsImmediately, TestCase):
         self.assertContains(response, "politique de confidentialité")
         self.assertContains(response, 'type="password"')
 
+    def test_page_does_not_place_cursor_in_email_field(self):
+        self.assertNotContains(self.client.get(self.url), "autofocus")
+
     def test_sign_up_creates_unconfirmed_client_with_password_and_sends_link(self):
         response = self.client.post(self.url, sign_up_data())
 
@@ -342,6 +345,9 @@ class LoginTests(TestCase):
 
         self.assertContains(response, "Adresse e-mail ou mot de passe incorrect.")
         self.assertNotIn("_auth_user_id", self.client.session)
+
+    def test_failed_login_page_does_not_place_cursor(self):
+        self.assertNotContains(self.log_in(password="mauvais-mot-2026"), "autofocus")
 
     def test_inactive_account_denied(self):
         self.user.is_active = False
