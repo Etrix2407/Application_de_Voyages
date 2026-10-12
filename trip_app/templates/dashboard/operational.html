@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block title %}Tableau de bord{% endblock %}
+
+{% block content %}
+    <h1>Tableau de bord</h1>
+
+    <ul class="key-figures">
+        {% include "dashboard/_figure.html" with label="Commandes en attente" value=figures.pending.count url=pending_url only %}
+        {% include "dashboard/_figure.html" with label=overdue_label value=figures.overdue.count url=overdue_url alert=overdue_alert only %}
+        {% url 'manage_pending_reviews' as reviews_url %}
+        {% include "dashboard/_figure.html" with label="Avis à modérer" value=figures.reviews_to_moderate url=reviews_url only %}
+        {% include "dashboard/_figure.html" with label="Départs de la semaine" value=figures.departures.count url=departures_url only %}
+    </ul>
+
+    <p>Départs de la semaine : commandes confirmées qui partent entre aujourd'hui et le {{ figures.departures.criteria.departure_to|date:"j F Y" }} inclus.</p>
+    <p class="updated-at">Chiffres en temps réel : ils sont recalculés à chaque affichage de la page.</p>
+{% endblock %}
