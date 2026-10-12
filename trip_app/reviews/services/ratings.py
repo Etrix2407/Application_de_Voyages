@@ -43,7 +43,7 @@ def attach_ratings(destinations) -> list:
         .values("order__destination")
         .annotate(count=Count("pk"), average=Avg("rating"))
     )
-    summaries = {row["order__destination"]: RatingSummary(_one_decimal(row["average"]), row["count"]) for row in rows}
+    summaries = {row["order__destination"]: RatingSummary(one_decimal(row["average"]), row["count"]) for row in rows}
     for destination in destinations:
         destination.rating_summary = summaries.get(destination.pk, NO_REVIEWS)
     return destinations
@@ -67,5 +67,6 @@ def latest_top_reviews(limit: int = 5):
     )
 
 
-def _one_decimal(value) -> Decimal:
+def one_decimal(value) -> Decimal:
+    """Note arrondie au dixième : « 4,3 » (aussi utilisée par le tableau de pilotage)."""
     return Decimal(str(value)).quantize(Decimal("0.1"), rounding=ROUND_HALF_UP)
