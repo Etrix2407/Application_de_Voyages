@@ -25,6 +25,15 @@ class HomeTests(TestCase):
         self.assertContains(response, "Horizons Lointains", count=3)
 
 
+class MenuCurrentPageTests(TestCase):
+    def test_menu_marks_only_the_displayed_page(self):
+        # Les filtres de l'adresse (?keyword=…) ne changent pas la page affichée.
+        response = self.client.get(reverse("search"), {"keyword": "plage"})
+
+        self.assertContains(response, 'aria-current="page"', count=1)
+        self.assertContains(response, f'<a href="{reverse("search")}" aria-current="page">Rechercher</a>', html=True)
+
+
 class SecurityHeaderTests(TestCase):
     def test_content_security_policy_forbids_inline_scripts_and_framing(self):
         response = self.client.get(reverse("home"))

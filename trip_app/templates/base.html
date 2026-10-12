@@ -1,4 +1,4 @@
-{% load static %}<!doctype html>
+{% load static navigation %}<!doctype html>
 <html lang="fr">
 <head>
     <meta charset="utf-8">
@@ -13,30 +13,30 @@
         <a class="logo" href="{% url 'home' %}">{{ site_name }}</a>
         <nav aria-label="Navigation principale">
             <ul class="menu">
-                <li><a href="{% url 'home' %}">Accueil</a></li>
-                <li><a href="{% url 'country_list' %}">Nos pays</a></li>
-                <li><a href="{% url 'destination_list' %}">Destinations</a></li>
-                <li><a href="{% url 'offers' %}">Nos offres du moment</a></li>
-                <li><a href="{% url 'search' %}">Rechercher</a></li>
+                <li><a href="{% url 'home' %}"{% current_page 'home' %}>Accueil</a></li>
+                <li><a href="{% url 'country_list' %}"{% current_page 'country_list' %}>Nos pays</a></li>
+                <li><a href="{% url 'destination_list' %}"{% current_page 'destination_list' %}>Destinations</a></li>
+                <li><a href="{% url 'offers' %}"{% current_page 'offers' %}>Nos offres du moment</a></li>
+                <li><a href="{% url 'search' %}"{% current_page 'search' %}>Rechercher</a></li>
                 {% if user.is_authenticated %}
                     {% if user.is_client %}
-                        <li><a href="{% url 'my_orders' %}">Mes demandes</a></li>
-                        <li><a href="{% url 'my_reviews' %}">Mes avis</a></li>
-                        <li><a href="{% url 'favorite_list' %}">Mes favoris</a></li>
+                        <li><a href="{% url 'my_orders' %}"{% current_page 'my_orders' %}>Mes demandes</a></li>
+                        <li><a href="{% url 'my_reviews' %}"{% current_page 'my_reviews' %}>Mes avis</a></li>
+                        <li><a href="{% url 'favorite_list' %}"{% current_page 'favorite_list' %}>Mes favoris</a></li>
                     {% endif %}
                     {% if user.is_staff_member %}
-                        <li><a href="{% url 'manage_country_list' %}">Gestion du catalogue</a></li>
-                        <li><a href="{% url 'manage_orders' %}">Demandes de voyage</a></li>
-                        <li><a href="{% url 'manage_promotions' %}">Promotions</a></li>
-                        <li><a href="{% url 'manage_pending_reviews' %}">Avis à modérer ({{ pending_reviews_count }})</a></li>
-                        <li><a href="{% url 'client_list' %}">Clients</a></li>
-                        <li><a href="{% url 'email_failure_list' %}">E-mails en échec</a></li>
+                        <li><a href="{% url 'manage_country_list' %}"{% current_page 'manage_country_list' %}>Gestion du catalogue</a></li>
+                        <li><a href="{% url 'manage_orders' %}"{% current_page 'manage_orders' %}>Demandes de voyage</a></li>
+                        <li><a href="{% url 'manage_promotions' %}"{% current_page 'manage_promotions' %}>Promotions</a></li>
+                        <li><a href="{% url 'manage_pending_reviews' %}"{% current_page 'manage_pending_reviews' %}>Avis à modérer ({{ pending_reviews_count }})</a></li>
+                        <li><a href="{% url 'client_list' %}"{% current_page 'client_list' %}>Clients</a></li>
+                        <li><a href="{% url 'email_failure_list' %}"{% current_page 'email_failure_list' %}>E-mails en échec</a></li>
                     {% endif %}
                     {% if user.is_administrator %}
-                        <li><a href="{% url 'staff_list' %}">Personnel</a></li>
-                        <li><a href="{% url 'email_text_list' %}">Modèles des e-mails</a></li>
+                        <li><a href="{% url 'staff_list' %}"{% current_page 'staff_list' %}>Personnel</a></li>
+                        <li><a href="{% url 'email_text_list' %}"{% current_page 'email_text_list' %}>Modèles des e-mails</a></li>
                     {% endif %}
-                    <li><a href="{% url 'profile' %}">Mon profil</a></li>
+                    <li><a href="{% url 'profile' %}"{% current_page 'profile' %}>Mon profil</a></li>
                     <li>
                         <form class="logout-form" method="post" action="{% url 'logout' %}">
                             {% csrf_token %}
@@ -44,8 +44,8 @@
                         </form>
                     </li>
                 {% else %}
-                    <li><a href="{% url 'login' %}">Se connecter</a></li>
-                    <li><a href="{% url 'sign_up' %}">Créer un compte</a></li>
+                    <li><a href="{% url 'login' %}"{% current_page 'login' %}>Se connecter</a></li>
+                    <li><a href="{% url 'sign_up' %}"{% current_page 'sign_up' %}>Créer un compte</a></li>
                 {% endif %}
             </ul>
         </nav>
