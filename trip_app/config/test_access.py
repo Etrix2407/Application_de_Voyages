@@ -103,6 +103,7 @@ ACCESS = {
     "email_text_list": ADMIN,
     "edit_email_text": ADMIN,
     "reset_email_text": ADMIN,
+    "pilotage_dashboard": ADMIN,
 }
 
 # Rôles autorisés pour chaque niveau d'accès.

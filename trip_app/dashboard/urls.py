@@ -1,3 +1,7 @@
-from django.urls import path  # noqa: F401  (routes ajoutées par chaque tableau de bord)
+from django.urls import path
 
-urlpatterns = []
+from .views import pilotage
+
+urlpatterns = [
+    path("pilotage/", pilotage.pilotage_dashboard, name="pilotage_dashboard"),
+]

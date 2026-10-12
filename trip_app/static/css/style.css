@@ -20,6 +20,9 @@
     --color-error: #a4161a;
     --color-error-dark: #7a1013;
 
+    /* Évolution favorable sur le tableau de bord seulement (le rouge marque l'évolution défavorable). */
+    --color-good: #1d6b35;          /* 6,5:1 sur le blanc, 5,6:1 sur la brume */
+
     /* Texte posé sur une couleur pleine (bouton, pastille, étiquette). */
     --color-on-fill: #ffffff;
 
@@ -55,6 +58,7 @@
         --color-background: #0f1b28;
         --color-error: #ff8f85;
         --color-error-dark: #ffb7b0;
+        --color-good: #86d99f;       /* 10,3:1 sur le fond nuit, 8,5:1 sur la brume */
         --color-on-fill: #0f1b28;
         --color-sky: #0a1520;
         color-scheme: dark;
@@ -75,6 +79,7 @@
         --color-background: #0f1b28;
         --color-error: #ff8f85;
         --color-error-dark: #ffb7b0;
+        --color-good: #86d99f;
         --color-on-fill: #0f1b28;
         --color-sky: #0a1520;
         color-scheme: dark;
@@ -1139,4 +1144,77 @@ td .thumbnail {
         background: none;
         border-top-width: 2px;
     }
+}
+
+/* Tableaux de bord : gros chiffres et évolutions par rapport à la période précédente. */
+
+.period-summary,
+.updated-at {
+    margin: 1rem 0;
+}
+
+.updated-at {
+    color: var(--color-text-muted);
+}
+
+/* Autant de colonnes que la largeur le permet ; une seule sur téléphone. */
+.key-figures {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 15rem), 1fr));
+    gap: 1rem;
+    padding: 0;
+    list-style: none;
+}
+
+.key-figure {
+    max-width: none;
+    padding: 1rem 1.25rem;
+    background: var(--color-soft);
+    border-left: 6px solid var(--color-primary);
+    border-radius: 0 1rem 1rem 0;
+}
+
+.key-figure p {
+    margin: 0;
+}
+
+.key-figure-label {
+    font-weight: 600;
+}
+
+.key-figure-value {
+    font-family: var(--font-heading);
+    font-size: 2.4rem;
+    font-variant-numeric: lining-nums;
+    font-weight: 700;
+    line-height: 1.2;
+    color: var(--color-primary);
+}
+
+/* Chiffre en alerte : rouge, et bordure épaissie pour ne pas dépendre de la seule couleur. */
+.key-figure-alert {
+    border-left-width: 12px;
+    border-left-color: var(--color-error);
+}
+
+.key-figure-alert .key-figure-value,
+.key-figure-alert .key-figure-value a {
+    color: var(--color-error);
+}
+
+/* Évolution : flèche et signe disent le sens, la couleur dit si c'est favorable. */
+.comparison {
+    font-weight: 600;
+}
+
+.comparison-good {
+    color: var(--color-good);
+}
+
+.comparison-bad {
+    color: var(--color-error);
+}
+
+.comparison-neutral {
+    color: var(--color-text-muted);
 }

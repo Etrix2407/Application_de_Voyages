@@ -34,6 +34,7 @@
                         <li><a href="{% url 'email_failure_list' %}"{% current_page 'email_failure_list' %}>E-mails en échec</a></li>
                     {% endif %}
                     {% if user.is_administrator %}
+                        <li><a href="{% url 'pilotage_dashboard' %}"{% current_page 'pilotage_dashboard' %}>Tableau de pilotage</a></li>
                         <li><a href="{% url 'staff_list' %}"{% current_page 'staff_list' %}>Personnel</a></li>
                         <li><a href="{% url 'email_text_list' %}"{% current_page 'email_text_list' %}>Modèles des e-mails</a></li>
                     {% endif %}

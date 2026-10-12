@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+
+{% block title %}Tableau de pilotage{% endblock %}
+
+{% block content %}
+    <h1>Tableau de pilotage</h1>
+
+    {% include "_form_errors.html" %}
+    <form method="get" class="search-form">
+        {{ form }}
+        <button type="submit">Afficher</button>
+        <a class="button button-secondary" href="{% url 'pilotage_dashboard' %}">Revenir à ce mois-ci</a>
+    </form>
+
+    {% with period=pilotage.period previous=pilotage.previous_period %}
+        <p class="period-summary">
+            Période : du {{ period.start|date:"j F Y" }} au {{ period.end|date:"j F Y" }} ({{ period.label }}),
+            selon la {{ period.basis_label|lower }}.<br>
+            Période de comparaison : du {{ previous.start|date:"j F Y" }} au {{ previous.end|date:"j F Y" }} ({{ previous.label }}).
+        </p>
+    {% endwith %}
+    <p class="updated-at">Dernière mise à jour : le {{ updated_at|date:"d/m/Y" }} à {{ updated_at|date:"H:i" }}. Les chiffres sont recalculés toutes les heures.</p>
+
+    {# section: orders #}
+
+    {# section: rankings #}
+
+    {# section: charts #}
+
+    {# section: promotions_reviews #}
+
+    {# section: clients_emails #}
+{% endblock %}

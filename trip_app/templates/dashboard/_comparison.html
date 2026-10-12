@@ -1,0 +1,10 @@
+{% comment %}
+Évolution par rapport à la période précédente (dashboard.services.comparison.Comparison).
+Paramètre : comparison. Lit aussi compared_to (« par rapport au mois dernier »), fourni par la page.
+La couleur n'est qu'un repère : la flèche et le texte caché disent le sens et s'il est favorable.
+{% endcomment %}
+<p class="comparison comparison-{{ comparison.tone }}">
+    {% if comparison.arrow %}<span aria-hidden="true">{{ comparison.arrow }}</span>{% endif %}
+    {{ comparison.text }}{% if comparison.is_percentage %} {{ compared_to }}{% endif %}
+    {% if comparison.tone == "good" %}<span class="sr-only">(évolution favorable)</span>{% elif comparison.tone == "bad" %}<span class="sr-only">(évolution défavorable)</span>{% endif %}
+</p>
