@@ -1,0 +1,25 @@
+{% comment %}
+Clients et e-mails (dashboard.services.clients_emails). Pas de lien sur « adresse à vérifier » :
+la liste des clients n'a pas de filtre sur ce marqueur.
+{% endcomment %}
+{% with clients=pilotage.clients_emails.clients emails=pilotage.clients_emails.emails %}
+    <section aria-labelledby="clients-title">
+        <h2 id="clients-title">Clients</h2>
+        <p>Seuls les comptes à l'adresse confirmée sont comptés. Les comptes créés le sont à leur date de création, quelle que soit la base de date choisie ; les comptes supprimés depuis y restent.</p>
+        <ul class="key-figures">
+            {% include "dashboard/_figure.html" with label="Comptes créés sur la période" value=clients.created comparison=clients.created_comparison %}
+            {% include "dashboard/_figure.html" with label="Clients inscrits aujourd'hui (comptes actifs)" value=clients.registered %}
+            {% include "dashboard/_figure.html" with label="Clients inscrits ayant passé au moins une commande" value=clients.registered_with_orders %}
+            {% include "dashboard/_figure.html" with label="Taux de conversion des comptes créés sur la période" value=clients.conversion_rate %}
+        </ul>
+    </section>
+
+    <section aria-labelledby="emails-title">
+        <h2 id="emails-title">E-mails</h2>
+        <ul class="key-figures">
+            {% url "email_failure_list" as failures_url %}
+            {% include "dashboard/_figure.html" with label="E-mails en échec sur les 7 derniers jours" value=emails.recent_failures url=failures_url %}
+            {% include "dashboard/_figure.html" with label="Clients à l'adresse à vérifier" value=emails.addresses_to_check %}
+        </ul>
+    </section>
+{% endwith %}
