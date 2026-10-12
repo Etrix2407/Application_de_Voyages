@@ -3,6 +3,7 @@ from decimal import Decimal
 
 from django.test import TestCase
 from django.urls import reverse
+from django.utils import timezone
 
 from accounts.tests.factories import create_agent, create_client
 from catalog.tests.factories import create_country, create_destination
@@ -61,6 +62,17 @@ class StaffOrderListTests(TestCase):
             self.listed(departure_from=departure_in(60).isoformat(), departure_to=departure_in(120).isoformat()),
             [self.new],
         )
+
+    def test_filter_overdue_pending_orders(self):
+        now = timezone.now()
+        recent = create_order(self.marie, self.kyoto)
+        Order.objects.filter(pk=recent.pk).update(created_at=now - timedelta(hours=47))
+        Order.objects.filter(pk=self.old.pk).update(created_at=now - timedelta(hours=49))
+        # Ancienne mais confirmée : elle n'est plus en attente.
+        Order.objects.filter(pk=self.new.pk).update(created_at=now - timedelta(hours=72))
+
+        self.assertEqual(self.listed(overdue="1"), [self.old])
+        self.assertContains(self.client.get(self.url), "En attente depuis plus de 48 h")
 
     def test_invalid_period_reported(self):
         response = self.client.get(

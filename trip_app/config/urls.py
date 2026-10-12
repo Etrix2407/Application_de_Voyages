@@ -19,6 +19,7 @@ urlpatterns = [
     path("demandes/", include("orders.urls")),
     path("avis/", include("reviews.urls")),
     path("promotions/", include("promotions.urls")),
+    path("tableau-de-bord/", include("dashboard.urls")),
 ]
 
 # En développement uniquement : Django sert lui-même les photos envoyées.

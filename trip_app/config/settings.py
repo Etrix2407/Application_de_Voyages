@@ -85,6 +85,7 @@ INSTALLED_APPS = [
     "promotions",
     "orders",
     "reviews",
+    "dashboard",
 ]
 
 MIDDLEWARE = [

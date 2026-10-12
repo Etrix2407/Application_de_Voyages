@@ -23,6 +23,8 @@ MAX_DAYS_BEFORE_DEPARTURE = 2 * 365
 MAX_STAY_DAYS = 90
 MAX_TRAVELLERS = 10
 MAX_REMARKS_LENGTH = 2000
+# Demande « en retard » : en attente depuis plus de 48 heures réelles, week-end compris.
+OVERDUE_DELAY = timedelta(hours=48)
 CLIENT_FINGERPRINT_SALT = "orders.Order.client_fingerprint"
 AT_LEAST_ONE_ADULT = "Il faut au moins un adulte."
 DELETED_CLIENT_LABEL = "Client supprimé"

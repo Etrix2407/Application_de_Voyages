@@ -103,6 +103,11 @@ ACCESS = {
     "email_text_list": ADMIN,
     "edit_email_text": ADMIN,
     "reset_email_text": ADMIN,
+    "operational_dashboard": STAFF,
+    "pilotage_dashboard": ADMIN,
+    "export_orders": ADMIN,
+    "export_log": ADMIN,
+    "signal_thresholds": ADMIN,
 }
 
 # Rôles autorisés pour chaque niveau d'accès.

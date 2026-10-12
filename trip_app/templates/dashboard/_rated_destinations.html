@@ -1,0 +1,8 @@
+{% comment %}
+Liste de destinations notées (dashboard.services.review_figures.RatedDestination). Paramètre : destinations.
+{% endcomment %}
+<ol>
+    {% for destination in destinations %}
+        <li>{{ destination.name }} ({{ destination.country_name }}) : {{ destination.average|floatformat:1 }} sur 5, {{ destination.review_count }} avis</li>
+    {% endfor %}
+</ol>

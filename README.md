@@ -1,6 +1,6 @@
 # Application de voyages — Horizons Lointains
 
-Application web (Python 3, Django 5.2) pour une agence de voyage. Elle gère les comptes des clients et du personnel, et propose un catalogue de pays, destinations et activités. Le cahier des charges est résumé dans [Recap.md](Recap.md) (v1 : comptes et catalogue), [Recap_2.md](Recap_2.md) (v2 : demandes de voyage), [Recap_3.md](Recap_3.md) (v3 : avis clients), [Recap_4.md](Recap_4.md) (v4 : promotions) et [Recap_5.md](Recap_5.md) (v5 : envoi d'e-mails). Les énoncés ne sont jamais modifiés : les décisions prises ensuite avec la cliente sont décrites dans ce README.
+Application web (Python 3, Django 5.2) pour une agence de voyage. Elle gère les comptes des clients et du personnel, et propose un catalogue de pays, destinations et activités. Le cahier des charges est résumé dans [Recap.md](Recap.md) (v1 : comptes et catalogue), [Recap_2.md](Recap_2.md) (v2 : demandes de voyage), [Recap_3.md](Recap_3.md) (v3 : avis clients), [Recap_4.md](Recap_4.md) (v4 : promotions), [Recap_5.md](Recap_5.md) (v5 : envoi d'e-mails) et [Recap_6.md](Recap_6.md) (v6 : statistiques et tableaux de bord). Les énoncés ne sont jamais modifiés : les décisions prises ensuite avec la cliente sont décrites dans ce README.
 
 ## Sommaire
 
@@ -11,6 +11,7 @@ Application web (Python 3, Django 5.2) pour une agence de voyage. Elle gère les
 - [Accessibilité](#accessibilité)
 - [Promotions (v4) : décisions validées](#promotions-v4--décisions-validées)
 - [E-mails (v5) : socle d'envoi](#e-mails-v5--socle-denvoi)
+- [Tableaux de bord (v6)](#tableaux-de-bord-v6)
 - [Tests](#tests)
 - [Mise en production](#mise-en-production)
 - [Structure du code](#structure-du-code)
@@ -126,7 +127,7 @@ Formats à respecter :
 ### Traiter les demandes de voyage (agent ou administrateur)
 
 1. Menu **Demandes de voyage** : toutes les demandes, les plus récentes d'abord (tri inversable), par pages de 25. Le client est affiché « Prénom Nom », ou « Client supprimé » si son compte n'existe plus.
-2. Filtres : état, pays, destination, client (nom, prénom ou e-mail, sans tenir compte des accents) et période de départ.
+2. Filtres : état, **en attente depuis plus de 48 h** (ne garde que les demandes en attente, quel que soit l'état choisi), pays, destination, client (nom, prénom ou e-mail, sans tenir compte des accents) et période de départ.
 3. Le détail d'une demande affiche le téléphone et l'e-mail du client (cliquables pour appeler ou écrire), les voyageurs, les activités aux prix figés, les remarques et l'historique.
 4. Après avoir rappelé le client : **Confirmer la demande** (impossible une fois la date de départ passée : la demande ne peut alors plus qu'être annulée). La fiche affiche le prix aux tarifs du jour : s'il a changé avant votre clic, la confirmation est refusée et la fiche montre le nouveau prix. **Annuler la demande** est possible tant qu'elle est en attente ou confirmée, avec un **motif interne obligatoire** (jamais montré au client sur le site ni dans ses e-mails, mais présent dans son fichier « Télécharger mes données », voir [Questions en attente de la cliente](#questions-en-attente-de-la-cliente)) et une **explication pour le client** facultative (affichée dans l'historique de sa demande ; vide, aucun motif ne lui est affiché). Chaque action est notée dans l'historique avec la date et votre nom (le client, lui, voit « Agence »).
 
@@ -156,6 +157,16 @@ Formats à respecter :
 5. Un pays ou une destination visé par une promotion ne peut pas être supprimé : désactivez-le.
 6. **Statistiques** (lien depuis la fiche, agents et administrateur) : nombre de demandes qui ont utilisé la promotion, total des remises accordées (pour une demande confirmée, la remise recalculée à la confirmation), nombre de clients différents, et liste des demandes avec un lien vers chacune. Les demandes annulées ne comptent dans aucun chiffre et sont listées à part. Les demandes de clients ayant supprimé leur compte sont comptées dans les demandes (« dont 2 demandes de clients ayant supprimé leur compte ») mais pas dans les clients différents : on ne peut plus savoir de qui il s'agit.
 7. **Envoyer une promotion par e-mail** (administrateur, lien depuis la liste ou la fiche d'une promotion en cours ou à venir) : choisissez la promotion, rédigez votre message ; une page de confirmation affiche l'aperçu de l'e-mail et demande « Envoyer la promotion « … » à N clients ? » (sans destinataire, aucun bouton d'envoi n'est proposé). Seules les promotions en cours ou à venir, pas épuisées et qui visent encore un pays ou une destination proposé peuvent être envoyées. Un double clic n'envoie la promotion qu'une fois. Les e-mails partent dans les minutes qui suivent (voir [E-mails promotionnels](#e-mails-promotionnels)). Les envois passés (date, auteur, nombre de destinataires) sont listés sur la fiche de la promotion.
+
+### Tableau de bord (agent ou administrateur)
+
+Menu **Tableau de bord** : quatre gros chiffres en temps réel (commandes en attente, en attente depuis plus de 48 h, avis à modérer, départs de la semaine). Cliquez sur un chiffre pour ouvrir la liste correspondante. Détail dans [Tableaux de bord (v6)](#tableaux-de-bord-v6).
+
+### Tableau de pilotage et export (administrateur)
+
+1. Menu **Tableau de pilotage** : choisissez la période (raccourci ou deux dates) et la date qui classe les commandes (date de commande ou date de départ), puis **Afficher**. Chaque chiffre est comparé à la période précédente. **Revenir à ce mois-ci** rétablit la période par défaut.
+2. **Exporter les commandes de la période (fichier CSV pour Excel)** télécharge la liste des commandes de la période affichée. **Journal des exports** liste tous les exports faits (date, auteur, période, nombre de lignes).
+3. Les **seuils des signaux** (taux d'annulation, demandes en retard, traitement en 48 h) se règlent à l'adresse `/tableau-de-bord/seuils/`.
 
 ### Utiliser l'application (client)
 
@@ -191,8 +202,8 @@ Limites par adresse IP, contre les robots : 20 échecs de connexion par 15 minut
 |---|---|
 | Visiteur | Catalogue complet (pays, destinations, activités) ; page « Destinations » avec les notes ; lecture des avis vérifiés ; recherche et filtres ; inscription ; connexion |
 | Client | Détail des pays, destinations et activités ; recherche et filtres ; favoris ; demandes de voyage (faire une demande une fois l'adresse e-mail confirmée, suivre et annuler ses demandes en attente) ; avis sur ses voyages terminés (donner, modifier 30 jours, supprimer) ; profil (modifier, changer le mot de passe ou l'adresse e-mail, télécharger ses données, supprimer le compte) |
-| Agent | Consultation et recherche ; gestion du catalogue ; liste des clients (avec le badge « Adresse à vérifier »), correction de leurs informations (sauf e-mail et mot de passe), envoi d'un lien de mot de passe ; liste des e-mails en échec et renvoi ; traitement des demandes de voyage (filtrer, confirmer, annuler avec motif) ; modération des avis (publier, refuser ou masquer avec motif), réponse de l'agence, liste filtrée de tous les avis ; consultation des promotions ; profil (consultation, changement du mot de passe, téléchargement de ses informations de compte et de la liste des e-mails reçus au format JSON) |
-| Administrateur | Droits de l'agent + gestion du personnel + gestion des promotions (créer, modifier, désactiver, supprimer si jamais utilisée ni envoyée par e-mail, envoyer par e-mail) + modification du texte des e-mails |
+| Agent | Consultation et recherche ; tableau de bord opérationnel (v6) ; gestion du catalogue ; liste des clients (avec le badge « Adresse à vérifier »), correction de leurs informations (sauf e-mail et mot de passe), envoi d'un lien de mot de passe ; liste des e-mails en échec et renvoi ; traitement des demandes de voyage (filtrer, confirmer, annuler avec motif) ; modération des avis (publier, refuser ou masquer avec motif), réponse de l'agence, liste filtrée de tous les avis ; consultation des promotions ; profil (consultation, changement du mot de passe, téléchargement de ses informations de compte et de la liste des e-mails reçus au format JSON) |
+| Administrateur | Droits de l'agent + gestion du personnel + gestion des promotions (créer, modifier, désactiver, supprimer si jamais utilisée ni envoyée par e-mail, envoyer par e-mail) + modification du texte des e-mails + tableau de pilotage, export des commandes, journal des exports et seuils des signaux (v6) |
 
 ## Règles de gestion appliquées
 
@@ -337,6 +348,88 @@ L'administrateur modifie le **texte** de chaque type d'e-mail (menu **Modèles d
 - **Remplissage** (`render_email`) : le texte de l'administrateur s'il existe (modèle `EmailText`, une ligne par type modifié), sinon le texte d'origine ; chaque champ est remplacé par sa valeur. Une valeur n'est jamais relue : des accolades dans un prénom, un titre d'avis ou un message restent telles quelles. Un champ facultatif vide, seul sur sa ligne, fait disparaître la ligne sans laisser de lignes vides en trop. `send_email` et `process_emails` (premier envoi des e-mails mis en attente par `queue_emails`, puis nouvelles tentatives) l'utilisent : l'objet noté au journal est celui réellement envoyé (mis à jour si le texte a changé entre-temps). Le journal ne garde toujours pas le contenu.
 - **Contrôles à l'enregistrement** : objet et texte obligatoires ; chaque champ du type doit rester au moins une fois dans le texte ; un champ inconnu ou une accolade seule sont refusés ; l'objet ne contient aucun champ. Le message d'erreur nomme les champs manquants ou inconnus.
 - **Pages** (administrateur seulement, `accounts/views/email_texts.py`) : la liste des types avec leur objet actuel et « Texte d'origine » ou « Modifié le … par … » (nom figé), puis la page de modification (objet, texte, liste des champs avec leur description) et le bouton **Rétablir le texte d'origine**, qui supprime le texte modifié.
+
+## Tableaux de bord (v6)
+
+Le [Recap_6.md](Recap_6.md) décrit deux tableaux de bord ; voici ce qui est réalisé et les définitions retenues. Les choix faits faute de précision attendent la validation de la cliente (voir [Questions en attente de la cliente](#tableaux-de-bord-v6--à-valider)). La « commande » du Recap est la **demande de voyage** de l'application. Toute la logique est dans l'application `dashboard/` ; les chiffres sont préparés en Python, les gabarits ne font qu'afficher.
+
+| Page | Adresse | Accès |
+|---|---|---|
+| Tableau de bord opérationnel | `/tableau-de-bord/` | Personnel (agents et administrateur) |
+| Tableau de pilotage | `/tableau-de-bord/pilotage/` | Administrateur |
+| Export des commandes (formulaire envoyé depuis le pilotage) | `/tableau-de-bord/export/` | Administrateur |
+| Journal des exports | `/tableau-de-bord/export/journal/` | Administrateur |
+| Seuils des signaux | `/tableau-de-bord/seuils/` (route `signal_thresholds`) | Administrateur |
+
+Les clients ne voient aucune statistique. L'affectation d'une commande à un agent est hors périmètre.
+
+### Définitions communes
+
+- **Montant estimé** d'une commande : le prix le plus récent, après remise (le prix confirmé s'il existe, sinon l'estimation de départ, comme `Order.latest_price`). Ce n'est **pas** de l'argent encaissé, et les pages le disent. **Remise** : la plus récente (celle recalculée à la confirmation s'il y en a une), comme dans les statistiques d'une promotion. Ces deux définitions sont écrites une seule fois, dans `dashboard/services/order_figures.py`.
+- **48 heures** : heures réelles, week-end compris (`orders.models.OVERDUE_DELAY`, le même délai que le filtre « En attente depuis plus de 48 h » de la liste des demandes).
+- Dates du jour et dates de commande : à l'heure de Bruxelles (une commande passée à 0 h 30 compte pour ce jour-là).
+
+### Tableau de bord opérationnel
+
+Quatre gros chiffres, recalculés **à chaque affichage** (aucun cache) et sans aucun montant :
+
+- **Commandes en attente** : toutes, sans portefeuille par agent ;
+- **En attente depuis plus de 48 h** : en rouge s'il y en a au moins une ;
+- **Avis à modérer** ;
+- **Départs de la semaine** : commandes confirmées qui partent dans les 7 prochains jours, c'est-à-dire **d'aujourd'hui à aujourd'hui + 6 jours** inclus (la page affiche la date de fin).
+
+Chaque chiffre de commandes est compté avec les filtres de la liste des demandes : son lien ouvre exactement les commandes comptées. « Avis à modérer » ouvre la page de modération.
+
+### Tableau de pilotage
+
+- **Période** : raccourcis **ce mois-ci** (par défaut), **le mois dernier**, **ce trimestre**, **cette année**, **les 12 derniers mois**, ou **période personnalisée** (deux dates, 5 ans au plus). Les raccourcis couvrent des **mois civils entiers**, jours à venir compris (« ce mois-ci » va jusqu'au dernier jour du mois) ; « les 12 derniers mois » sont les 12 mois civils qui se terminent par le mois en cours. Les commandes sont classées par **date de commande** (par défaut) ou par **date de départ** ; ce choix ne concerne que les commandes (pas les comptes ni les avis).
+- **Comparaison** avec la période précédente : les mêmes mois civils juste avant pour un raccourci (« par rapport au mois dernier »), le même nombre de jours juste avant pour une période personnalisée. Vert si c'est bien, rouge si c'est mauvais, selon l'indicateur (une hausse des annulations, des remises ou du délai est rouge), avec une flèche ▲ ou ▼ pour ne pas reposer sur la seule couleur. Arrondi à l'unité. Période précédente à zéro : « nouveau », ou un tiret si les deux valent zéro ; jamais de division par zéro.
+- **Commandes** : nombre par état (en attente, confirmées, annulées) et total, taux de confirmation et taux d'annulation (tiret sans commande).
+- **Montants** : montant estimé des commandes confirmées, potentiel en attente, total des remises accordées (commandes non annulées seulement) ; le montant estimé des commandes annulées est affiché à part et n'est jamais compté dans le montant confirmé.
+- **Délai de traitement** : de la création de la commande à la **première confirmation ou annulation par le personnel**. Une annulation par le client n'est pas un traitement de l'agence : une commande annulée par le client sans décision du personnel est **exclue** du délai ; une commande encore en attente n'a pas de délai. Délai moyen, délai le plus long, et part des commandes traitées en 48 h au plus (48 h pile comprises, puisqu'une commande n'est en retard qu'au-delà de 48 h).
+- **Classements** (top 5) : destinations et pays par nombre de commandes **confirmées**, avec leur montant estimé ; activités les plus choisies dans les commandes **non annulées** (une demande en attente montre déjà l'intérêt du client) ; bas du classement : les 5 destinations les moins demandées parmi les destinations **actives** (destination et pays actifs), zéro commande compris. Regroupés par destination ou pays du catalogue, sous leur nom actuel ; à égalité, ordre alphabétique.
+- **Graphiques** (dessinés en SVG par le serveur, sans bibliothèque) : courbe des commandes par mois sur les 12 mois civils qui se terminent par le mois de fin de la période ; barres par pays (les 10 premiers, puis « Autres pays ») ; répartition par état avec la part de chacun.
+- **Promotions** : simple résumé avec un lien vers la page de chaque promotion. Promotions **en cours aujourd'hui** (pas selon la période), avec leurs utilisations et le total de leurs remises **depuis leur début** ; la promotion qui a le mieux marché sur la période (le plus de commandes ; à égalité, la plus récente). Commandes annulées exclues, comme dans les statistiques d'une promotion.
+- **Avis** : note moyenne de l'agence, calculée sur **tous les avis publiés** ; nombre d'avis publiés sur la période (selon leur jour de publication), comparé à la période précédente ; les 3 destinations les mieux notées et les 3 moins bien notées, calculées sur **tous les avis publiés** (pas seulement ceux de la période : sur un mois, presque aucune destination n'atteindrait le seuil), pour les destinations qui ont **au moins 5 avis**. Avec moins de 6 destinations classées, une destination n'apparaît pas dans les deux listes. Les avis d'une destination qui n'est plus proposée comptent.
+- **Clients** :
+  - **comptes créés** sur la période, à leur jour de création, et **taux de conversion** (part de ces comptes qui ont passé au moins une commande, quel qu'en soit l'état et à n'importe quelle date) : seuls les comptes à l'**adresse confirmée** comptent ; un compte jamais confirmé ne compte nulle part ;
+  - **clients inscrits** aujourd'hui (comptes clients actifs à l'adresse confirmée, sans période) et, parmi eux, ceux qui ont passé au moins une commande ;
+  - **comptes supprimés** : leurs commandes restent dans les totaux, ils ne comptent plus dans les clients inscrits, et les « comptes créés » d'une période passée ne changent pas. Pour cela, la suppression d'un compte client confirmé laisse une **trace anonyme** (`DeletedClientAccount` : date de création du compte, date de suppression, « avait passé une commande » ; ni numéro, ni nom, ni adresse), enregistrée par un signal quel que soit le chemin de suppression (`accounts/signals.py`). Les comptes supprimés **avant la v6** ne sont pas récupérables : ils manquent aux comptes créés et au taux de conversion des périodes passées.
+- **E-mails** (indépendants de la période) : e-mails en échec sur les **7 derniers jours glissants**, comptés à la date de leur **dernière tentative** (un ancien e-mail dont le renvoi vient d'échouer compte), y compris ceux qui ne peuvent plus être renvoyés, avec un lien vers **E-mails en échec** ; nombre de clients « adresse à vérifier » (même règle que la liste des clients).
+
+### Fraîcheur des données
+
+- **Opérationnel** : temps réel.
+- **Pilotage** : mis en cache **1 heure**, avec une clé par période (base de date, dates et libellé) ; la page affiche la date et l'heure de la dernière mise à jour. Le cache est celui du site (table `django_cache` de la base).
+- **Signaux** : comparés aux seuils en vigueur **à chaque affichage** ; les chiffres comparés sont ceux du tableau, qui peuvent dater d'une heure.
+- **Export** : données lues au moment de l'export, sans le cache.
+
+### Export des commandes
+
+Réservé à l'administrateur, depuis le tableau de pilotage : il couvre exactement les jours affichés, selon la base de date choisie (`dashboard/services/order_export.py`).
+
+- **Format** : CSV qu'Excel ouvre directement en français, sans bibliothèque supplémentaire : UTF-8 avec BOM (accents lus correctement), séparateur « ; », virgule décimale, dates JJ/MM/AAAA. Fichier `commandes_<début>_<fin>.csv`.
+- **Colonnes** : numéro, date de commande, date de départ, destination, pays, numéro de client, voyageurs, montant estimé (€), remise (€), état.
+- **RGPD** : ni nom ni coordonnées, seulement le **numéro de client** (vide si le compte a été supprimé), et aucune remarque libre.
+- **Protection contre les formules** : une cellule qui commence par `=`, `+`, `-`, `@`, une tabulation ou un retour chariot est précédée d'une apostrophe, pour qu'Excel ne l'exécute pas.
+- **Traçabilité** : chaque export est enregistré dans le journal (`ExportLog` : date, auteur au nom figé, période, base de date, nombre de lignes), dans la même transaction que la préparation du fichier. Le **Journal des exports** les liste, du plus récent au plus ancien, par pages de 25.
+
+### Signaux
+
+Trois signaux en couleur, sans e-mail :
+
+| Signal | Seuil par défaut |
+|---|---|
+| Le taux d'annulation de la période dépasse | 25 % |
+| Commandes en attente depuis plus de 48 h (toutes périodes confondues) : plus de | 5 |
+| La part des commandes traitées en 48 h passe sous | 80 % |
+
+Les seuils sont **modifiables par l'administrateur** (modèle `SignalThresholds`, page `/tableau-de-bord/seuils/`, route `signal_thresholds`).
+
+### Non réalisé
+
+- **Points à confirmer** du Recap 6, en attente de la cliente : statistiques par agent (et information des agents) ; délai de 48 h en heures ouvrables (voir [Questions en attente de la cliente](#tableaux-de-bord-v6--à-valider)).
+- **Souhaitable** : la carte du monde colorée selon les pays les plus vendus n'est pas réalisée.
 
 ## Tests
 
@@ -495,11 +588,13 @@ trip_app/
 │   │                       # client), throttling (limites anti-abus), privacy (effacement RGPD et conservation
 │   │                       # du journal), data_export (informations du compte pour l'export RGPD),
 │   │                       # unsubscribe (désinscription des e-mails promotionnels), task_lock (verrou :
-│   │                       # un seul passage d'une tâche planifiée à la fois)
+│   │                       # un seul passage d'une tâche planifiée à la fois), deleted_accounts (trace
+│   │                       # anonyme d'un compte client supprimé, v6)
 │   ├── management/commands/ # process_emails (toutes les 5 minutes), purge_unconfirmed (chaque jour)
 │   ├── models.py · forms.py · validators.py · decorators.py · urls.py
 │   ├── hashers.py          # hachage des mots de passe avec le « poivre »
-│   ├── signals.py          # session de 8 h du personnel, effacement du journal à la suppression d'un compte
+│   ├── signals.py          # session de 8 h du personnel ; à la suppression d'un compte : effacement du journal
+│   │                       # et trace anonyme DeletedClientAccount
 │   └── tests/
 ├── catalog/                # catalogue : pays, destinations, activités, favoris
 │   ├── views/              # browse, search, favorites, manage
@@ -538,6 +633,17 @@ trip_app/
 │   │                         # send_trip_reminders (rappels de voyage, chaque jour)
 │   ├── models.py · forms.py · signals.py · urls.py · context_processors.py (compteur du menu)
 │   └── tests/
+├── dashboard/              # tableaux de bord (v6) : opérationnel pour les agents, pilotage pour l'administrateur, export
+│   ├── views/              # operational (personnel), pilotage (administrateur), export (export et journal des exports)
+│   ├── services/           # operational (chiffres des agents), periods (périodes et comparaison), comparison
+│   │                       # (« +12 % », « nouveau »), order_figures (définitions du montant estimé et de la
+│   │                       # remise), orders_section (commandes, montants, délai de traitement), rankings
+│   │                       # (classements), charts (graphiques SVG), promotion_figures et review_figures
+│   │                       # (réunis par promotions_reviews), clients et emails (réunis par clients_emails),
+│   │                       # pilotage (assemble les sections), cache (cache d'une heure par période),
+│   │                       # order_export (export CSV et sa trace)
+│   ├── models.py (ExportLog) · forms.py (période du pilotage) · urls.py
+│   └── tests/
 ├── templates/
 │   ├── base.html · home.html · privacy.html · 403/404/500.html
 │   ├── _pagination.html · _form_errors.html (récapitulatif des erreurs) · _confirm_delete.html
@@ -548,7 +654,8 @@ trip_app/
 │   ├── orders/             # demandes côté client, fragments _*.html, manage/
 │   ├── promotions/         # offers.html (offres du moment), fragment _offer_terms.html, manage/ (gestion,
 │   │                       # désactivation, envoi par e-mail et sa confirmation, statistiques)
-│   └── reviews/            # avis côté client, fragments publics _*.html, manage/ (modération)
+│   ├── reviews/            # avis côté client, fragments publics _*.html, manage/ (modération)
+│   └── dashboard/          # operational.html, pilotage.html (sections en fragments _*.html), export_log.html
 └── static/
     ├── css/                # feuille de style (texte lisible, adaptée au mobile, modes clair et sombre)
     └── js/                 # theme.js : bouton « Mode sombre / Mode clair »
@@ -556,7 +663,7 @@ trip_app/
 
 Règle de rangement : les **vues** ne font que recevoir la requête et afficher la page ; la logique réutilisable va dans **services/** ; un outil utilisé par plusieurs applications va dans **common/**, sauf s'il dépend des modèles d'une application : il reste alors dans celle-ci (par exemple `StaffFilterForm`, qui filtre par pays et destination, est dans `catalog/forms.py`), pour que `common` ne dépende d'aucune application.
 
-Dépendances entre applications : les **modèles et services** suivent l'ordre `accounts ← catalog ← promotions ← orders ← reviews` (une application ne dépend que de celles qui la précèdent ; les réactions en sens inverse passent par des signaux, par exemple l'anonymisation RGPD ou le retrait d'un avis quand un voyage est annulé). Les **vues et gabarits** peuvent assembler plusieurs applications (par exemple la note moyenne affichée dans le catalogue).
+Dépendances entre applications : les **modèles et services** suivent l'ordre `accounts ← catalog ← promotions ← orders ← reviews ← dashboard` (une application ne dépend que de celles qui la précèdent ; les réactions en sens inverse passent par des signaux, par exemple l'anonymisation RGPD ou le retrait d'un avis quand un voyage est annulé). Les **vues et gabarits** peuvent assembler plusieurs applications (par exemple la note moyenne affichée dans le catalogue).
 
 ## Questions en attente de la cliente
 
@@ -571,3 +678,17 @@ Ces points sont soulevés par l'audit d'octobre 2026. Ils ne sont **pas tranché
 7. Le **compteur** « Avis à modérer (N) » du menu suffit-il comme « tableau de bord » ?
 8. À confirmer : un client peut **supprimer son avis à tout moment**, et un agent **ne peut pas corriger l'adresse e-mail** d'un client.
 9. La **politique de confidentialité** (`templates/privacy.html`) ne mentionne pas encore : le journal des e-mails envoyés (destinataire, type, objet, état), conservé 1 an et anonymisé à la suppression du compte ; les e-mails de service (compte, demandes, avis) ; le fichier « Télécharger mes données » ; le lien de désinscription des e-mails promotionnels. Le texte juridique est à rédiger ou valider par la cliente.
+
+### Tableaux de bord (v6) : à valider
+
+Choix faits faute de précision dans le Recap 6, appliqués en attendant la réponse de la cliente :
+
+10. Le **délai de traitement** ne compte que les décisions du **personnel** (confirmation ou annulation) : une commande annulée par le client sans décision de l'agence est exclue du délai et de la part traitée en 48 h.
+11. L'export est un fichier **CSV** qu'Excel ouvre directement, et non un vrai fichier `.xlsx` (qui demanderait une bibliothèque supplémentaire).
+12. Les comptes à l'**adresse non confirmée** sont exclus de toutes les statistiques des clients (comptes créés, clients inscrits, taux de conversion).
+13. Les **classements des avis** (3 mieux notées, 3 moins bien notées) et la **note moyenne** sont calculés sur tous les avis publiés depuis l'ouverture, et non sur la seule période choisie.
+
+Points à confirmer du Recap 6, non réalisés en attendant la réponse :
+
+14. **Statistiques par agent** (visibles de l'administrateur seulement : commandes traitées, délai moyen avant la première action) ; si elles sont retenues, les agents en sont informés.
+15. Délai de 48 h compté en **heures ouvrables** (l'agence est fermée le dimanche) plutôt qu'en heures réelles, comme aujourd'hui.

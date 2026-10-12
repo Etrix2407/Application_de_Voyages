@@ -1,0 +1,70 @@
+{% load money %}
+{% comment %}
+Section « Promotions et avis » (dashboard.services.promotions_reviews) : simple résumé,
+le détail de chaque promotion reste sur sa page de gestion.
+{% endcomment %}
+{% with promotions=pilotage.promotions_reviews.promotions reviews=pilotage.promotions_reviews.reviews %}
+    <section aria-labelledby="pilotage-promotions">
+        <h2 id="pilotage-promotions">Promotions</h2>
+
+        <h3>La promotion qui a le mieux marché sur la période</h3>
+        {% if promotions.best %}
+            <p>
+                <a href="{% url 'manage_promotion_detail' promotions.best.pk %}">{{ promotions.best.name }}</a> :
+                {{ promotions.best.order_count }} commande{{ promotions.best.order_count|pluralize }} (hors annulées).
+            </p>
+        {% else %}
+            <p>Aucune commande avec une promotion sur la période.</p>
+        {% endif %}
+
+        <h3>Promotions en cours</h3>
+        {% if promotions.running %}
+            <div class="table-scroll" tabindex="0" role="region" aria-label="Tableau des promotions en cours">
+                <table>
+                    <caption>Chiffres cumulés depuis le début de chaque promotion, commandes annulées exclues</caption>
+                    <thead>
+                        <tr>
+                            <th scope="col">Promotion</th>
+                            <th scope="col">Utilisations</th>
+                            <th scope="col">Total des remises</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for promotion in promotions.running %}
+                            <tr>
+                                <td><a href="{% url 'manage_promotion_detail' promotion.pk %}">{{ promotion.name }}</a></td>
+                                <td>{{ promotion.order_count }}</td>
+                                <td>{{ promotion.total_discount|euros }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <p>Aucune promotion en cours.</p>
+        {% endif %}
+    </section>
+
+    <section aria-labelledby="pilotage-reviews">
+        <h2 id="pilotage-reviews">Avis</h2>
+        <ul class="key-figures">
+            {% include "dashboard/_figure.html" with label="Note moyenne de l'agence" value=reviews.average_text %}
+            {% include "dashboard/_figure.html" with label="Avis publiés sur la période" value=reviews.published_count comparison=reviews.comparison %}
+        </ul>
+
+        <h3>Destinations les mieux notées</h3>
+        {% if reviews.best_rated %}
+            {% include "dashboard/_rated_destinations.html" with destinations=reviews.best_rated %}
+        {% else %}
+            <p>Aucune destination n'a encore {{ reviews.min_reviews_to_rank }} avis publiés.</p>
+        {% endif %}
+
+        <h3>Destinations les moins bien notées</h3>
+        {% if reviews.worst_rated %}
+            {% include "dashboard/_rated_destinations.html" with destinations=reviews.worst_rated %}
+        {% else %}
+            <p>Pas assez de destinations notées pour ce classement.</p>
+        {% endif %}
+        <p>Classements sur tous les avis publiés, pour les destinations qui en ont au moins {{ reviews.min_reviews_to_rank }}.</p>
+    </section>
+{% endwith %}

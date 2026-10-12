@@ -1,0 +1,39 @@
+{% comment %}
+Barres horizontales (dashboard.services.charts.BarChart), suivies du tableau des chiffres.
+Paramètres : chart, chart_id (identifiant unique dans la page), caption, label_header ;
+facultatif : show_percent (ajoute la part de chaque barre).
+{% endcomment %}
+<figure class="chart">
+    <figcaption id="{{ chart_id }}-caption">{{ caption }}</figcaption>
+    <svg class="chart-svg" viewBox="0 0 {{ chart.width }} {{ chart.height }}" role="img" aria-labelledby="{{ chart_id }}-caption">
+        {% for bar in chart.bars %}
+            <text x="0" y="{{ bar.label_y }}">{{ bar.label }}</text>
+            <rect class="chart-bar {{ bar.css_class }}" x="0" y="{{ bar.bar_y }}" width="{{ bar.width }}" height="{{ chart.bar_height }}"/>
+            <text x="{{ bar.value_x }}" y="{{ bar.value_y }}">{{ bar.count }}{% if show_percent %} ({{ bar.percent }}){% endif %}</text>
+        {% endfor %}
+    </svg>
+    <details>
+        <summary>Voir les chiffres</summary>
+        <div class="table-scroll" tabindex="0" role="region" aria-label="Tableau : {{ caption|lower }}">
+            <table>
+                <caption>{{ caption }}</caption>
+                <thead>
+                    <tr>
+                        <th scope="col">{{ label_header }}</th>
+                        <th scope="col">Commandes</th>
+                        {% if show_percent %}<th scope="col">Part</th>{% endif %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for bar in chart.bars %}
+                        <tr>
+                            <th scope="row">{{ bar.label }}</th>
+                            <td>{{ bar.count }}</td>
+                            {% if show_percent %}<td>{{ bar.percent }}</td>{% endif %}
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </details>
+</figure>

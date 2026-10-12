@@ -14,6 +14,7 @@ from orders.models import (
     MAX_STAY_DAYS,
     MAX_TRAVELLERS,
     MIN_DAYS_BEFORE_DEPARTURE,
+    OVERDUE_DELAY,
     Order,
     OrderStatus,
     departure_window,
@@ -94,7 +95,7 @@ class ClientCancelForm(forms.Form):
 class StaffOrderFilterForm(StaffFilterForm):
     """Filtres de la liste des demandes (personnel). Tous facultatifs."""
 
-    field_order = ["status", "country", "destination"]
+    field_order = ["status", "overdue", "country", "destination"]
     periods = (("departure_from", "departure_to"),)
 
     status = forms.ChoiceField(label="État", required=False, choices=[("", "Tous les états"), *OrderStatus.choices])
@@ -103,6 +104,10 @@ class StaffOrderFilterForm(StaffFilterForm):
     )
     departure_from = optional_date_field("Départ à partir du")
     departure_to = optional_date_field("Départ jusqu'au")
+    # Ne garde que les demandes en attente, quel que soit l'état choisi plus haut.
+    overdue = forms.BooleanField(
+        label=f"En attente depuis plus de {OVERDUE_DELAY // timedelta(hours=1)} h", required=False
+    )
     sort = forms.ChoiceField(
         label="Tri",
         required=False,

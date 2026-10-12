@@ -1,7 +1,9 @@
 """Filtrage et tri des demandes de voyage pour le personnel."""
 
+from django.utils import timezone
+
 from accounts.services.client_search import matching_clients, search_words
-from orders.models import Order
+from orders.models import OVERDUE_DELAY, Order, OrderStatus
 
 NEWEST_FIRST = "recent"
 OLDEST_FIRST = "ancien"
@@ -21,6 +23,8 @@ def filter_orders(criteria: dict):
         orders = orders.filter(departure_date__gte=criteria["departure_from"])
     if criteria.get("departure_to"):
         orders = orders.filter(departure_date__lte=criteria["departure_to"])
+    if criteria.get("overdue"):
+        orders = orders.filter(status=OrderStatus.PENDING, created_at__lt=timezone.now() - OVERDUE_DELAY)
     # Le numéro départage les demandes créées au même instant : l'ordre ne change jamais d'une page à l'autre.
     if criteria.get("sort") == OLDEST_FIRST:
         orders = orders.order_by("created_at", "pk")

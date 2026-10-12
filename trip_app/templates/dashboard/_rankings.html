@@ -1,0 +1,22 @@
+{% comment %}
+Classements de la période (dashboard.services.rankings). Les liens mènent aux pages de gestion du catalogue :
+elles existent aussi pour un élément désactivé, contrairement aux pages publiques.
+{% endcomment %}
+{% with rankings=pilotage.rankings %}
+    <section aria-labelledby="rankings-title">
+        <h2 id="rankings-title">Classements</h2>
+
+        <h3>Destinations les plus demandées</h3>
+        {% include "dashboard/_ranking_table.html" with items=rankings.destinations caption="Top 5 des destinations, par nombre de commandes confirmées" name_label="Destination" link="manage_edit_destination" count_label="Commandes confirmées" show_amount=True empty="Aucune commande confirmée sur cette période." only %}
+
+        <h3>Pays les plus demandés</h3>
+        {% include "dashboard/_ranking_table.html" with items=rankings.countries caption="Top 5 des pays, par nombre de commandes confirmées" name_label="Pays" link="manage_country" count_label="Commandes confirmées" show_amount=True empty="Aucune commande confirmée sur cette période." only %}
+        <p>Le montant estimé est le prix le plus récent des commandes confirmées, remise déduite : ce n'est pas de l'argent encaissé.</p>
+
+        <h3>Activités les plus choisies</h3>
+        {% include "dashboard/_ranking_table.html" with items=rankings.activities caption="Top 5 des activités, par nombre de commandes non annulées qui les contiennent" name_label="Activité" link="manage_edit_activity" count_label="Commandes" empty="Aucune activité choisie sur cette période." only %}
+
+        <h3>Destinations les moins demandées</h3>
+        {% include "dashboard/_ranking_table.html" with items=rankings.least_requested caption="Les 5 destinations actives ayant le moins de commandes confirmées" name_label="Destination" link="manage_edit_destination" count_label="Commandes confirmées" empty="Aucune destination active dans le catalogue." only %}
+    </section>
+{% endwith %}

@@ -1,0 +1,10 @@
+{% comment %}
+Gros chiffre, à placer dans une liste <ul class="key-figures">.
+Paramètres : label, value (déjà mis en forme, ex. value=amount|euros) ;
+facultatifs : comparison (voir _comparison.html), url (le chiffre devient un lien), alert (mis en rouge).
+{% endcomment %}
+<li class="key-figure{% if alert %} key-figure-alert{% endif %}">
+    <p class="key-figure-label">{{ label }}</p>
+    <p class="key-figure-value">{% if url %}<a href="{{ url }}">{{ value }}<span class="sr-only"> : voir la liste</span></a>{% else %}{{ value }}{% endif %}</p>
+    {% if comparison %}{% include "dashboard/_comparison.html" %}{% endif %}
+</li>

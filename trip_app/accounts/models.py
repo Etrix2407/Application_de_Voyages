@@ -322,3 +322,31 @@ class EmailText(models.Model):
 
     def __str__(self) -> str:
         return self.kind
+
+
+class DeletedClientAccount(models.Model):
+    """Trace anonyme d'un compte client supprimé, pour les statistiques du tableau de pilotage (Recap 6).
+
+    La suppression d'un compte est réelle (RGPD) : sans cette trace, les « comptes créés » et le taux
+    de conversion d'une période passée baisseraient à chaque suppression. On ne garde que ce qu'il
+    faut pour ces chiffres : aucune donnée personnelle, ni numéro du compte, ni adresse, ni nom.
+
+    Seuls les comptes dont l'adresse avait été confirmée sont tracés : partout, un compte ne compte
+    comme « créé » qu'une fois son adresse confirmée (un compte jamais confirmé, purgé ou remplacé
+    par une nouvelle inscription, ne compte jamais).
+    Les comptes supprimés avant l'ajout de cette trace ne sont pas récupérables : ils manquent
+    aux « comptes créés » et au taux de conversion des périodes passées.
+    """
+
+    date_joined = models.DateTimeField("date de création du compte")
+    deleted_at = models.DateTimeField("date de suppression", default=timezone.now)
+    # Le client avait passé au moins une demande de voyage, quel qu'en soit l'état.
+    had_orders = models.BooleanField("avait passé une demande de voyage")
+
+    class Meta:
+        verbose_name = "compte client supprimé"
+        verbose_name_plural = "comptes clients supprimés"
+        ordering = ["-deleted_at", "-pk"]
+
+    def __str__(self) -> str:
+        return f"Compte créé le {self.date_joined:%d/%m/%Y}, supprimé le {self.deleted_at:%d/%m/%Y}"
